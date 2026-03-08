@@ -1,10 +1,40 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { coursesService } from '@/core/api/services';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { ROUTES } from '@/shared/constants';
 import type { CourseListItem, PaginationMeta } from '@/core/types';
-import { ChevronLeft, ChevronRight, ExternalLink, Pencil } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Pencil,
+  Eye,
+  Trash2,
+  Globe,
+  EyeOff,
+  BookOpen,
+  Users,
+  Layers,
+  BarChart3,
+  Crown,
+  Unlock,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface CoursesTableProps {
   data: CourseListItem[];
@@ -14,100 +44,384 @@ interface CoursesTableProps {
   onRefetch: () => void;
 }
 
-export function CoursesTable({ data, meta, page, onPageChange }: CoursesTableProps) {
+const DIFFICULTY_BADGE: Record<string, string> = {
+  BEGINNER: 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10',
+  INTERMEDIATE: 'border-amber-500/40 text-amber-400 bg-amber-500/10',
+  ADVANCED: 'border-orange-500/40 text-orange-400 bg-orange-500/10',
+  EXPERT: 'border-rose-500/40 text-rose-400 bg-rose-500/10',
+};
+
+function CourseThumbnail({ course }: { course: CourseListItem }) {
+  if (course.thumbnail) {
+    return (
+      <img
+        src={course.thumbnail}
+        alt={course.title}
+        loading='lazy'
+        className='h-full w-full object-cover'
+      />
+    );
+  }
+  return (
+    <div className='flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-950 to-blue-900 border border-blue-800/50'>
+      <BookOpen className='h-4 w-4 text-blue-400' />
+    </div>
+  );
+}
+
+function StateIndicator({
+  state,
+  isPublished,
+}: {
+  state?: string;
+  isPublished: boolean;
+}) {
+  if (state === 'COMING_SOON') {
+    return (
+      <span className='inline-flex items-center gap-1.5 text-xs font-medium text-blue-400'>
+        <span className='h-1.5 w-1.5 rounded-full bg-blue-500' />
+        Coming Soon
+      </span>
+    );
+  }
+  if (isPublished || state === 'PUBLISHED') {
+    return (
+      <span className='inline-flex items-center gap-1.5 text-xs font-medium text-emerald-400'>
+        <span className='h-1.5 w-1.5 rounded-full bg-emerald-500' />
+        Published
+      </span>
+    );
+  }
+  return (
+    <span className='inline-flex items-center gap-1.5 text-xs font-medium text-amber-400'>
+      <span className='h-1.5 w-1.5 rounded-full bg-amber-500' />
+      Draft
+    </span>
+  );
+}
+
+function DeleteConfirm({
+  courseName,
+  onConfirm,
+  isLoading,
+}: {
+  courseName: string;
+  onConfirm: () => void;
+  isLoading: boolean;
+}) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button
+          variant='ghost'
+          size='sm'
+          className='h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10'
+          title='Delete'
+        >
+          <Trash2 className='h-3.5 w-3.5' />
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Course</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete{' '}
+            <strong>{courseName}</strong>? This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={onConfirm}
+            disabled={isLoading}
+            className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+          >
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+export function CoursesTable({
+  data,
+  meta,
+  page,
+  onPageChange,
+  onRefetch,
+}: CoursesTableProps) {
+  const queryClient = useQueryClient();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const publishMutation = useMutation({
+    mutationFn: (id: string) => coursesService.publish(id),
+    onSuccess: () => {
+      toast.success('Course published successfully');
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
+    },
+    onError: () => toast.error('Failed to publish course'),
+  });
+
+  const unpublishMutation = useMutation({
+    mutationFn: (id: string) => coursesService.unpublish(id),
+    onSuccess: () => {
+      toast.success('Course moved to Draft');
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
+    },
+    onError: () => toast.error('Failed to unpublish course'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => coursesService.delete(id),
+    onSuccess: () => {
+      toast.success('Course deleted');
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      onRefetch();
+      setDeletingId(null);
+    },
+    onError: () => {
+      toast.error('Failed to delete course');
+      setDeletingId(null);
+    },
+  });
+
   if (data.length === 0) {
     return (
-      <Card className="p-12 text-center">
-        <p className="text-muted-foreground">No courses found</p>
+      <Card className='flex flex-col items-center justify-center gap-3 p-16 text-center'>
+        <div className='flex h-12 w-12 items-center justify-center rounded-full bg-muted'>
+          <BookOpen className='h-5 w-5 text-muted-foreground' />
+        </div>
+        <p className='font-medium'>No courses found</p>
+        <p className='text-sm text-muted-foreground'>
+          Try adjusting your filters or create a new course.
+        </p>
       </Card>
     );
   }
 
   return (
-    <Card>
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="border-b">
-            <tr>
-              <th className="p-4 text-left text-sm font-medium">Course</th>
-              <th className="p-4 text-left text-sm font-medium">Difficulty</th>
-              <th className="p-4 text-left text-sm font-medium">Status</th>
-              <th className="p-4 text-left text-sm font-medium">Enrollments</th>
-              <th className="p-4 text-left text-sm font-medium">Sections</th>
-              <th className="p-4 text-right text-sm font-medium">Actions</th>
+    <Card className='overflow-hidden'>
+      <div className='overflow-x-auto'>
+        <table className='w-full'>
+          <thead>
+            <tr className='border-b bg-muted/30'>
+              <th className='p-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground'>
+                Course
+              </th>
+              <th className='hidden p-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground md:table-cell'>
+                Difficulty
+              </th>
+              <th className='p-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground'>
+                Status
+              </th>
+              <th className='hidden p-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground lg:table-cell'>
+                Stats
+              </th>
+              <th className='p-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground'>
+                Actions
+              </th>
             </tr>
           </thead>
-          <tbody>
-            {data.map((course) => (
-              <tr key={course.id} className="border-b last:border-0 hover:bg-muted/50">
-                <td className="p-4">
-                  <div>
-                    <div className="font-medium">{course.title}</div>
-                    <div className="text-sm text-muted-foreground">{course.slug}</div>
-                  </div>
-                </td>
-                <td className="p-4">
-                  {course.difficulty
-                    ? <Badge variant="outline">{course.difficulty}</Badge>
-                    : '—'}
-                </td>
-                <td className="p-4">
-                  <Badge variant={course.isPublished ? 'default' : 'secondary'}>
-                    {course.state ?? (course.isPublished ? 'Published' : 'Draft')}
-                  </Badge>
-                </td>
-                <td className="p-4">
-                  <div className="text-sm font-medium">
-                    {course.enrollmentCount ?? course._count.enrollments}
-                  </div>
-                </td>
-                <td className="p-4">
-                  {/* sections is the correct _count field returned by the backend */}
-                  <div className="text-sm">{course._count.sections}</div>
-                </td>
-                <td className="p-4 text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <Link to={ROUTES.COURSE_EDIT(course.id)}>
-                      <Button variant="ghost" size="sm">
-                        <Pencil className="h-3 w-3" />
-                      </Button>
-                    </Link>
-                    <Link to={ROUTES.COURSE_DETAIL(course.id)}>
-                      <Button variant="ghost" size="sm">
-                        View <ExternalLink className="ml-2 h-3 w-3" />
-                      </Button>
-                    </Link>
-                  </div>
-                </td>
-              </tr>
-            ))}
+          <tbody className='divide-y divide-border/50'>
+            {data.map((course) => {
+              const isPublished =
+                course.isPublished || course.state === 'PUBLISHED';
+              const isComingSoon = course.state === 'COMING_SOON';
+              const isToggling =
+                (publishMutation.isPending || unpublishMutation.isPending);
+
+              return (
+                <tr
+                  key={course.id}
+                  className='group transition-colors hover:bg-muted/30'
+                >
+                  {/* ── Course info ── */}
+                  <td className='p-4'>
+                    <div className='flex items-center gap-3'>
+                      <div className='relative h-10 w-16 shrink-0 overflow-hidden rounded-md border border-border/50'>
+                        <CourseThumbnail course={course} />
+                      </div>
+                      <div className='min-w-0'>
+                        <p className='truncate text-sm font-semibold leading-snug'>
+                          {course.title}
+                        </p>
+                        <p className='mt-0.5 truncate text-xs text-muted-foreground'>
+                          {course.slug}
+                        </p>
+                        {course.access && (
+                          <Badge
+                            variant='outline'
+                            className={cn(
+                              'mt-1 h-4 gap-1 px-1 text-[10px] font-bold',
+                              course.access === 'FREE'
+                                ? 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10'
+                                : 'border-violet-500/40 text-violet-400 bg-violet-500/10',
+                            )}
+                          >
+                            {course.access === 'FREE' ? (
+                              <Unlock className='h-2.5 w-2.5' />
+                            ) : (
+                              <Crown className='h-2.5 w-2.5' />
+                            )}
+                            {course.access}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* ── Difficulty ── */}
+                  <td className='hidden p-4 md:table-cell'>
+                    {course.difficulty ? (
+                      <Badge
+                        variant='outline'
+                        className={cn(
+                          'gap-1 text-[11px] font-semibold',
+                          DIFFICULTY_BADGE[course.difficulty] ??
+                            'border-border/60',
+                        )}
+                      >
+                        <BarChart3 className='h-3 w-3' />
+                        {course.difficulty.charAt(0) +
+                          course.difficulty.slice(1).toLowerCase()}
+                      </Badge>
+                    ) : (
+                      <span className='text-xs text-muted-foreground'>—</span>
+                    )}
+                  </td>
+
+                  {/* ── Status ── */}
+                  <td className='p-4'>
+                    <StateIndicator
+                      state={course.state}
+                      isPublished={course.isPublished}
+                    />
+                  </td>
+
+                  {/* ── Stats ── */}
+                  <td className='hidden p-4 lg:table-cell'>
+                    <div className='flex flex-col gap-1'>
+                      <span className='flex items-center gap-1.5 text-xs text-muted-foreground'>
+                        <Users className='h-3 w-3' />
+                        {course._count.enrollments} enrolled
+                      </span>
+                      <span className='flex items-center gap-1.5 text-xs text-muted-foreground'>
+                        <Layers className='h-3 w-3' />
+                        {course._count.sections} sections
+                      </span>
+                    </div>
+                  </td>
+
+                  {/* ── Actions ── */}
+                  <td className='p-4 text-right'>
+                    <div className='flex items-center justify-end gap-1'>
+                      {/* Publish / Unpublish toggle */}
+                      {!isComingSoon && (
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          className={cn(
+                            'h-8 w-8 p-0',
+                            isPublished
+                              ? 'text-amber-400 hover:text-amber-500 hover:bg-amber-500/10'
+                              : 'text-emerald-400 hover:text-emerald-500 hover:bg-emerald-500/10',
+                          )}
+                          disabled={isToggling}
+                          onClick={() =>
+                            isPublished
+                              ? unpublishMutation.mutate(course.id)
+                              : publishMutation.mutate(course.id)
+                          }
+                          title={isPublished ? 'Move to Draft' : 'Publish'}
+                        >
+                          {isPublished ? (
+                            <EyeOff className='h-3.5 w-3.5' />
+                          ) : (
+                            <Globe className='h-3.5 w-3.5' />
+                          )}
+                        </Button>
+                      )}
+
+                      {/* Edit */}
+                      <Link to={ROUTES.COURSE_EDIT(course.id)}>
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          className='h-8 w-8 p-0 text-muted-foreground hover:text-foreground'
+                          title='Edit'
+                        >
+                          <Pencil className='h-3.5 w-3.5' />
+                        </Button>
+                      </Link>
+
+                      {/* View detail */}
+                      <Link to={ROUTES.COURSE_DETAIL(course.id)}>
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          className='h-8 w-8 p-0 text-muted-foreground hover:text-foreground'
+                          title='View'
+                        >
+                          <Eye className='h-3.5 w-3.5' />
+                        </Button>
+                      </Link>
+
+                      {/* Delete */}
+                      <DeleteConfirm
+                        courseName={course.title}
+                        isLoading={
+                          deleteMutation.isPending && deletingId === course.id
+                        }
+                        onConfirm={() => {
+                          setDeletingId(course.id);
+                          deleteMutation.mutate(course.id);
+                        }}
+                      />
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
+      {/* ── Pagination ── */}
       {meta && meta.totalPages > 1 && (
-        <div className="flex items-center justify-between border-t p-4">
-          <div className="text-sm text-muted-foreground">
-            Page {meta.page} of {meta.totalPages} ({meta.total} total)
-          </div>
-          <div className="flex gap-2">
+        <div className='flex items-center justify-between border-t px-4 py-3'>
+          <p className='text-xs text-muted-foreground'>
+            Showing{' '}
+            <span className='font-semibold text-foreground'>
+              {(page - 1) * meta.limit + 1}–
+              {Math.min(page * meta.limit, meta.total)}
+            </span>{' '}
+            of{' '}
+            <span className='font-semibold text-foreground'>{meta.total}</span>
+          </p>
+          <div className='flex items-center gap-1'>
             <Button
-              variant="outline"
-              size="sm"
+              variant='outline'
+              size='sm'
+              className='h-8 gap-1 px-3 text-xs'
               onClick={() => onPageChange(page - 1)}
               disabled={page === 1}
             >
-              <ChevronLeft className="h-4 w-4" />
-              Previous
+              <ChevronLeft className='h-3.5 w-3.5' />
+              Prev
             </Button>
+            <div className='flex h-8 min-w-[2rem] items-center justify-center rounded-md border border-primary/30 bg-primary/10 px-2 text-xs font-semibold text-primary'>
+              {page}
+            </div>
             <Button
-              variant="outline"
-              size="sm"
+              variant='outline'
+              size='sm'
+              className='h-8 gap-1 px-3 text-xs'
               onClick={() => onPageChange(page + 1)}
               disabled={page === meta.totalPages}
             >
               Next
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className='h-3.5 w-3.5' />
             </Button>
           </div>
         </div>
