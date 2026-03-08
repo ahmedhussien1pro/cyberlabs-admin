@@ -10,15 +10,16 @@ export default function AdminLayout() {
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar />
-      
+
       <div
         className={cn(
           'flex flex-1 flex-col transition-all duration-300',
-          sidebarCollapsed ? 'ml-20' : 'ml-64'
+          sidebarCollapsed
+            ? 'ltr:ml-20 rtl:mr-20'
+            : 'ltr:ml-64 rtl:mr-64'
         )}
       >
         <Header />
-        
         <main className="flex-1 overflow-y-auto p-6">
           <Outlet />
         </main>

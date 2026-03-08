@@ -9,6 +9,7 @@
     "users": "Users",
     "courses": "Courses",
     "labs": "Labs",
+    "paths": "Learning Paths",
     "analytics": "Analytics",
     "settings": "Settings",
     "logout": "Logout"
@@ -58,5 +59,9 @@
     "dark": "Dark",
     "system": "System"
   },
-  "admin": { "title": "CyberLabs Admin", "badge": "Admin" }
+  "admin": { "title": "CyberLabs Admin", "badge": "Admin" },
+  "adminPanel": "Admin Panel",
+  "adminSubtitle": "Manage your CyberLabs platform",
+  "profile": "Profile",
+  "logout": "Logout"
 }

@@ -44,7 +44,7 @@ export const LabEditPage = lazy(
   () => import('@/features/labs/pages/lab-edit.page'),
 );
 
-// Paths ← NEW
+// Paths
 export const PathsListPage = lazy(
   () => import('@/features/paths/pages/paths-list.page'),
 );

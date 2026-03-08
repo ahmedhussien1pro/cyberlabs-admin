@@ -9,6 +9,7 @@
     "users": "المستخدمون",
     "courses": "الكورسات",
     "labs": "المعامل",
+    "paths": "مسارات التعلم",
     "analytics": "التحليلات",
     "settings": "الإعدادات",
     "logout": "تسجيل الخروج"
@@ -58,5 +59,9 @@
     "dark": "داكن",
     "system": "النظام"
   },
-  "admin": { "title": "CyberLabs Admin", "badge": "مسؤول" }
+  "admin": { "title": "CyberLabs Admin", "badge": "مسؤول" },
+  "adminPanel": "لوحة الإدارة",
+  "adminSubtitle": "إدارة منصة CyberLabs",
+  "profile": "الملف الشخصي",
+  "logout": "تسجيل الخروج"
 }
