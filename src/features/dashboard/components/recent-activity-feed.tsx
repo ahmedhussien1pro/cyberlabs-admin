@@ -1,96 +1,83 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { UserPlus, BookOpen, FlaskConical } from 'lucide-react';
 import type { ActivityEvent } from '@/core/types';
-import { UserPlus, BookOpen, CheckCircle, Clock } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
 
 interface RecentActivityFeedProps {
-  data?: ActivityEvent[];
+  activities: ActivityEvent[];
 }
 
-export function RecentActivityFeed({ data }: RecentActivityFeedProps) {
-  if (!data) {
-    return (
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-32" />
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-64" />
-        </CardContent>
-      </Card>
-    );
-  }
+const TYPE_CONFIG = {
+  user_registered: {
+    icon: UserPlus,
+    color: 'text-blue-500',
+    label: 'New User',
+    variant: 'secondary' as const,
+  },
+  course_enrolled: {
+    icon: BookOpen,
+    color: 'text-green-500',
+    label: 'Enrollment',
+    variant: 'default' as const,
+  },
+  lab_completed: {
+    icon: FlaskConical,
+    color: 'text-purple-500',
+    label: 'Lab Done',
+    variant: 'outline' as const,
+  },
+};
 
-  const getEventIcon = (type: ActivityEvent['type']) => {
-    switch (type) {
-      case 'user_registered':
-        return <UserPlus className="h-4 w-4 text-blue-600" />;
-      case 'course_enrolled':
-        return <BookOpen className="h-4 w-4 text-green-600" />;
-      case 'lab_completed':
-        return <CheckCircle className="h-4 w-4 text-purple-600" />;
-    }
-  };
+function timeAgo(timestamp: string): string {
+  const diff = Date.now() - new Date(timestamp).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
 
-  const getEventText = (event: ActivityEvent) => {
-    switch (event.type) {
-      case 'user_registered':
-        return `${event.user.name} joined the platform`;
-      case 'course_enrolled':
-        return (
-          <>
-            {event.user.name} enrolled in <span className="font-medium">{event.course?.title}</span>
-          </>
-        );
-      case 'lab_completed':
-        return (
-          <>
-            {event.user.name} completed <span className="font-medium">{event.lab?.title}</span>
-          </>
-        );
-    }
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
+export function RecentActivityFeed({ activities }: RecentActivityFeedProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Clock className="h-5 w-5" />
-          Recent Activity
-        </CardTitle>
-        <CardDescription>Latest platform events</CardDescription>
+        <CardTitle>Recent Activity</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {data.slice(0, 10).map((event, idx) => (
-            <div key={idx} className="flex items-start gap-3">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="text-xs">
-                  {getInitials(event.user.name)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 space-y-1">
-                <div className="flex items-center gap-2">
-                  {getEventIcon(event.type)}
-                  <p className="text-sm">{getEventText(event)}</p>
+        <div className='space-y-3 max-h-80 overflow-y-auto'>
+          {activities.length === 0 && (
+            <p className='text-sm text-muted-foreground text-center py-4'>
+              No recent activity
+            </p>
+          )}
+          {activities.map((event, idx) => {
+            const config =
+              TYPE_CONFIG[event.type] ?? TYPE_CONFIG.user_registered;
+            const Icon = config.icon;
+            const target = event.course?.title ?? event.lab?.title ?? '—';
+
+            return (
+              <div key={idx} className='flex items-start gap-3'>
+                <Icon className={`h-4 w-4 mt-0.5 shrink-0 ${config.color}`} />
+                <div className='flex-1 min-w-0'>
+                  <p className='text-sm'>
+                    <span className='font-medium'>{event.user.name}</span>
+                    {event.type === 'user_registered' && ' registered'}
+                    {event.type === 'course_enrolled' &&
+                      ` enrolled in ${target}`}
+                    {event.type === 'lab_completed' && ` completed ${target}`}
+                  </p>
+                  <p className='text-xs text-muted-foreground'>
+                    {timeAgo(event.timestamp)}
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {formatDistanceToNow(new Date(event.timestamp), { addSuffix: true })}
-                </p>
+                <Badge variant={config.variant} className='text-xs shrink-0'>
+                  {config.label}
+                </Badge>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>

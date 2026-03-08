@@ -1,99 +1,67 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { EngagementMetrics } from '@/core/types';
-import { Activity, Users, TrendingUp, Clock } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Activity, Users, FlaskConical, Clock } from 'lucide-react';
+import type { EngagementMetrics as EngagementMetricsType } from '@/core/types';
 
 interface EngagementMetricsProps {
-  data?: EngagementMetrics;
+  data: EngagementMetricsType;
 }
 
 function formatDuration(seconds: number): string {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const remainingMin = minutes % 60;
+  return `${hours}h ${remainingMin}m`;
 }
 
 export function EngagementMetrics({ data }: EngagementMetricsProps) {
-  if (!data) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Engagement Metrics</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-64" />
-        </CardContent>
-      </Card>
-    );
-  }
-
   const metrics = [
     {
+      label: 'Active Users (30d)',
+      value: data.activeUsers.toLocaleString(),
       icon: Users,
-      label: 'Active Users',
-      value: data.activeUsers,
+      color: 'text-blue-500',
     },
     {
+      label: 'Lab Launches (30d)',
+      value: data.labLaunches.toLocaleString(),
+      icon: FlaskConical,
+      color: 'text-green-500',
+    },
+    {
+      label: 'Submissions (30d)',
+      value: data.submissions.toLocaleString(),
       icon: Activity,
-      label: 'Lab Launches',
-      value: data.labLaunches ?? 0,
+      color: 'text-purple-500',
     },
     {
-      icon: TrendingUp,
-      label: 'Completion Rate',
-      value: `${data.completionRate}%`,
-    },
-    {
-      icon: TrendingUp,
-      label: 'Submissions',
-      value: data.submissions ?? 0,
-    },
-    {
+      label: 'Avg Session Duration',
+      value: formatDuration(data.avgSessionDuration),
       icon: Clock,
-      label: 'Avg Time/Lab',
-      value: `${data.avgTimePerLab}min`,
-    },
-    {
-      icon: Clock,
-      label: 'Avg Session',
-      value: data.avgSessionDuration ? formatDuration(data.avgSessionDuration) : 'N/A',
+      color: 'text-orange-500',
     },
   ];
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Engagement Metrics</CardTitle>
+        <CardTitle>Engagement Metrics (Last 30 Days)</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-4 md:grid-cols-2">
-          {metrics.map((metric, idx) => (
-            <div key={idx} className="flex items-center gap-3">
-              <div className="rounded-full bg-primary/10 p-2">
-                <metric.icon className="h-4 w-4 text-primary" />
-              </div>
+        <div className='grid grid-cols-2 gap-4'>
+          {metrics.map(({ label, value, icon: Icon, color }) => (
+            <div
+              key={label}
+              className='flex items-start gap-3 p-3 rounded-lg bg-muted/50'>
+              <Icon className={`h-5 w-5 mt-0.5 ${color}`} />
               <div>
-                <p className="text-sm text-muted-foreground">{metric.label}</p>
-                <p className="text-lg font-semibold">{metric.value}</p>
+                <p className='text-xs text-muted-foreground'>{label}</p>
+                <p className='text-lg font-bold'>{value}</p>
               </div>
             </div>
           ))}
         </div>
-
-        {data.topCategories && data.topCategories.length > 0 && (
-          <div className="mt-6">
-            <h4 className="mb-3 text-sm font-medium">Top Categories</h4>
-            <div className="space-y-2">
-              {data.topCategories.slice(0, 5).map((cat, idx) => (
-                <div key={idx} className="flex items-center justify-between">
-                  <span className="text-sm">{cat.category}</span>
-                  <span className="text-sm font-semibold">{cat.count}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

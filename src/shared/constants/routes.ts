@@ -6,8 +6,10 @@ export const ROUTES = {
   COURSES: '/courses',
   COURSE_DETAIL: (id: string) => `/courses/${id}`,
   COURSE_CREATE: '/courses/new',
+  COURSE_EDIT: (id: string) => `/courses/${id}/edit`,
   LABS: '/labs',
   LAB_DETAIL: (id: string) => `/labs/${id}`,
   LAB_CREATE: '/labs/new',
+  LAB_EDIT: (id: string) => `/labs/${id}/edit`,
   UN_AUTHORIZED: '/401',
 } as const;

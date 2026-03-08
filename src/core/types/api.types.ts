@@ -1,53 +1,94 @@
-// User Types
-export type UserRole = 'USER' | 'ADMIN';
+// ─── User Types ───────────────────────────────────────────────────
+export type UserRole =
+  | 'USER'
+  | 'ADMIN'
+  | 'STUDENT'
+  | 'INSTRUCTOR'
+  | 'CONTENT_CREATOR';
 
 export interface User {
   id: string;
   email: string;
-  username: string;
   name?: string;
+  avatarUrl?: string;
   role: UserRole;
-  isSuspended: boolean;
+  internalRole?: string;
   isActive?: boolean;
+  isEmailVerified?: boolean;
+  twoFactorEnabled?: boolean;
   createdAt: string;
   updatedAt: string;
   lastLoginAt?: string;
+  failedLoginAttempts?: number;
+  lockedUntil?: string | null;
+  deletedAt?: string | null;
+  deletionReason?: string | null;
+  security?: {
+    isSuspended: boolean;
+    suspensionReason?: string | null;
+    suspendedAt?: string | null;
+    loginAttempts?: number;
+    lockedUntil?: string | null;
+  };
+  points?: { totalPoints: number; totalXP: number; level: number };
+  subscriptions?: Array<{
+    id: string;
+    status: string;
+    billingCycle: string;
+    currentPeriodEnd: string;
+    plan: { name: string; price: number };
+  }>;
   _count?: {
     enrollments: number;
     labProgress: number;
-    submissions?: number;
+    badges?: number;
+    achievements?: number;
   };
 }
 
 export interface UserListItem {
   id: string;
   email: string;
-  username: string;
   name?: string;
+  avatarUrl?: string;
   role: UserRole;
-  isSuspended: boolean;
+  internalRole?: string;
   isActive?: boolean;
+  isEmailVerified?: boolean;
   createdAt: string;
+  lastLoginAt?: string;
+  security?: {
+    isSuspended: boolean;
+    suspensionReason?: string | null;
+    suspendedAt?: string | null;
+  };
+  points?: { totalPoints: number; totalXP: number; level: number };
   _count: {
     enrollments: number;
     labProgress: number;
-    submissions?: number;
+    badges?: number;
   };
 }
 
+// ✅ Fixed: matches exact backend response shape
 export interface UserStats {
   total: number;
-  active: number;
-  activeToday?: number;
+  newThisMonth: number;
   suspended: number;
-  admins: number;
+  byRole: {
+    ADMIN: number;
+    USER: number;
+    STUDENT: number;
+    INSTRUCTOR: number;
+    CONTENT_CREATOR: number;
+  };
 }
 
 export interface UpdateUserRoleRequest {
   role: UserRole;
 }
 
-// Auth Types
+// ─── Auth Types ────────────────────────────────────────────────────
 export interface AuthResponse {
   user: User;
   accessToken: string;
@@ -62,73 +103,125 @@ export interface LoginRequest {
   password: string;
 }
 
-// Course Types
+// ─── Course Types ──────────────────────────────────────────────────
 export type Difficulty = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT';
+export type CourseState = 'PUBLISHED' | 'DRAFT' | 'COMING_SOON';
+export type CourseAccess = 'FREE' | 'PREMIUM';
 
 export interface Course {
   id: string;
   title: string;
   ar_title?: string;
-  slug?: string;
-  description: string;
+  slug: string;
+  description?: string;
+  ar_description?: string;
+  longDescription?: string;
+  ar_longDescription?: string;
   difficulty: Difficulty;
+  category?: string;
+  access?: CourseAccess;
+  contentType?: string;
+  color?: string;
+  state?: CourseState;
   isPublished: boolean;
+  isFeatured?: boolean;
+  isNew?: boolean;
+  price?: number;
+  duration?: string;
+  estimatedHours?: number;
+  thumbnail?: string;
+  backgroundImage?: string;
+  tags?: string[];
+  topics?: string[];
+  skills?: string[];
+  prerequisites?: string[];
   enrollmentCount?: number;
   averageRating?: number;
+  reviewCount?: number;
+  publishedAt?: string;
   createdAt: string;
   updatedAt: string;
+  instructor?: { id: string; name: string; email?: string; avatarUrl?: string };
   _count?: {
-    labs: number;
-    courseLabs?: number;
     enrollments: number;
+    sections: number;
+    lessons: number;
     reviews?: number;
   };
-  courseLabs?: Array<{
-    lab: any;
-  }>;
 }
 
 export interface CourseListItem {
   id: string;
   title: string;
-  slug?: string;
+  ar_title?: string;
+  slug: string;
+  thumbnail?: string;
   difficulty: Difficulty;
+  category?: string;
+  access?: CourseAccess;
+  state?: CourseState;
   isPublished: boolean;
+  isFeatured?: boolean;
+  isNew?: boolean;
+  price?: number;
   enrollmentCount?: number;
+  averageRating?: number;
+  reviewCount?: number;
   createdAt: string;
+  updatedAt: string;
+  instructor?: { id: string; name: string; avatarUrl?: string };
   _count: {
-    labs: number;
-    courseLabs?: number;
     enrollments: number;
+    sections: number;
+    lessons: number;
   };
 }
 
+// ✅ Fixed: matches exact backend response shape
 export interface CourseStats {
   total: number;
   published: number;
-  unpublished?: number;
-  draft: number;
-  totalEnrollments?: number;
-  byDifficulty: {
-    beginner: number;
-    intermediate: number;
-    advanced: number;
-    expert?: number;
+  unpublished: number;
+  featured: number;
+  byState: {
+    PUBLISHED: number;
+    DRAFT: number;
+    COMING_SOON: number;
   };
 }
 
 export interface CreateCourseRequest {
   title: string;
-  slug?: string;
-  description: string;
+  slug: string;
+  instructorId: string;
+  ar_title?: string;
+  description?: string;
+  ar_description?: string;
+  longDescription?: string;
+  ar_longDescription?: string;
   difficulty: Difficulty;
-  imageUrl?: string;
+  category?: string;
+  access?: CourseAccess;
+  contentType?: string;
+  color?: string;
+  state?: CourseState;
+  price?: number;
+  duration?: string;
+  estimatedHours?: number;
+  thumbnail?: string;
+  backgroundImage?: string;
+  tags?: string[];
+  topics?: string[];
+  skills?: string[];
+  prerequisites?: string[];
+  isNew?: boolean;
+  isFeatured?: boolean;
 }
 
 export interface UpdateCourseRequest extends Partial<CreateCourseRequest> {}
 
-// Lab Types
-export type Category =
+// ─── Lab Types ─────────────────────────────────────────────────────
+export type LabCategory =
   | 'WEB_SECURITY'
   | 'NETWORK_SECURITY'
   | 'CRYPTOGRAPHY'
@@ -138,11 +231,8 @@ export type Category =
   | 'OSINT'
   | 'MISC';
 
-export type LabCategory = Category;
-
 export type LabDifficulty = Difficulty;
-
-export type LabExecutionMode = 'BROWSER' | 'DOCKER' | 'STATIC';
+export type LabExecutionMode = 'FRONTEND' | 'SHARED_BACKEND' | 'DOCKER';
 
 export interface LabListItem {
   id: string;
@@ -151,79 +241,63 @@ export interface LabListItem {
   category: LabCategory;
   difficulty: LabDifficulty;
   executionMode: LabExecutionMode;
-  points: number;
+  points?: number;
   isPublished: boolean;
-  courseId: string | null;
   createdAt: string;
   _count: {
     submissions: number;
-    usersProgress: number;
-    hints: number;
+    usersProgress?: number;
+    hints?: number;
     instances?: number;
   };
 }
 
-export interface Lab extends Omit<LabListItem, '_count'> {
-  description: string;
+export interface Lab extends LabListItem {
   ar_title?: string;
+  description?: string;
   flagAnswer: string;
-  hints: string[];
-  resources: string[];
-  dockerImage: string | null;
-  staticFiles: string[];
+  solution?: string;
+  hints?: string[];
+  resources?: string[];
+  dockerImage?: string | null;
+  staticFiles?: string[];
   xpReward?: number;
   pointsReward?: number;
   duration?: number;
   maxAttempts?: number;
   timeLimit?: number;
   skills?: string[];
-  course: {
-    id: string;
-    title: string;
-  } | null;
   updatedAt: string;
-  _count: {
-    submissions: number;
-    usersProgress: number;
-    hints: number;
-    instances?: number;
-  };
 }
 
+// ✅ Fixed: matches exact backend response shape
 export interface LabStats {
   total: number;
   published: number;
-  draft: number;
-  totalCompletions?: number;
-  byCategory: Record<LabCategory, number>;
+  unpublished: number;
+  totalCompletions: number;
+  totalSubmissions: number;
   byDifficulty: {
-    beginner: number;
-    BEGINNER?: number;
-    intermediate: number;
-    advanced: number;
-    expert: number;
-  };
-  byExecutionMode: {
-    browser: number;
-    docker: number;
-    static: number;
+    BEGINNER: number;
+    INTERMEDIATE: number;
+    ADVANCED: number;
+    EXPERT: number;
   };
 }
 
 export interface CreateLabRequest {
   title: string;
   slug?: string;
-  description: string;
-  category: LabCategory;
-  difficulty: LabDifficulty;
-  executionMode: LabExecutionMode;
-  points: number;
-  flagAnswer: string;
+  description?: string;
+  category?: LabCategory;
+  difficulty?: LabDifficulty;
+  executionMode?: LabExecutionMode;
+  points?: number;
+  flagAnswer?: string;
   hints?: string[];
   resources?: string[];
   dockerImage?: string;
   staticFiles?: string[];
-  courseId?: string;
   xpReward?: number;
   pointsReward?: number;
   duration?: number;
@@ -233,115 +307,66 @@ export interface CreateLabRequest {
 
 export interface UpdateLabRequest extends Partial<CreateLabRequest> {}
 
-// Analytics Types
+// ─── Analytics Types ───────────────────────────────────────────────
+// ✅ Fixed: matches exact backend response shape
 export interface AnalyticsOverview {
   users: number;
   courses: number;
   labs: number;
+  enrollments: number;
   labCompletions: number;
-  usersChange?: number;
-  coursesChange?: number;
-  labsChange?: number;
-  completionsChange?: number;
+  totalXP: number;
+  totalPoints: number;
 }
 
-export interface GrowthData {
-  labels: string[];
-  users: number[];
-  courses: number[];
-  labs: number[];
+// ✅ Fixed: backend returns {month, count} not {date, month, count}
+export interface GrowthDataPoint {
+  month: string; // e.g. "2025-03"
+  count: number;
 }
 
 export interface GrowthTrends {
-  users: Array<{ date: string; month: string; count: number }>;
-  courses: Array<{ date: string; month: string; count: number }>;
-  enrollments: Array<{ date: string; month: string; count: number }>;
+  users: GrowthDataPoint[];
+  enrollments: GrowthDataPoint[];
 }
 
+// ✅ Fixed: matches exact backend response shape
 export interface EngagementMetrics {
-  avgTimePerLab: number;
-  completionRate: number;
   activeUsers: number;
-  labLaunches?: number;
-  submissions?: number;
-  avgSessionDuration?: number;
-  topCategories: Array<{
-    category: string;
-    count: number;
-  }>;
-}
-
-export interface TopContentItem {
-  id: string;
-  title: string;
-  type: 'course' | 'lab';
-  views: number;
-  completions: number;
+  labLaunches: number;
+  submissions: number;
+  avgSessionDuration: number; // in seconds
 }
 
 export interface TopContent {
   courses: Array<{
     id: string;
     title: string;
-    difficulty?: Difficulty;
-    enrollments: number;
-    enrollmentCount?: number;
-    completions: number;
+    slug: string;
+    enrollmentCount: number;
+    averageRating: number;
+    difficulty: Difficulty;
   }>;
   labs: Array<{
     id: string;
     title: string;
-    difficulty?: Difficulty;
-    attempts: number;
+    slug: string;
+    difficulty: LabDifficulty;
+    category: LabCategory;
     completions: number;
   }>;
 }
 
-export interface RecentActivityItem {
-  id: string;
-  type: 'enrollment' | 'completion' | 'submission';
-  user: {
-    id: string;
-    username: string;
-  };
-  target: {
-    id: string;
-    title: string;
-    type: 'course' | 'lab';
-  };
-  timestamp: string;
-}
-
+// ✅ Fixed: matches exact backend response shape (no top-level id, no target)
 export interface ActivityEvent {
-  id: string;
-  type: 'enrollment' | 'completion' | 'submission' | 'lab_start' | 'user_registered' | 'course_enrolled' | 'lab_completed';
-  user: {
-    id: string;
-    name: string;
-  };
-  target: {
-    id: string;
-    title: string;
-    type: 'course' | 'lab';
-  };
-  course?: {
-    id: string;
-    title: string;
-  };
-  lab?: {
-    id: string;
-    title: string;
-  };
+  type: 'user_registered' | 'course_enrolled' | 'lab_completed';
   timestamp: string;
+  user: { id: string; name: string };
+  course?: { id: string; title: string; slug?: string };
+  lab?: { id: string; title: string; slug?: string };
 }
 
-// Pagination
-export interface PaginationParams {
-  page?: number;
-  limit?: number;
-  search?: string;
-}
-
+// ─── Pagination ────────────────────────────────────────────────────
 export interface PaginationMeta {
   page: number;
   limit: number;
@@ -351,6 +376,5 @@ export interface PaginationMeta {
 
 export interface PaginatedResponse<T> {
   data: T[];
-  meta?: PaginationMeta;
-  pagination?: PaginationMeta;
+  meta: PaginationMeta;
 }

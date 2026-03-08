@@ -8,20 +8,24 @@ import {
 import { StatsCard } from '../components/stats-card';
 import { GrowthChart } from '../components/growth-chart';
 import { EngagementMetrics } from '../components/engagement-metrics';
+import { RecentActivityFeed } from '../components/recent-activity-feed';
+import { TopContentTable } from '../components/top-content-table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import {
   AlertCircle,
   Users,
   BookOpen,
   FlaskConical,
+  UserPlus,
   TrendingUp,
-  Activity,
+  GraduationCap,
+  Trophy,
 } from 'lucide-react';
 
 export default function DashboardPage() {
-  // Fetch all stats
   const {
     data: overview,
     isLoading: overviewLoading,
@@ -29,45 +33,54 @@ export default function DashboardPage() {
   } = useQuery({
     queryKey: ['analytics', 'overview'],
     queryFn: analyticsService.getOverview,
-    retry: 0,
+    retry: 1,
   });
 
   const { data: usersStats, isLoading: usersLoading } = useQuery({
     queryKey: ['users', 'stats'],
     queryFn: usersService.getStats,
-    retry: 0,
+    retry: 1,
   });
 
   const { data: coursesStats, isLoading: coursesLoading } = useQuery({
     queryKey: ['courses', 'stats'],
     queryFn: coursesService.getStats,
-    retry: 0,
+    retry: 1,
   });
 
   const { data: labsStats, isLoading: labsLoading } = useQuery({
     queryKey: ['labs', 'stats'],
     queryFn: labsService.getStats,
-    retry: 0,
+    retry: 1,
   });
 
   const { data: growth } = useQuery({
     queryKey: ['analytics', 'growth'],
     queryFn: analyticsService.getGrowth,
-    retry: 0,
+    retry: 1,
   });
 
   const { data: engagement } = useQuery({
     queryKey: ['analytics', 'engagement'],
     queryFn: analyticsService.getEngagement,
-    retry: 0,
+    retry: 1,
   });
 
-  // Check if we have ANY data
-  const hasAnyData = usersStats || coursesStats || labsStats || overview;
+  const { data: topContent } = useQuery({
+    queryKey: ['analytics', 'top-content'],
+    queryFn: analyticsService.getTopContent,
+    retry: 1,
+  });
+
+  const { data: recentActivity } = useQuery({
+    queryKey: ['analytics', 'recent-activity'],
+    queryFn: analyticsService.getRecentActivity,
+    retry: 1,
+  });
+
   const isStillLoading =
     overviewLoading || usersLoading || coursesLoading || labsLoading;
-
-  // Show info message if analytics APIs are not available
+  const hasAnyData = overview || usersStats || coursesStats || labsStats;
   const showAnalyticsWarning = overviewError && !isStillLoading;
 
   return (
@@ -76,35 +89,30 @@ export default function DashboardPage() {
       <div>
         <h1 className='text-3xl font-bold tracking-tight'>Dashboard</h1>
         <p className='text-muted-foreground'>
-          Overview of your CyberLabs platform
+          CyberLabs platform overview — real-time stats
         </p>
       </div>
 
       {/* Analytics Warning */}
       {showAnalyticsWarning && (
-        <Alert>
+        <Alert variant='destructive'>
           <AlertCircle className='h-4 w-4' />
           <AlertDescription>
-            Analytics endpoints are currently unavailable. Showing basic stats
-            only.
-            <br />
-            <span className='text-xs mt-1 block opacity-75'>
-              Contact backend team to enable analytics endpoints for full
-              dashboard features.
-            </span>
+            Analytics endpoints are unavailable. Check that the backend is
+            running and your JWT token is valid.
           </AlertDescription>
         </Alert>
       )}
 
-      {/* Stats Cards */}
+      {/* Primary KPI Cards */}
       <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
         {usersLoading ? (
           <Skeleton className='h-32' />
         ) : (
           <StatsCard
             title='Total Users'
-            value={usersStats?.total ?? 0}
-            change={overview?.usersChange}
+            value={usersStats?.total ?? overview?.users ?? 0}
+            subtitle={`+${usersStats?.newThisMonth ?? 0} this month`}
             icon={Users}
           />
         )}
@@ -113,9 +121,9 @@ export default function DashboardPage() {
           <Skeleton className='h-32' />
         ) : (
           <StatsCard
-            title='Total Courses'
-            value={coursesStats?.total ?? 0}
-            change={overview?.coursesChange}
+            title='Courses'
+            value={coursesStats?.total ?? overview?.courses ?? 0}
+            subtitle={`${coursesStats?.published ?? 0} published`}
             icon={BookOpen}
           />
         )}
@@ -124,56 +132,59 @@ export default function DashboardPage() {
           <Skeleton className='h-32' />
         ) : (
           <StatsCard
-            title='Total Labs'
-            value={labsStats?.total ?? 0}
-            change={overview?.labsChange}
+            title='Labs'
+            value={labsStats?.total ?? overview?.labs ?? 0}
+            subtitle={`${labsStats?.published ?? 0} published`}
             icon={FlaskConical}
           />
         )}
 
-        {usersLoading ? (
+        {overviewLoading ? (
           <Skeleton className='h-32' />
         ) : (
           <StatsCard
-            title='Active Users'
-            value={usersStats?.active ?? 0}
-            icon={Activity}
+            title='Total Enrollments'
+            value={overview?.enrollments ?? 0}
+            subtitle={`${overview?.labCompletions ?? 0} lab completions`}
+            icon={GraduationCap}
           />
         )}
       </div>
 
-      {/* Detailed Stats Grid */}
+      {/* Secondary Stats Row */}
       <div className='grid gap-4 md:grid-cols-3'>
         {/* Users Breakdown */}
         {usersStats && (
           <Card>
-            <CardHeader>
-              <CardTitle className='text-base'>Users Breakdown</CardTitle>
+            <CardHeader className='pb-3'>
+              <CardTitle className='text-base flex items-center gap-2'>
+                <Users className='h-4 w-4' />
+                Users Breakdown
+              </CardTitle>
             </CardHeader>
-            <CardContent className='space-y-3'>
+            <CardContent className='space-y-2'>
               <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>
-                  Total Users
-                </span>
+                <span className='text-sm text-muted-foreground'>Total</span>
                 <span className='font-semibold'>{usersStats.total}</span>
               </div>
               <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>Active</span>
-                <span className='font-semibold text-green-600'>
-                  {usersStats.active}
+                <span className='text-sm text-muted-foreground'>
+                  New This Month
                 </span>
+                <Badge variant='secondary'>{usersStats.newThisMonth}</Badge>
               </div>
               <div className='flex items-center justify-between'>
                 <span className='text-sm text-muted-foreground'>Suspended</span>
-                <span className='font-semibold text-red-600'>
-                  {usersStats.suspended}
-                </span>
+                <Badge variant='destructive'>{usersStats.suspended}</Badge>
               </div>
-              <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>Admins</span>
-                <span className='font-semibold text-blue-600'>
-                  {usersStats.admins}
-                </span>
+              <div className='pt-2 border-t space-y-1'>
+                <p className='text-xs text-muted-foreground mb-1'>By Role</p>
+                {Object.entries(usersStats.byRole).map(([role, count]) => (
+                  <div key={role} className='flex justify-between text-xs'>
+                    <span className='capitalize'>{role.replace('_', ' ')}</span>
+                    <span className='font-medium'>{count}</span>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -182,46 +193,43 @@ export default function DashboardPage() {
         {/* Courses Breakdown */}
         {coursesStats && (
           <Card>
-            <CardHeader>
-              <CardTitle className='text-base'>Courses Breakdown</CardTitle>
+            <CardHeader className='pb-3'>
+              <CardTitle className='text-base flex items-center gap-2'>
+                <BookOpen className='h-4 w-4' />
+                Courses Breakdown
+              </CardTitle>
             </CardHeader>
-            <CardContent className='space-y-3'>
+            <CardContent className='space-y-2'>
               <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>
-                  Total Courses
-                </span>
+                <span className='text-sm text-muted-foreground'>Total</span>
                 <span className='font-semibold'>{coursesStats.total}</span>
               </div>
               <div className='flex items-center justify-between'>
                 <span className='text-sm text-muted-foreground'>Published</span>
-                <span className='font-semibold text-green-600'>
+                <Badge className='bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'>
                   {coursesStats.published}
-                </span>
+                </Badge>
               </div>
               <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>Draft</span>
-                <span className='font-semibold text-orange-600'>
-                  {coursesStats.draft}
+                <span className='text-sm text-muted-foreground'>
+                  Unpublished
                 </span>
+                <Badge variant='outline'>{coursesStats.unpublished}</Badge>
               </div>
-              <div className='pt-2 border-t'>
-                <p className='text-xs text-muted-foreground mb-2'>
-                  By Difficulty
-                </p>
-                <div className='space-y-1'>
-                  <div className='flex justify-between text-xs'>
-                    <span>Beginner</span>
-                    <span>{coursesStats.byDifficulty.beginner}</span>
+              <div className='flex items-center justify-between'>
+                <span className='text-sm text-muted-foreground'>Featured</span>
+                <Badge variant='secondary'>{coursesStats.featured}</Badge>
+              </div>
+              <div className='pt-2 border-t space-y-1'>
+                <p className='text-xs text-muted-foreground mb-1'>By State</p>
+                {Object.entries(coursesStats.byState).map(([state, count]) => (
+                  <div key={state} className='flex justify-between text-xs'>
+                    <span className='capitalize'>
+                      {state.replace('_', ' ')}
+                    </span>
+                    <span className='font-medium'>{count}</span>
                   </div>
-                  <div className='flex justify-between text-xs'>
-                    <span>Intermediate</span>
-                    <span>{coursesStats.byDifficulty.intermediate}</span>
-                  </div>
-                  <div className='flex justify-between text-xs'>
-                    <span>Advanced</span>
-                    <span>{coursesStats.byDifficulty.advanced}</span>
-                  </div>
-                </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -230,53 +238,84 @@ export default function DashboardPage() {
         {/* Labs Breakdown */}
         {labsStats && (
           <Card>
-            <CardHeader>
-              <CardTitle className='text-base'>Labs Breakdown</CardTitle>
+            <CardHeader className='pb-3'>
+              <CardTitle className='text-base flex items-center gap-2'>
+                <FlaskConical className='h-4 w-4' />
+                Labs Breakdown
+              </CardTitle>
             </CardHeader>
-            <CardContent className='space-y-3'>
+            <CardContent className='space-y-2'>
               <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>
-                  Total Labs
-                </span>
+                <span className='text-sm text-muted-foreground'>Total</span>
                 <span className='font-semibold'>{labsStats.total}</span>
               </div>
               <div className='flex items-center justify-between'>
                 <span className='text-sm text-muted-foreground'>Published</span>
-                <span className='font-semibold text-green-600'>
+                <Badge className='bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'>
                   {labsStats.published}
-                </span>
+                </Badge>
               </div>
               <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>Draft</span>
-                <span className='font-semibold text-orange-600'>
-                  {labsStats.draft}
+                <span className='text-sm text-muted-foreground'>
+                  Unpublished
                 </span>
+                <Badge variant='outline'>{labsStats.unpublished}</Badge>
               </div>
-              <div className='pt-2 border-t'>
-                <p className='text-xs text-muted-foreground mb-2'>
-                  By Execution Mode
+              <div className='flex items-center justify-between'>
+                <span className='text-sm text-muted-foreground'>
+                  Completions
+                </span>
+                <Badge variant='secondary'>{labsStats.totalCompletions}</Badge>
+              </div>
+              <div className='pt-2 border-t space-y-1'>
+                <p className='text-xs text-muted-foreground mb-1'>
+                  By Difficulty
                 </p>
-                <div className='space-y-1'>
-                  <div className='flex justify-between text-xs'>
-                    <span>Browser</span>
-                    <span>{labsStats.byExecutionMode.browser}</span>
+                {Object.entries(labsStats.byDifficulty).map(([diff, count]) => (
+                  <div key={diff} className='flex justify-between text-xs'>
+                    <span className='capitalize'>{diff}</span>
+                    <span className='font-medium'>{count}</span>
                   </div>
-                  <div className='flex justify-between text-xs'>
-                    <span>Docker</span>
-                    <span>{labsStats.byExecutionMode.docker}</span>
-                  </div>
-                  <div className='flex justify-between text-xs'>
-                    <span>Static</span>
-                    <span>{labsStats.byExecutionMode.static}</span>
-                  </div>
-                </div>
+                ))}
               </div>
             </CardContent>
           </Card>
         )}
       </div>
 
-      {/* Charts - Only show if data is available */}
+      {/* XP / Points Banner */}
+      {overview && (
+        <div className='grid gap-4 md:grid-cols-2'>
+          <Card>
+            <CardContent className='flex items-center gap-4 pt-6'>
+              <Trophy className='h-8 w-8 text-yellow-500' />
+              <div>
+                <p className='text-sm text-muted-foreground'>
+                  Total XP Awarded
+                </p>
+                <p className='text-2xl font-bold'>
+                  {overview.totalXP.toLocaleString()}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className='flex items-center gap-4 pt-6'>
+              <UserPlus className='h-8 w-8 text-blue-500' />
+              <div>
+                <p className='text-sm text-muted-foreground'>
+                  Total Points Awarded
+                </p>
+                <p className='text-2xl font-bold'>
+                  {overview.totalPoints.toLocaleString()}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Charts */}
       {(growth || engagement) && (
         <div className='grid gap-6 md:grid-cols-2'>
           {growth && <GrowthChart data={growth} />}
@@ -284,17 +323,23 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Top Content + Activity */}
+      {(topContent || recentActivity) && (
+        <div className='grid gap-6 lg:grid-cols-2'>
+          {topContent && <TopContentTable data={topContent} />}
+          {recentActivity && <RecentActivityFeed activities={recentActivity} />}
+        </div>
+      )}
+
       {/* Empty State */}
       {!hasAnyData && !isStillLoading && (
         <Card>
-          <CardContent className='flex flex-col items-center justify-center py-12'>
+          <CardContent className='flex flex-col items-center justify-center py-16'>
             <TrendingUp className='h-12 w-12 text-muted-foreground mb-4' />
             <h3 className='text-lg font-semibold mb-2'>No Data Available</h3>
             <p className='text-sm text-muted-foreground text-center max-w-md'>
               The dashboard will populate automatically once you have users,
-              courses, and labs in your system.
-              <br />
-              Start by creating your first course or lab!
+              courses, and labs. Start by creating your first course or lab!
             </p>
           </CardContent>
         </Card>

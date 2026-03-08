@@ -65,6 +65,14 @@ export const routes: RouteObject[] = [
         path: 'labs/:id',
         element: <LazyPage Component={Pages.LabDetailPage} />,
       },
+      {
+        path: 'courses/:id/edit',
+        element: <LazyPage Component={Pages.CourseEditPage} />,
+      },
+      {
+        path: 'labs/:id/edit',
+        element: <LazyPage Component={Pages.LabEditPage} />,
+      },
     ],
   },
 ];
