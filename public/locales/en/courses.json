@@ -1,0 +1,89 @@
+{
+  "title": "Courses",
+  "subtitle": "Manage platform courses",
+  "stats": {
+    "total": "Total Courses",
+    "published": "Published",
+    "unpublished": "Unpublished",
+    "featured": "Featured"
+  },
+  "table": {
+    "title": "Title",
+    "instructor": "Instructor",
+    "difficulty": "Difficulty",
+    "access": "Access",
+    "status": "Status",
+    "enrollments": "Enrollments",
+    "rating": "Rating",
+    "createdAt": "Created At",
+    "actions": "Actions"
+  },
+  "filters": {
+    "allDifficulties": "All Difficulties",
+    "allAccess": "All Access Types",
+    "allStatuses": "All Statuses",
+    "searchPlaceholder": "Search courses..."
+  },
+  "difficulty": {
+    "BEGINNER": "Beginner",
+    "INTERMEDIATE": "Intermediate",
+    "ADVANCED": "Advanced",
+    "EXPERT": "Expert"
+  },
+  "access": { "FREE": "Free", "PRO": "Pro", "PREMIUM": "Premium" },
+  "state": {
+    "PUBLISHED": "Published",
+    "DRAFT": "Draft",
+    "COMING_SOON": "Coming Soon"
+  },
+  "form": {
+    "createTitle": "Create Course",
+    "editTitle": "Edit Course",
+    "basicInfo": "Basic Information",
+    "classification": "Classification",
+    "media": "Media",
+    "metrics": "Metrics",
+    "flags": "Flags",
+    "arabicContent": "Arabic Content",
+    "instructor": "Instructor",
+    "title": "Title",
+    "slug": "Slug",
+    "description": "Short Description",
+    "longDescription": "Long Description",
+    "category": "Category",
+    "color": "Card Color",
+    "state": "State",
+    "thumbnailUrl": "Thumbnail URL",
+    "backgroundImageUrl": "Background Image URL",
+    "price": "Price ($)",
+    "duration": "Duration (hours)",
+    "estimatedHours": "Estimated Hours",
+    "tags": "Tags",
+    "skills": "Skills",
+    "topics": "Topics",
+    "prerequisites": "Prerequisites",
+    "featured": "Featured Course",
+    "featuredDesc": "Show in featured section",
+    "isNew": "Mark as New",
+    "isNewDesc": "Show \"New\" badge on card",
+    "selectInstructor": "Select instructor...",
+    "createCourse": "Create Course",
+    "saveChanges": "Save Changes"
+  },
+  "actions": {
+    "create": "Create Course",
+    "edit": "Edit",
+    "delete": "Delete",
+    "publish": "Publish",
+    "unpublish": "Unpublish",
+    "viewDetail": "View Detail"
+  },
+  "dialogs": {
+    "deleteTitle": "Delete Course",
+    "deleteDesc": "Are you sure you want to delete \"{{title}}\"? This cannot be undone.",
+    "publishTitle": "Publish Course",
+    "publishDesc": "Publish \"{{title}}\"?",
+    "unpublishTitle": "Unpublish Course",
+    "unpublishDesc": "Unpublish \"{{title}}\"?"
+  }
+}

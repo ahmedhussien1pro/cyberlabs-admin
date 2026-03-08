@@ -1,0 +1,27 @@
+{
+  "title": "لوحة التحكم",
+  "subtitle": "نظرة عامة على المنصة",
+  "stats": {
+    "totalUsers": "إجمالي المستخدمين",
+    "totalCourses": "إجمالي الكورسات",
+    "totalLabs": "إجمالي المعامل",
+    "newThisMonth": "جدد هذا الشهر",
+    "activeUsers": "المستخدمون النشطون",
+    "publishedCourses": "الكورسات المنشورة",
+    "publishedLabs": "المعامل المنشورة",
+    "totalEnrollments": "إجمالي التسجيلات"
+  },
+  "sections": {
+    "recentActivity": "النشاط الأخير",
+    "topCourses": "أفضل الكورسات",
+    "topLabs": "أفضل المعامل",
+    "userGrowth": "نمو المستخدمين",
+    "enrollmentTrends": "اتجاهات التسجيل"
+  },
+  "activity": {
+    "userRegistered": "{{name}} سجّل حسابًا",
+    "courseEnrolled": "{{name}} التحق بـ {{course}}",
+    "labCompleted": "{{name}} أكمل {{lab}}",
+    "noActivity": "لا يوجد نشاط حديث"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "generic": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+  "network": "خطأ في الشبكة. يرجى التحقق من الاتصال.",
+  "unauthorized": "غير مصرح لك بتنفيذ هذا الإجراء.",
+  "forbidden": "تم رفض الوصول.",
+  "notFound": "المورد المطلوب غير موجود.",
+  "serverError": "خطأ في الخادم. يرجى المحاولة لاحقاً.",
+  "validation": "يرجى التحقق من الأخطاء في النموذج.",
+  "api": {
+    "createFailed": "فشل إنشاء {{resource}}.",
+    "updateFailed": "فشل تحديث {{resource}}.",
+    "deleteFailed": "فشل حذف {{resource}}.",
+    "fetchFailed": "فشل تحميل {{resource}}.",
+    "publishFailed": "فشل نشر {{resource}}.",
+    "unpublishFailed": "فشل إلغاء نشر {{resource}}."
+  }
+}

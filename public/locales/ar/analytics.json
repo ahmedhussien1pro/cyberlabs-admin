@@ -1,0 +1,30 @@
+{
+  "title": "التحليلات",
+  "subtitle": "رؤى حول أداء المنصة",
+  "sections": {
+    "overview": "نظرة عامة",
+    "growth": "اتجاهات النمو",
+    "engagement": "التفاعل",
+    "topContent": "أفضل المحتوى"
+  },
+  "metrics": {
+    "users": "المستخدمون",
+    "courses": "الكورسات",
+    "labs": "المعامل",
+    "enrollments": "التسجيلات",
+    "labCompletions": "إكمالات المعامل",
+    "totalXP": "إجمالي XP",
+    "totalPoints": "إجمالي النقاط",
+    "activeUsers": "المستخدمون النشطون",
+    "labLaunches": "تشغيلات المعامل",
+    "submissions": "التسليمات",
+    "avgSessionDuration": "متوسط مدة الجلسة"
+  },
+  "charts": {
+    "userGrowth": "نمو المستخدمين",
+    "enrollmentTrends": "اتجاهات التسجيل",
+    "noData": "لا توجد بيانات",
+    "month": "الشهر",
+    "count": "العدد"
+  }
+}

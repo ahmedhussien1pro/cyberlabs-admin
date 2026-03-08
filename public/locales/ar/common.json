@@ -1,0 +1,62 @@
+{
+  "language": {
+    "change": "تغيير اللغة",
+    "english": "English",
+    "arabic": "العربية"
+  },
+  "nav": {
+    "dashboard": "لوحة التحكم",
+    "users": "المستخدمون",
+    "courses": "الكورسات",
+    "labs": "المعامل",
+    "analytics": "التحليلات",
+    "settings": "الإعدادات",
+    "logout": "تسجيل الخروج"
+  },
+  "actions": {
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "create": "إنشاء",
+    "update": "تحديث",
+    "publish": "نشر",
+    "unpublish": "إلغاء النشر",
+    "view": "عرض",
+    "search": "بحث",
+    "filter": "تصفية",
+    "reset": "إعادة تعيين",
+    "confirm": "تأكيد",
+    "back": "رجوع",
+    "close": "إغلاق",
+    "loading": "جارٍ التحميل..."
+  },
+  "status": {
+    "active": "نشط",
+    "inactive": "غير نشط",
+    "suspended": "موقوف",
+    "published": "منشور",
+    "draft": "مسودة",
+    "comingSoon": "قريباً",
+    "free": "مجاني",
+    "premium": "مميز",
+    "pro": "برو"
+  },
+  "table": {
+    "noResults": "لا توجد نتائج",
+    "loading": "جارٍ تحميل البيانات...",
+    "total": "الإجمالي",
+    "page": "صفحة",
+    "of": "من",
+    "rowsPerPage": "صفوف لكل صفحة",
+    "previous": "السابق",
+    "next": "التالي"
+  },
+  "theme": {
+    "toggle": "تبديل المظهر",
+    "light": "فاتح",
+    "dark": "داكن",
+    "system": "النظام"
+  },
+  "admin": { "title": "CyberLabs Admin", "badge": "مسؤول" }
+}

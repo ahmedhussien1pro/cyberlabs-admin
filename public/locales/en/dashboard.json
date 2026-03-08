@@ -1,0 +1,27 @@
+{
+  "title": "Dashboard",
+  "subtitle": "Platform overview",
+  "stats": {
+    "totalUsers": "Total Users",
+    "totalCourses": "Total Courses",
+    "totalLabs": "Total Labs",
+    "newThisMonth": "New This Month",
+    "activeUsers": "Active Users",
+    "publishedCourses": "Published Courses",
+    "publishedLabs": "Published Labs",
+    "totalEnrollments": "Total Enrollments"
+  },
+  "sections": {
+    "recentActivity": "Recent Activity",
+    "topCourses": "Top Courses",
+    "topLabs": "Top Labs",
+    "userGrowth": "User Growth",
+    "enrollmentTrends": "Enrollment Trends"
+  },
+  "activity": {
+    "userRegistered": "{{name}} registered",
+    "courseEnrolled": "{{name}} enrolled in {{course}}",
+    "labCompleted": "{{name}} completed {{lab}}",
+    "noActivity": "No recent activity"
+  }
+}

@@ -9,14 +9,12 @@
     --main-color: #0d6efd;
     --main-color2: #0b5ed7;
     --main-color3: #0a58ca;
-    --main-color4: #084fb9ff;
     --primary-text: #ffffff;
     --secondary-text: #c4c2c2;
     --white-color: #ffffff;
     --border-color: #1e1e1e;
     --link-color: #1db6cd;
     --highlight-color: #1db6cd66;
-    --hover-main-color: #0a54c3;
     --main-transition: all 0.3s ease;
 
     --background: 240 10% 6%;
@@ -45,13 +43,10 @@
     --primary-bg: #ffffff;
     --secondary-bg: #f8f9fa;
     --main-color: #0d6efd;
-    --main-color2: #0b5ed7;
-    --main-color3: #0a58ca;
     --primary-text: #212529;
     --secondary-text: #6c757d;
     --white-color: #ffffff;
     --border-color: #dee2e6;
-    --link-color: #0d6eefd;
 
     --background: 0 0% 100%;
     --foreground: 240 10% 4%;
@@ -80,11 +75,10 @@
     @apply border-border;
   }
   body {
-    @apply bg-[var(--primary-bg)] text-[var(--primary-text)];
+    @apply bg-background text-foreground;
     font-family:
       -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-      sans-serif;
+      'Ubuntu', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }

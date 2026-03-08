@@ -1,0 +1,85 @@
+{
+  "title": "الكورسات",
+  "subtitle": "إدارة كورسات المنصة",
+  "stats": {
+    "total": "إجمالي الكورسات",
+    "published": "المنشورة",
+    "unpublished": "غير المنشورة",
+    "featured": "المميزة"
+  },
+  "table": {
+    "title": "العنوان",
+    "instructor": "المدرب",
+    "difficulty": "المستوى",
+    "access": "نوع الوصول",
+    "status": "الحالة",
+    "enrollments": "التسجيلات",
+    "rating": "التقييم",
+    "createdAt": "تاريخ الإنشاء",
+    "actions": "الإجراءات"
+  },
+  "filters": {
+    "allDifficulties": "كل المستويات",
+    "allAccess": "كل أنواع الوصول",
+    "allStatuses": "كل الحالات",
+    "searchPlaceholder": "البحث في الكورسات..."
+  },
+  "difficulty": {
+    "BEGINNER": "مبتدئ",
+    "INTERMEDIATE": "متوسط",
+    "ADVANCED": "متقدم",
+    "EXPERT": "خبير"
+  },
+  "access": { "FREE": "مجاني", "PRO": "برو", "PREMIUM": "مميز" },
+  "state": { "PUBLISHED": "منشور", "DRAFT": "مسودة", "COMING_SOON": "قريباً" },
+  "form": {
+    "createTitle": "إنشاء كورس",
+    "editTitle": "تعديل الكورس",
+    "basicInfo": "المعلومات الأساسية",
+    "classification": "التصنيف",
+    "media": "الوسائط",
+    "metrics": "المقاييس",
+    "flags": "الخيارات",
+    "arabicContent": "المحتوى العربي",
+    "instructor": "المدرب",
+    "title": "العنوان",
+    "slug": "الرابط المختصر",
+    "description": "الوصف المختصر",
+    "longDescription": "الوصف التفصيلي",
+    "category": "الفئة",
+    "color": "لون البطاقة",
+    "state": "الحالة",
+    "thumbnailUrl": "رابط الصورة المصغرة",
+    "backgroundImageUrl": "رابط صورة الخلفية",
+    "price": "السعر ($)",
+    "duration": "المدة (ساعات)",
+    "estimatedHours": "الساعات التقديرية",
+    "tags": "الوسوم",
+    "skills": "المهارات",
+    "topics": "المواضيع",
+    "prerequisites": "المتطلبات السابقة",
+    "featured": "كورس مميز",
+    "featuredDesc": "عرضه في قسم المميزات",
+    "isNew": "وضع علامة جديد",
+    "isNewDesc": "عرض شارة جديد على البطاقة",
+    "selectInstructor": "اختر المدرب...",
+    "createCourse": "إنشاء الكورس",
+    "saveChanges": "حفظ التغييرات"
+  },
+  "actions": {
+    "create": "إنشاء كورس",
+    "edit": "تعديل",
+    "delete": "حذف",
+    "publish": "نشر",
+    "unpublish": "إلغاء النشر",
+    "viewDetail": "عرض التفاصيل"
+  },
+  "dialogs": {
+    "deleteTitle": "حذف الكورس",
+    "deleteDesc": "هل أنت متأكد من حذف \"{{title}}\"؟ لا يمكن التراجع.",
+    "publishTitle": "نشر الكورس",
+    "publishDesc": "هل تريد نشر \"{{title}}\"؟",
+    "unpublishTitle": "إلغاء النشر",
+    "unpublishDesc": "هل تريد إلغاء نشر \"{{title}}\"؟"
+  }
+}

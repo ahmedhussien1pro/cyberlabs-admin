@@ -1,0 +1,30 @@
+{
+  "title": "Analytics",
+  "subtitle": "Platform performance insights",
+  "sections": {
+    "overview": "Overview",
+    "growth": "Growth Trends",
+    "engagement": "Engagement",
+    "topContent": "Top Content"
+  },
+  "metrics": {
+    "users": "Users",
+    "courses": "Courses",
+    "labs": "Labs",
+    "enrollments": "Enrollments",
+    "labCompletions": "Lab Completions",
+    "totalXP": "Total XP",
+    "totalPoints": "Total Points",
+    "activeUsers": "Active Users",
+    "labLaunches": "Lab Launches",
+    "submissions": "Submissions",
+    "avgSessionDuration": "Avg. Session Duration"
+  },
+  "charts": {
+    "userGrowth": "User Growth",
+    "enrollmentTrends": "Enrollment Trends",
+    "noData": "No data available",
+    "month": "Month",
+    "count": "Count"
+  }
+}

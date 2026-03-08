@@ -1,0 +1,62 @@
+{
+  "language": {
+    "change": "Change language",
+    "english": "English",
+    "arabic": "العربية"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "users": "Users",
+    "courses": "Courses",
+    "labs": "Labs",
+    "analytics": "Analytics",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "update": "Update",
+    "publish": "Publish",
+    "unpublish": "Unpublish",
+    "view": "View",
+    "search": "Search",
+    "filter": "Filter",
+    "reset": "Reset",
+    "confirm": "Confirm",
+    "back": "Back",
+    "close": "Close",
+    "loading": "Loading..."
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "suspended": "Suspended",
+    "published": "Published",
+    "draft": "Draft",
+    "comingSoon": "Coming Soon",
+    "free": "Free",
+    "premium": "Premium",
+    "pro": "Pro"
+  },
+  "table": {
+    "noResults": "No results found",
+    "loading": "Loading data...",
+    "total": "Total",
+    "page": "Page",
+    "of": "of",
+    "rowsPerPage": "Rows per page",
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "theme": {
+    "toggle": "Toggle theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "admin": { "title": "CyberLabs Admin", "badge": "Admin" }
+}

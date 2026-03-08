@@ -1,0 +1,58 @@
+{
+  "title": "Users",
+  "subtitle": "Manage platform users",
+  "stats": {
+    "total": "Total Users",
+    "newThisMonth": "New This Month",
+    "suspended": "Suspended",
+    "byRole": "By Role"
+  },
+  "table": {
+    "name": "Name",
+    "email": "Email",
+    "role": "Role",
+    "status": "Status",
+    "joined": "Joined",
+    "lastLogin": "Last Login",
+    "enrollments": "Enrollments",
+    "actions": "Actions"
+  },
+  "filters": {
+    "allRoles": "All Roles",
+    "allStatuses": "All Statuses",
+    "searchPlaceholder": "Search by name or email..."
+  },
+  "roles": {
+    "ADMIN": "Admin",
+    "USER": "User",
+    "STUDENT": "Student",
+    "INSTRUCTOR": "Instructor",
+    "CONTENT_CREATOR": "Content Creator"
+  },
+  "actions": {
+    "viewProfile": "View Profile",
+    "changeRole": "Change Role",
+    "suspend": "Suspend",
+    "unsuspend": "Unsuspend",
+    "suspendReason": "Suspension reason (optional)"
+  },
+  "dialogs": {
+    "suspendTitle": "Suspend User",
+    "suspendDesc": "Are you sure you want to suspend {{name}}?",
+    "unsuspendTitle": "Unsuspend User",
+    "unsuspendDesc": "Are you sure you want to unsuspend {{name}}?",
+    "changeRoleTitle": "Change Role",
+    "changeRoleDesc": "Select a new role for {{name}}"
+  },
+  "detail": {
+    "title": "User Details",
+    "personalInfo": "Personal Information",
+    "security": "Security",
+    "subscriptions": "Subscriptions",
+    "twoFactor": "2FA",
+    "emailVerified": "Email Verified",
+    "points": "Points",
+    "xp": "XP",
+    "level": "Level"
+  }
+}

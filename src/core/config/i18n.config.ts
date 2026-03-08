@@ -11,9 +11,21 @@ i18n
     fallbackLng: 'en',
     supportedLngs: ['en', 'ar'],
 
-    ns: ['common', 'translation'],
+    ns: [
+      'common',
+      'auth',
+      'dashboard',
+      'users',
+      'courses',
+      'labs',
+      'analytics',
+      'errors',
+    ],
     defaultNS: 'common',
-    debug: true,
+
+    // ✅ debug فقط في dev
+    debug: import.meta.env.DEV,
+
     backend: {
       loadPath: '/locales/{{lng}}/{{ns}}.json',
     },

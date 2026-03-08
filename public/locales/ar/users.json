@@ -1,0 +1,58 @@
+{
+  "title": "المستخدمون",
+  "subtitle": "إدارة مستخدمي المنصة",
+  "stats": {
+    "total": "إجمالي المستخدمين",
+    "newThisMonth": "جدد هذا الشهر",
+    "suspended": "الموقوفون",
+    "byRole": "حسب الدور"
+  },
+  "table": {
+    "name": "الاسم",
+    "email": "البريد الإلكتروني",
+    "role": "الدور",
+    "status": "الحالة",
+    "joined": "تاريخ الانضمام",
+    "lastLogin": "آخر تسجيل دخول",
+    "enrollments": "التسجيلات",
+    "actions": "الإجراءات"
+  },
+  "filters": {
+    "allRoles": "كل الأدوار",
+    "allStatuses": "كل الحالات",
+    "searchPlaceholder": "البحث بالاسم أو البريد..."
+  },
+  "roles": {
+    "ADMIN": "مسؤول",
+    "USER": "مستخدم",
+    "STUDENT": "طالب",
+    "INSTRUCTOR": "مدرب",
+    "CONTENT_CREATOR": "منشئ محتوى"
+  },
+  "actions": {
+    "viewProfile": "عرض الملف",
+    "changeRole": "تغيير الدور",
+    "suspend": "إيقاف",
+    "unsuspend": "إلغاء الإيقاف",
+    "suspendReason": "سبب الإيقاف (اختياري)"
+  },
+  "dialogs": {
+    "suspendTitle": "إيقاف المستخدم",
+    "suspendDesc": "هل أنت متأكد من إيقاف {{name}}؟",
+    "unsuspendTitle": "إلغاء الإيقاف",
+    "unsuspendDesc": "هل أنت متأكد من إلغاء إيقاف {{name}}؟",
+    "changeRoleTitle": "تغيير الدور",
+    "changeRoleDesc": "اختر دورًا جديدًا لـ {{name}}"
+  },
+  "detail": {
+    "title": "تفاصيل المستخدم",
+    "personalInfo": "المعلومات الشخصية",
+    "security": "الأمان",
+    "subscriptions": "الاشتراكات",
+    "twoFactor": "المصادقة الثنائية",
+    "emailVerified": "البريد مُفعَّل",
+    "points": "النقاط",
+    "xp": "نقاط الخبرة",
+    "level": "المستوى"
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "title": "Labs",
+  "subtitle": "Manage platform labs",
+  "stats": {
+    "total": "Total Labs",
+    "published": "Published",
+    "unpublished": "Unpublished",
+    "totalCompletions": "Total Completions",
+    "totalSubmissions": "Total Submissions"
+  },
+  "table": {
+    "title": "Title",
+    "category": "Category",
+    "difficulty": "Difficulty",
+    "executionMode": "Mode",
+    "points": "Points",
+    "status": "Status",
+    "submissions": "Submissions",
+    "actions": "Actions"
+  },
+  "filters": {
+    "allCategories": "All Categories",
+    "allDifficulties": "All Difficulties",
+    "allModes": "All Modes",
+    "searchPlaceholder": "Search labs..."
+  },
+  "category": {
+    "WEB_SECURITY": "Web Security",
+    "NETWORK_SECURITY": "Network Security",
+    "CRYPTOGRAPHY": "Cryptography",
+    "REVERSE_ENGINEERING": "Reverse Engineering",
+    "FORENSICS": "Forensics",
+    "BINARY_EXPLOITATION": "Binary Exploitation",
+    "OSINT": "OSINT",
+    "MISC": "Misc",
+    "MALWARE_ANALYSIS": "Malware Analysis"
+  },
+  "executionMode": {
+    "FRONTEND": "Frontend",
+    "SHARED_BACKEND": "Shared Backend",
+    "DOCKER": "Docker",
+    "BROWSER": "Browser",
+    "STATIC": "Static"
+  },
+  "form": {
+    "createTitle": "Create Lab",
+    "editTitle": "Edit Lab",
+    "title": "Title",
+    "slug": "Slug",
+    "description": "Description",
+    "category": "Category",
+    "difficulty": "Difficulty",
+    "executionMode": "Execution Mode",
+    "points": "Points",
+    "flagAnswer": "Flag Answer",
+    "hints": "Hints",
+    "resources": "Resources",
+    "dockerImage": "Docker Image",
+    "xpReward": "XP Reward",
+    "pointsReward": "Points Reward",
+    "duration": "Duration (min)",
+    "maxAttempts": "Max Attempts",
+    "timeLimit": "Time Limit (min)",
+    "createLab": "Create Lab",
+    "saveChanges": "Save Changes"
+  },
+  "actions": {
+    "create": "Create Lab",
+    "edit": "Edit",
+    "delete": "Delete",
+    "publish": "Publish",
+    "unpublish": "Unpublish"
+  },
+  "dialogs": {
+    "deleteTitle": "Delete Lab",
+    "deleteDesc": "Are you sure you want to delete \"{{title}}\"?",
+    "publishTitle": "Publish Lab",
+    "publishDesc": "Publish \"{{title}}\"?"
+  }
+}
