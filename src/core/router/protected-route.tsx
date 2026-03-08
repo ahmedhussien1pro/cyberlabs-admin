@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from '@/core/store/auth.store';
 import { ROUTES } from '@/shared/constants';
+import { Preloader } from '@/shared/components/common/preloader';
 import Cookies from 'js-cookie';
 
 export default function ProtectedRoute({
@@ -9,16 +10,20 @@ export default function ProtectedRoute({
 }: {
   children?: React.ReactNode;
 }) {
-  const { user, clearAuth } = useAuthStore();
+  const { user, clearAuth, _hasHydrated } = useAuthStore();
   const token = Cookies.get('access_token');
 
   useEffect(() => {
-    if (!token || !user) {
+    if (_hasHydrated && (!token || !user)) {
       clearAuth();
       Cookies.remove('access_token');
     }
-  }, [token, user, clearAuth]);
+  }, [token, user, clearAuth, _hasHydrated]);
 
+  // ⏳ انتظر لحد ما Zustand يخلص تحميل localStorage
+  if (!_hasHydrated) return <Preloader />;
+
+  // بعد الـ hydration — اتحكم بثقة
   if (!token) return <Navigate to={ROUTES.LOGIN} replace />;
   if (!user) return <Navigate to={ROUTES.LOGIN} replace />;
 

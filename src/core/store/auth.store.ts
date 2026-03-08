@@ -5,14 +5,22 @@ import type { User } from '@/core/types';
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
+  _hasHydrated: boolean;
+  setHasHydrated: (state: boolean) => void;
   setUser: (user: User | null) => void;
   clearAuth: () => void;
 }
 
-export const useAuthStore = create<AuthState>()(  persist(
+export const useAuthStore = create<AuthState>()(
+  persist(
     (set) => ({
       user: null,
       isAuthenticated: false,
+      _hasHydrated: false,
+
+      setHasHydrated: (state) => {
+        set({ _hasHydrated: state });
+      },
 
       setUser: (user) => {
         set({
@@ -31,6 +39,9 @@ export const useAuthStore = create<AuthState>()(  persist(
     {
       name: 'cyberlabs-auth',
       storage: createJSONStorage(() => localStorage),
-    }
-  )
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
+    },
+  ),
 );
