@@ -7,8 +7,11 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   user: User;
-  access_token?: string; // Some backends use this
-  token?: string;        // Others use this
+  accessToken?: string;  // CamelCase (used by backend)
+  access_token?: string; // Snake case (alternative)
+  token?: string;        // Simple key (alternative)
+  refreshToken?: string;
+  expiresIn?: number;
 }
 
 export interface AuthState {

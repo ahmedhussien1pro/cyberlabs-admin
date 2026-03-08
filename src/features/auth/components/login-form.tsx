@@ -33,8 +33,8 @@ export function LoginForm() {
     onSuccess: (data) => {
       console.log('📦 Raw response:', data);
       
-      // Handle both 'token' and 'access_token' keys
-      const token = data.access_token || data.token;
+      // Handle multiple token key formats
+      const token = data.accessToken || data.access_token || data.token;
       
       if (!token) {
         console.error('❌ No token found in response!');
@@ -45,14 +45,23 @@ export function LoginForm() {
       
       console.log('✅ Login successful');
       console.log('👤 User:', data.user.email, '(', data.user.role, ')');
-      console.log('🔑 Token:', token.substring(0, 20) + '...');
+      console.log('🔑 Token:', token.substring(0, 30) + '...');
       
-      // Store token
+      // Store tokens
       Cookies.set('access_token', token, { 
         expires: 7,
         path: '/',
         sameSite: 'lax',
       });
+      
+      // Store refresh token if available
+      if (data.refreshToken) {
+        Cookies.set('refresh_token', data.refreshToken, {
+          expires: 30, // Refresh tokens usually last longer
+          path: '/',
+          sameSite: 'lax',
+        });
+      }
       
       // Update store
       setUser(data.user);
