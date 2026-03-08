@@ -3,7 +3,8 @@ import type { InternalAxiosRequestConfig } from 'axios';
 
 import Cookies from 'js-cookie';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || 'https://backend-test.cyber-labs.tech/api/v1';
 
 console.log('🌐 API Base URL:', API_BASE_URL);
 
