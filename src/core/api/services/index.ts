@@ -3,3 +3,5 @@ export { usersService } from './users.service';
 export { coursesService } from './courses.service';
 export { labsService } from './labs.service';
 export { analyticsService } from './analytics.service';
+export { pathsService } from './paths.service';
+export type { PathsQueryParams } from './paths.service';

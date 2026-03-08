@@ -308,6 +308,93 @@ export interface CreateLabRequest {
 
 export interface UpdateLabRequest extends Partial<CreateLabRequest> {}
 
+// ─── Learning Path Types ───────────────────────────────────────────────────────
+export type PathModuleType = 'COURSE' | 'LAB';
+export type PathModuleStatus = 'PUBLISHED' | 'DRAFT' | 'COMING_SOON';
+
+export interface PathModule {
+  id: string;
+  pathId: string;
+  title: string;
+  ar_title?: string;
+  description?: string;
+  ar_description?: string;
+  order: number;
+  type: PathModuleType;
+  status: PathModuleStatus;
+  estimatedHours: number;
+  isLocked: boolean;
+  totalTopics: number;
+  courseId?: string;
+  labId?: string;
+  course?: {
+    id: string;
+    title: string;
+    slug: string;
+    thumbnail?: string;
+    difficulty: Difficulty;
+  };
+  lab?: {
+    id: string;
+    title: string;
+    slug: string;
+    imageUrl?: string;
+    difficulty: LabDifficulty;
+  };
+}
+
+export interface LearningPathListItem {
+  id: string;
+  title: string;
+  ar_title?: string;
+  slug: string;
+  description?: string;
+  thumbnail?: string;
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt?: string;
+  _count: {
+    modules: number;
+    enrollments: number;
+  };
+}
+
+export interface LearningPath extends LearningPathListItem {
+  ar_description?: string;
+  modules: PathModule[];
+}
+
+/** Shape returned by GET /admin/paths/stats */
+export interface PathStats {
+  total: number;
+  published: number;
+  unpublished: number;
+}
+
+export interface CreatePathRequest {
+  title: string;
+  slug: string;
+  ar_title?: string;
+  description?: string;
+  ar_description?: string;
+  thumbnail?: string;
+  isPublished?: boolean;
+  modules?: Array<{
+    title: string;
+    ar_title?: string;
+    description?: string;
+    ar_description?: string;
+    order: number;
+    type: PathModuleType;
+    estimatedHours?: number;
+    isLocked?: boolean;
+    courseId?: string;
+    labId?: string;
+  }>;
+}
+
+export interface UpdatePathRequest extends Partial<Omit<CreatePathRequest, 'modules'>> {}
+
 // ─── Analytics Types ───────────────────────────────────────────────────────────
 /** Shape returned by GET /admin/analytics/overview */
 export interface AnalyticsOverview {
