@@ -6,7 +6,7 @@ import { UserFilters } from '../components/user-filters';
 import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, Users } from 'lucide-react';
+import { AlertCircle, Users, UserX, UserPlus, Shield } from 'lucide-react';
 import type { UserRole } from '@/core/types';
 
 export default function UsersListPage() {
@@ -43,13 +43,23 @@ export default function UsersListPage() {
       <div className="flex h-full items-center justify-center">
         <Alert variant="destructive" className="max-w-md">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Failed to load users. Please try again later.
-          </AlertDescription>
+          <AlertDescription>Failed to load users. Please try again later.</AlertDescription>
         </Alert>
       </div>
     );
   }
+
+  // Build stat cards from the correct backend response shape
+  const statCards = stats
+    ? [
+        { label: 'Total Users', value: stats.total, icon: Users },
+        // byRole.ADMIN replaces the removed stats.admins field
+        { label: 'Admins', value: stats.byRole.ADMIN, icon: Shield },
+        { label: 'Suspended', value: stats.suspended, icon: UserX },
+        // newThisMonth replaces the removed stats.activeToday field
+        { label: 'New This Month', value: stats.newThisMonth, icon: UserPlus },
+      ]
+    : [];
 
   return (
     <div className="space-y-6">
@@ -62,12 +72,7 @@ export default function UsersListPage() {
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         {stats ? (
-          [
-            { label: 'Total Users', value: stats.total, icon: Users },
-            { label: 'Admins', value: stats.admins, icon: Users },
-            { label: 'Suspended', value: stats.suspended, icon: Users },
-            { label: 'Active Today', value: stats.activeToday, icon: Users },
-          ].map((stat) => (
+          statCards.map((stat) => (
             <Card key={stat.label} className="p-4">
               <div className="flex items-center justify-between">
                 <div>

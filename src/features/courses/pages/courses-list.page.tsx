@@ -48,9 +48,7 @@ export default function CoursesListPage() {
       <div className="flex h-full items-center justify-center">
         <Alert variant="destructive" className="max-w-md">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Failed to load courses. Please try again later.
-          </AlertDescription>
+          <AlertDescription>Failed to load courses. Please try again later.</AlertDescription>
         </Alert>
       </div>
     );
@@ -77,7 +75,8 @@ export default function CoursesListPage() {
             { label: 'Total Courses', value: stats.total },
             { label: 'Published', value: stats.published },
             { label: 'Unpublished', value: stats.unpublished },
-            { label: 'Total Enrollments', value: stats.totalEnrollments },
+            // featured replaces totalEnrollments which was never in the backend response
+            { label: 'Featured', value: stats.featured },
           ].map((stat) => (
             <Card key={stat.label} className="p-4">
               <div className="flex items-center justify-between">

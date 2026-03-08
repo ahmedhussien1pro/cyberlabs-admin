@@ -1,4 +1,4 @@
-// ─── User Types ───────────────────────────────────────────────────
+// ─── User Types ───────────────────────────────────────────────────────────────
 export type UserRole =
   | 'USER'
   | 'ADMIN'
@@ -19,10 +19,6 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   lastLoginAt?: string;
-  failedLoginAttempts?: number;
-  lockedUntil?: string | null;
-  deletedAt?: string | null;
-  deletionReason?: string | null;
   security?: {
     isSuspended: boolean;
     suspensionReason?: string | null;
@@ -42,7 +38,6 @@ export interface User {
     enrollments: number;
     labProgress: number;
     badges?: number;
-    achievements?: number;
   };
 }
 
@@ -70,7 +65,7 @@ export interface UserListItem {
   };
 }
 
-// ✅ Fixed: matches exact backend response shape
+/** Shape returned by GET /admin/users/stats */
 export interface UserStats {
   total: number;
   newThisMonth: number;
@@ -88,7 +83,7 @@ export interface UpdateUserRoleRequest {
   role: UserRole;
 }
 
-// ─── Auth Types ────────────────────────────────────────────────────
+// ─── Auth Types ────────────────────────────────────────────────────────────────
 export interface AuthResponse {
   user: User;
   accessToken: string;
@@ -103,7 +98,7 @@ export interface LoginRequest {
   password: string;
 }
 
-// ─── Course Types ──────────────────────────────────────────────────
+// ─── Course Types ──────────────────────────────────────────────────────────────
 export type Difficulty = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT';
 export type CourseState = 'PUBLISHED' | 'DRAFT' | 'COMING_SOON';
 export type CourseAccess = 'FREE' | 'PREMIUM';
@@ -177,7 +172,7 @@ export interface CourseListItem {
   };
 }
 
-// ✅ Fixed: matches exact backend response shape
+/** Shape returned by GET /admin/courses/stats */
 export interface CourseStats {
   total: number;
   published: number;
@@ -220,7 +215,7 @@ export interface CreateCourseRequest {
 
 export interface UpdateCourseRequest extends Partial<CreateCourseRequest> {}
 
-// ─── Lab Types ─────────────────────────────────────────────────────
+// ─── Lab Types ─────────────────────────────────────────────────────────────────
 export type LabCategory =
   | 'WEB_SECURITY'
   | 'NETWORK_SECURITY'
@@ -229,10 +224,16 @@ export type LabCategory =
   | 'FORENSICS'
   | 'BINARY_EXPLOITATION'
   | 'OSINT'
-  | 'MISC';
+  | 'MISC'
+  | 'WEB'
+  | 'NETWORK'
+  | 'MALWARE_ANALYSIS';
+
+/** @deprecated use LabCategory */
+export type Category = LabCategory;
 
 export type LabDifficulty = Difficulty;
-export type LabExecutionMode = 'FRONTEND' | 'SHARED_BACKEND' | 'DOCKER';
+export type LabExecutionMode = 'FRONTEND' | 'SHARED_BACKEND' | 'DOCKER' | 'BROWSER' | 'STATIC';
 
 export interface LabListItem {
   id: string;
@@ -270,7 +271,7 @@ export interface Lab extends LabListItem {
   updatedAt: string;
 }
 
-// ✅ Fixed: matches exact backend response shape
+/** Shape returned by GET /admin/labs/stats */
 export interface LabStats {
   total: number;
   published: number;
@@ -307,8 +308,8 @@ export interface CreateLabRequest {
 
 export interface UpdateLabRequest extends Partial<CreateLabRequest> {}
 
-// ─── Analytics Types ───────────────────────────────────────────────
-// ✅ Fixed: matches exact backend response shape
+// ─── Analytics Types ───────────────────────────────────────────────────────────
+/** Shape returned by GET /admin/analytics/overview */
 export interface AnalyticsOverview {
   users: number;
   courses: number;
@@ -319,25 +320,27 @@ export interface AnalyticsOverview {
   totalPoints: number;
 }
 
-// ✅ Fixed: backend returns {month, count} not {date, month, count}
+/** Single data point returned by growth arrays */
 export interface GrowthDataPoint {
   month: string; // e.g. "2025-03"
   count: number;
 }
 
+/** Shape returned by GET /admin/analytics/growth */
 export interface GrowthTrends {
   users: GrowthDataPoint[];
   enrollments: GrowthDataPoint[];
 }
 
-// ✅ Fixed: matches exact backend response shape
+/** Shape returned by GET /admin/analytics/engagement */
 export interface EngagementMetrics {
   activeUsers: number;
   labLaunches: number;
   submissions: number;
-  avgSessionDuration: number; // in seconds
+  avgSessionDuration: number; // seconds
 }
 
+/** Shape returned by GET /admin/analytics/top-content */
 export interface TopContent {
   courses: Array<{
     id: string;
@@ -357,7 +360,7 @@ export interface TopContent {
   }>;
 }
 
-// ✅ Fixed: matches exact backend response shape (no top-level id, no target)
+/** Shape returned by GET /admin/analytics/recent-activity */
 export interface ActivityEvent {
   type: 'user_registered' | 'course_enrolled' | 'lab_completed';
   timestamp: string;
@@ -366,7 +369,7 @@ export interface ActivityEvent {
   lab?: { id: string; title: string; slug?: string };
 }
 
-// ─── Pagination ────────────────────────────────────────────────────
+// ─── Pagination ────────────────────────────────────────────────────────────────
 export interface PaginationMeta {
   page: number;
   limit: number;

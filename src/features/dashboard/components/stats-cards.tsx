@@ -9,11 +9,7 @@ interface StatsCardsProps {
   isLoading: boolean;
 }
 
-export function StatsCards({
-  userStats,
-  courseStats,
-  isLoading,
-}: StatsCardsProps) {
+export function StatsCards({ userStats, courseStats, isLoading }: StatsCardsProps) {
   if (isLoading) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -32,8 +28,8 @@ export function StatsCards({
         icon={Users}
       />
       <StatsCard
-        title="Active Users"
-        value={userStats?.active ?? 0}
+        title="New This Month"
+        value={userStats?.newThisMonth ?? 0}
         icon={TrendingUp}
       />
       <StatsCard

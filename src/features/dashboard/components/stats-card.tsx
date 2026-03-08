@@ -5,13 +5,15 @@ import { cn } from '@/lib/utils';
 interface StatsCardProps {
   title: string;
   value: number | string;
+  /** Optional sub-text shown beneath the value (e.g. "+5 this month") */
+  subtitle?: string;
   change?: number;
   icon: LucideIcon;
 }
 
-export function StatsCard({ title, value, change, icon: Icon }: StatsCardProps) {
-  const isPositive = change && change > 0;
-  const isNegative = change && change < 0;
+export function StatsCard({ title, value, subtitle, change, icon: Icon }: StatsCardProps) {
+  const isPositive = change !== undefined && change > 0;
+  const isNegative = change !== undefined && change < 0;
 
   return (
     <Card>
@@ -19,7 +21,12 @@ export function StatsCard({ title, value, change, icon: Icon }: StatsCardProps) 
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <p className="text-2xl font-bold">{value.toLocaleString()}</p>
+            <p className="text-2xl font-bold">
+              {typeof value === 'number' ? value.toLocaleString() : value}
+            </p>
+            {subtitle && (
+              <p className="text-xs text-muted-foreground">{subtitle}</p>
+            )}
             {change !== undefined && change !== 0 && (
               <p
                 className={cn(

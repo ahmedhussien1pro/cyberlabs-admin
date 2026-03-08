@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/shared/constants';
 import type { CourseListItem, PaginationMeta } from '@/core/types';
-import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, Pencil } from 'lucide-react';
 
 interface CoursesTableProps {
   data: CourseListItem[];
@@ -33,7 +33,7 @@ export function CoursesTable({ data, meta, page, onPageChange }: CoursesTablePro
               <th className="p-4 text-left text-sm font-medium">Difficulty</th>
               <th className="p-4 text-left text-sm font-medium">Status</th>
               <th className="p-4 text-left text-sm font-medium">Enrollments</th>
-              <th className="p-4 text-left text-sm font-medium">Labs</th>
+              <th className="p-4 text-left text-sm font-medium">Sections</th>
               <th className="p-4 text-right text-sm font-medium">Actions</th>
             </tr>
           </thead>
@@ -47,25 +47,37 @@ export function CoursesTable({ data, meta, page, onPageChange }: CoursesTablePro
                   </div>
                 </td>
                 <td className="p-4">
-                  {course.difficulty ? <Badge variant="outline">{course.difficulty}</Badge> : '—'}
+                  {course.difficulty
+                    ? <Badge variant="outline">{course.difficulty}</Badge>
+                    : '—'}
                 </td>
                 <td className="p-4">
                   <Badge variant={course.isPublished ? 'default' : 'secondary'}>
-                    {course.isPublished ? 'Published' : 'Draft'}
+                    {course.state ?? (course.isPublished ? 'Published' : 'Draft')}
                   </Badge>
                 </td>
                 <td className="p-4">
-                  <div className="text-sm font-medium">{course.enrollmentCount}</div>
+                  <div className="text-sm font-medium">
+                    {course.enrollmentCount ?? course._count.enrollments}
+                  </div>
                 </td>
                 <td className="p-4">
-                  <div className="text-sm">{course._count.courseLabs}</div>
+                  {/* sections is the correct _count field returned by the backend */}
+                  <div className="text-sm">{course._count.sections}</div>
                 </td>
                 <td className="p-4 text-right">
-                  <Link to={ROUTES.COURSE_DETAIL(course.id)}>
-                    <Button variant="ghost" size="sm">
-                      View <ExternalLink className="ml-2 h-3 w-3" />
-                    </Button>
-                  </Link>
+                  <div className="flex items-center justify-end gap-1">
+                    <Link to={ROUTES.COURSE_EDIT(course.id)}>
+                      <Button variant="ghost" size="sm">
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                    </Link>
+                    <Link to={ROUTES.COURSE_DETAIL(course.id)}>
+                      <Button variant="ghost" size="sm">
+                        View <ExternalLink className="ml-2 h-3 w-3" />
+                      </Button>
+                    </Link>
+                  </div>
                 </td>
               </tr>
             ))}
