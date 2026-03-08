@@ -13,19 +13,24 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const token = Cookies.get('access_token');
 
   useEffect(() => {
-    console.log('ProtectedRoute check:', { hasToken: !!token, hasUser: !!user, userRole: user?.role });
+    console.log('🔒 ProtectedRoute check:', {
+      hasToken: !!token,
+      hasUser: !!user,
+      userRole: user?.role,
+      userEmail: user?.email,
+    });
   }, [token, user]);
 
   // No token - redirect to login
   if (!token) {
-    console.log('No token found, redirecting to login');
+    console.log('❌ No token found - redirecting to login');
     clearAuth();
     return <Navigate to={ROUTES.LOGIN} replace />;
   }
 
   // No user in store - redirect to login
   if (!user) {
-    console.log('No user in store, redirecting to login');
+    console.log('❌ No user in store - redirecting to login');
     clearAuth();
     Cookies.remove('access_token');
     return <Navigate to={ROUTES.LOGIN} replace />;
@@ -33,7 +38,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   // Not admin - access denied
   if (user.role !== 'ADMIN') {
-    console.log('User is not admin:', user.role);
+    console.log('❌ User is not admin:', user.role);
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
@@ -46,5 +51,6 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
+  console.log('✅ Access granted - rendering protected content');
   return children ? <>{children}</> : <Outlet />;
 }

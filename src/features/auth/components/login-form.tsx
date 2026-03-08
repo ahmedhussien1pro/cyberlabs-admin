@@ -31,33 +31,36 @@ export function LoginForm() {
   const loginMutation = useMutation({
     mutationFn: authService.login,
     onSuccess: (data) => {
-      console.log('Login successful:', { user: data.user, hasToken: !!data.access_token });
+      console.log('✅ Login successful');
+      console.log('User:', data.user);
+      console.log('Token:', data.access_token.substring(0, 20) + '...');
       
-      // Store token in cookie with proper settings
+      // Store token
       Cookies.set('access_token', data.access_token, { 
         expires: 7,
         path: '/',
         sameSite: 'lax',
       });
       
-      // Update auth store
+      // Update store
       setUser(data.user);
       
-      console.log('Token stored:', Cookies.get('access_token'));
+      console.log('✅ Token stored in cookie');
+      console.log('✅ User stored in Zustand');
+      console.log('🔄 Navigating to dashboard...');
       
-      // Navigate to dashboard
-      setTimeout(() => {
-        navigate(ROUTES.DASHBOARD, { replace: true });
-      }, 100);
+      // Navigate WITHOUT reload
+      navigate(ROUTES.DASHBOARD, { replace: true });
     },
     onError: (err: any) => {
-      console.error('Login error:', err);
+      console.error('❌ Login error:', err);
       const message = err.response?.data?.message || 'Invalid email or password';
       setError(message);
     },
   });
 
   const onSubmit = (data: LoginFormData) => {
+    console.log('🔐 Attempting login...');
     setError('');
     loginMutation.mutate(data);
   };

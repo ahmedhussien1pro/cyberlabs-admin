@@ -3,12 +3,14 @@ import Cookies from 'js-cookie';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+console.log('🌐 API Base URL:', API_BASE_URL);
+
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true,
+  withCredentials: false, // Changed to false since we're using Bearer token
 });
 
 // Request interceptor - attach token
@@ -28,12 +30,14 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
+      console.log('❌ 401 Unauthorized - clearing auth');
       // Clear token and reload to trigger redirect
       Cookies.remove('access_token');
       localStorage.removeItem('cyberlabs-auth');
       
       // Only redirect if not already on login page
       if (!window.location.pathname.includes('/login')) {
+        console.log('🔄 Redirecting to login...');
         window.location.href = '/login';
       }
     }
