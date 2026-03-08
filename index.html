@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Meta basics -->
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- SEO -->
+    <title>CyberLabs</title>
+    <meta
+      name="title"
+      content="CyberLabs Platform | Cybersecurity Learning Gateway" />
+    <meta
+      name="description"
+      content="CyberLabs Platform is a fast, secure, and scalable cybersecurity learning environment built with React, Node.js, Express, Prisma, and PostgreSQL. Developed by Ahmed Hussien & the CyberLabs team." />
+    <meta name="author" content="Ahmed Hussien, CyberLabs Team" />
+    <meta name="application-name" content="CyberLabs Platform" />
+    <meta
+      name="keywords"
+      content="CyberLabs, Cybersecurity Learning, React, Node.js, Express, Prisma, PostgreSQL, Vercel, Ahmed Hussien, Fullstack Developer" />
+
+    <!-- Open Graph / WhatsApp / Facebook / LinkedIn -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://digitopia-project.vercel.app/" />
+    <meta
+      property="og:title"
+      content="CyberLabs Platform | Cybersecurity Learning Gateway" />
+    <meta
+      property="og:description"
+      content="Explore CyberLabs Platform – a modern, secure, and scalable learning environment powered by React, Bootstrap, Node.js, Express, Prisma, PostgreSQL, and Vercel." />
+    <meta
+      property="og:image"
+      content="https://digitopia-project.vercel.app/meta-image.jpg?v=2" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="CyberLabs" />
+
+    <!-- Twitter -->
+    <meta
+      name="twitter:card"
+      content="https://digitopia-project.vercel.app/meta-image.jpg?v=2" />
+    <meta name="twitter:url" content="https://digitopia-project.vercel.app/" />
+    <meta
+      name="twitter:title"
+      content="CyberLabs Platform | Cybersecurity Learning Gateway" />
+    <meta
+      name="twitter:description"
+      content="CyberLabs Platform is built for performance, security, and accessibility. Developed by Ahmed Hussien & the CyberLabs team." />
+    <meta
+      name="twitter:image"
+      content="https://digitopia-project.vercel.app/meta-image.jpg?v=2" />
+    <meta name="twitter:creator" content="@CyberLabs" />
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="/images/favIcon.svg" type="image/x-icon" />
+    <!-- Apple Touch Icon -->
+    <link rel="apple-touch-icon" href="/images/favIcon.svg" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&display=swap"
+      rel="stylesheet" />
+    <!-- Font Awesome CDN -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+
+    <div id="root"></div>
+    <noscript>
+      user name = support@cyberlap.com password = cyberlap use this for login
+    </noscript>
+    <!--  user name = support@cyberlap.com password = cyberlap use this for login -->
+    <script>
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') {
+          document.title = 'Cyber Security';
+          document
+            .querySelector("link[rel*='icon']")
+            .setAttribute('href', '/images/favIcon.svg');
+        } else {
+          document.title = 'Come Back Please';
+          document
+            .querySelector("link[rel*='icon']")
+            .setAttribute('href', '/images/favhand.png');
+        }
+      });
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
