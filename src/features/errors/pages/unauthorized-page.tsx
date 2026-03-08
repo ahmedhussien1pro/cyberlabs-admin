@@ -235,7 +235,7 @@ export default function UnauthorizedPage() {
             asChild
             size='lg'
             className='gap-2 rounded-full bg-red-500 px-7 font-mono text-white shadow-lg shadow-red-500/25 transition-all duration-300 hover:scale-[1.03] hover:bg-red-600 hover:shadow-red-500/40'>
-            <Link to={ROUTES.HOME}>
+            <Link to={ROUTES.LOGIN}>
               <Home className='h-4 w-4' />
               {t('forbiddenBack')}
             </Link>
@@ -246,7 +246,7 @@ export default function UnauthorizedPage() {
             size='lg'
             variant='outline'
             className='gap-2 rounded-full border-red-500/20 px-7 font-mono transition-all duration-300 hover:border-red-500/40 hover:bg-red-500/5 hover:text-red-400'>
-            <Link to={ROUTES.AUTH.LOGIN}>
+            <Link to={ROUTES.LOGIN}>
               <ShieldAlert className='h-4 w-4' />
               {t('forbiddenLogin')}
             </Link>

@@ -16,7 +16,13 @@ export interface PaginatedResponse<T> {
 
 export type UserRole = 'USER' | 'ADMIN';
 export type Difficulty = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
-export type Category = 'WEB' | 'NETWORK' | 'CRYPTOGRAPHY' | 'FORENSICS' | 'REVERSE_ENGINEERING' | 'MALWARE_ANALYSIS';
+export type Category =
+  | 'WEB'
+  | 'NETWORK'
+  | 'CRYPTOGRAPHY'
+  | 'FORENSICS'
+  | 'REVERSE_ENGINEERING'
+  | 'MALWARE_ANALYSIS';
 export type LabExecutionMode = 'FRONTEND' | 'SHARED_BACKEND' | 'DOCKER';
 
 // ────────────────────────────────────────────────────────────────────
@@ -196,8 +202,8 @@ export interface Lab extends LabListItem {
   steps?: any;
   postSolve?: any;
   initialState?: any;
-  flagAnswer?: string;  // ⚠️ Only in admin detail view
-  solution?: any;       // ⚠️ Only in admin detail view
+  flagAnswer?: string; // ⚠️ Only in admin detail view
+  solution?: any; // ⚠️ Only in admin detail view
   pointsPerHint?: number;
   pointsPerFail?: number;
   maxAttempts?: number;

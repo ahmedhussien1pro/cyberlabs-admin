@@ -9,4 +9,5 @@ export const ROUTES = {
   LABS: '/labs',
   LAB_DETAIL: (id: string) => `/labs/${id}`,
   LAB_CREATE: '/labs/new',
+  UN_AUTHORIZED: '/401',
 } as const;

@@ -217,7 +217,7 @@ export default function NotFoundPage() {
             asChild
             size='lg'
             className='gap-2 px-3 font-mono shadow-lg shadow-primary/20 transition-all duration-300 hover:scale-[1.03] hover:shadow-primary/40'>
-            <Link to={ROUTES.HOME}>
+            <Link to={ROUTES.DASHBOARD}>
               <Home className='h-4 w-4' />
               {t('notFoundBack')}
             </Link>

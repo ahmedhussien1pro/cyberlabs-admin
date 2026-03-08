@@ -1,6 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, BookOpen, FlaskConical, TrendingUp, Award, Zap } from 'lucide-react';
-import type { AnalyticsOverview, UserStats, CourseStats, LabStats } from '@/core/types';
+import { Users, BookOpen, FlaskConical, Zap } from 'lucide-react';
+import type {
+  AnalyticsOverview,
+  UserStats,
+  CourseStats,
+  LabStats,
+} from '@/core/types';
 
 interface StatsCardsProps {
   overview?: AnalyticsOverview;
@@ -9,7 +14,12 @@ interface StatsCardsProps {
   labStats?: LabStats;
 }
 
-export function StatsCards({ overview, userStats, courseStats, labStats }: StatsCardsProps) {
+export function StatsCards({
+  overview,
+  userStats,
+  courseStats,
+  labStats,
+}: StatsCardsProps) {
   const cards = [
     {
       title: 'Total Users',
@@ -46,11 +56,11 @@ export function StatsCards({ overview, userStats, courseStats, labStats }: Stats
   ];
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
       {cards.map((card) => (
         <Card key={card.title}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+          <CardHeader className='flex flex-row items-center justify-between pb-2'>
+            <CardTitle className='text-sm font-medium text-muted-foreground'>
               {card.title}
             </CardTitle>
             <div className={`rounded-lg p-2 ${card.bgColor}`}>
@@ -58,8 +68,8 @@ export function StatsCards({ overview, userStats, courseStats, labStats }: Stats
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{card.value}</div>
-            <p className="text-xs text-muted-foreground">{card.subtitle}</p>
+            <div className='text-2xl font-bold'>{card.value}</div>
+            <p className='text-xs text-muted-foreground'>{card.subtitle}</p>
           </CardContent>
         </Card>
       ))}
