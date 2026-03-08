@@ -2,15 +2,16 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+import { Mail, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
+import Cookies from 'js-cookie';
+
 import { authService } from '@/core/api/services';
 import { useAuthStore } from '@/core/store/auth.store';
 import { ROUTES } from '@/shared/constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import Cookies from 'js-cookie';
-import { Loader2, AlertCircle } from 'lucide-react';
 
 interface LoginFormData {
   email: string;
@@ -18,9 +19,11 @@ interface LoginFormData {
 }
 
 export function LoginForm() {
+  const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const { setUser } = useAuthStore();
   const [error, setError] = useState<string>('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -30,43 +33,32 @@ export function LoginForm() {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginFormData) => {
-      // Step 1: Authenticate
       const data = await authService.login(credentials);
 
-      const token = data.accessToken || (data as any).access_token || (data as any).token;
-      if (!token) {
-        throw new Error('Authentication failed - no token received');
-      }
+      const token =
+        data.accessToken ||
+        (data as any).access_token ||
+        (data as any).token;
 
-      // Step 2: Store tokens so the axios interceptor can attach them
-      Cookies.set('access_token', token, {
-        expires: 7,
-        path: '/',
-        sameSite: 'lax',
-      });
+      if (!token) throw new Error('Authentication failed - no token received');
+
+      Cookies.set('access_token', token, { expires: 7, path: '/', sameSite: 'lax' });
       if (data.refreshToken) {
-        Cookies.set('refresh_token', data.refreshToken, {
-          expires: 30,
-          path: '/',
-          sameSite: 'lax',
-        });
+        Cookies.set('refresh_token', data.refreshToken, { expires: 30, path: '/', sameSite: 'lax' });
       }
 
-      // Step 3: Verify admin role against backend (GET /admin/health → AdminGuard)
       try {
         await authService.verifyAdminHealth();
       } catch {
-        // Clean up tokens if not admin
         Cookies.remove('access_token');
         Cookies.remove('refresh_token');
-        throw new Error('Access denied: Admin role required');
+        throw new Error(t('login.error.notAdmin', 'Access denied: Admin role required'));
       }
 
       return data;
     },
 
     onSuccess: (data) => {
-      // Step 4: Persist user in store and redirect
       setUser(data.user);
       navigate(ROUTES.DASHBOARD, { replace: true });
     },
@@ -75,7 +67,7 @@ export function LoginForm() {
       const message =
         err.message ||
         err.response?.data?.message ||
-        'Invalid email or password';
+        t('login.error.invalidCredentials', 'Invalid email or password');
       setError(message);
     },
   });
@@ -86,74 +78,84 @@ export function LoginForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <div className="rounded-lg border bg-card p-6 shadow-sm">
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="admin@cyberlabs.com"
-              autoComplete="email"
-              {...register('email', {
-                required: 'Email is required',
-                pattern: {
-                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                  message: 'Invalid email address',
-                },
-              })}
-              disabled={loginMutation.isPending}
-            />
-            {errors.email && (
-              <p className="text-sm text-destructive">{errors.email.message}</p>
-            )}
-          </div>
+    <form onSubmit={handleSubmit(onSubmit)} className='space-y-4'>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              autoComplete="current-password"
-              {...register('password', {
-                required: 'Password is required',
-                minLength: {
-                  value: 6,
-                  message: 'Password must be at least 6 characters',
-                },
-              })}
-              disabled={loginMutation.isPending}
-            />
-            {errors.password && (
-              <p className="text-sm text-destructive">{errors.password.message}</p>
-            )}
-          </div>
+      {/* Email */}
+      <div>
+        <div className='auth-form__input-box'>
+          <Input
+            id='email'
+            type='email'
+            placeholder={t('login.emailPlaceholder', 'admin@cyberlabs.com')}
+            autoComplete='email'
+            className='auth-form__input'
+            {...register('email', {
+              required: 'Email is required',
+              pattern: {
+                value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                message: 'Invalid email address',
+              },
+            })}
+            disabled={loginMutation.isPending}
+          />
+          <Mail className='auth-form__input-icon' size={18} />
         </div>
-
-        {error && (
-          <Alert variant="destructive" className="mt-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
+        {errors.email && (
+          <span className='auth-form__error'>{errors.email.message}</span>
         )}
-
-        <Button
-          type="submit"
-          className="mt-6 w-full"
-          disabled={loginMutation.isPending}
-        >
-          {loginMutation.isPending ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Signing in...
-            </>
-          ) : (
-            'Sign in'
-          )}
-        </Button>
       </div>
+
+      {/* Password */}
+      <div>
+        <div className='auth-form__input-box'>
+          <Input
+            id='password'
+            type={showPassword ? 'text' : 'password'}
+            placeholder={t('login.passwordPlaceholder', '••••••••')}
+            autoComplete='current-password'
+            className='auth-form__input'
+            {...register('password', {
+              required: 'Password is required',
+              minLength: { value: 6, message: 'Password must be at least 6 characters' },
+            })}
+            disabled={loginMutation.isPending}
+          />
+          <button
+            type='button'
+            className='auth-form__input-icon-btn'
+            onClick={() => setShowPassword((p) => !p)}
+            tabIndex={-1}
+            aria-label={showPassword ? 'Hide password' : 'Show password'}>
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
+        {errors.password && (
+          <span className='auth-form__error'>{errors.password.message}</span>
+        )}
+      </div>
+
+      {/* Error Alert */}
+      {error && (
+        <Alert variant='destructive'>
+          <AlertCircle className='h-4 w-4' />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Submit */}
+      <Button
+        type='submit'
+        className='auth-form__submit-btn'
+        disabled={loginMutation.isPending}>
+        {loginMutation.isPending ? (
+          <span className='flex items-center gap-2'>
+            <Loader2 className='h-4 w-4 animate-spin' />
+            {t('login.loading', 'Signing in...')}
+          </span>
+        ) : (
+          t('login.submit', 'Sign In')
+        )}
+      </Button>
     </form>
   );
 }
