@@ -20,14 +20,16 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 // ── Types ──────────────────────────────────────────────────────────
+type LocalizedText = string | { en: string; ar?: string } | null | undefined;
+
 interface PreviewElement {
-  title: { en: string; ar?: string };
+  title: LocalizedText;
   type?: string;
   duration?: number;
 }
 
 interface PreviewTopic {
-  title: { en: string; ar?: string };
+  title: LocalizedText;
   elements?: PreviewElement[];
 }
 
@@ -48,11 +50,31 @@ interface PreviewMetadata {
 
 interface CourseImportPreviewProps {
   landingData: {
-    title: { en: string; ar?: string };
-    description?: { en?: string; ar?: string };
+    title: LocalizedText;
+    description?: LocalizedText | { en?: string; ar?: string };
   };
   topics: PreviewTopic[];
   metadata: PreviewMetadata;
+}
+
+// ── Helper: extract readable text regardless of shape ──────────────
+function getText(val: LocalizedText): string {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  return val.en ?? '';
+}
+
+function getArText(val: LocalizedText): string | undefined {
+  if (!val || typeof val === 'string') return undefined;
+  return val.ar || undefined;
+}
+
+function getDescEn(
+  val: LocalizedText | { en?: string; ar?: string } | null | undefined,
+): string {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  return (val as any).en ?? '';
 }
 
 // ── Color palettes (matches the main platform) ─────────────────────
@@ -136,6 +158,10 @@ export function CourseImportPreview({
   const toggleTopic = (idx: number) =>
     setOpenTopics((prev) => ({ ...prev, [idx]: !prev[idx] }));
 
+  const courseTitle = getText(landingData.title);
+  const courseTitleAr = getArText(landingData.title);
+  const courseDesc = getDescEn(landingData.description);
+
   return (
     <div className='space-y-6'>
       {/* ── Label ─────────────────────────────────────────── */}
@@ -153,7 +179,8 @@ export function CourseImportPreview({
           'rounded-xl border overflow-hidden',
           `bg-gradient-to-br ${colors.bg}`,
           colors.border,
-        )}>
+        )}
+      >
         {/* Hero thumbnail */}
         <div className='relative h-40 bg-black/30 flex items-center justify-center overflow-hidden'>
           {metadata.thumbnail ? (
@@ -185,7 +212,8 @@ export function CourseImportPreview({
               className={cn(
                 'text-xs font-bold px-2 py-1 rounded-full',
                 colors.badge,
-              )}>
+              )}
+            >
               {ACCESS_LABEL[metadata.access]?.label ?? metadata.access}
             </span>
           </div>
@@ -193,17 +221,15 @@ export function CourseImportPreview({
 
         {/* Card body */}
         <div className='p-4 space-y-3'>
-          <h3 className='text-lg font-bold leading-tight'>
-            {landingData.title.en}
-          </h3>
-          {landingData.title.ar && (
+          <h3 className='text-lg font-bold leading-tight'>{courseTitle}</h3>
+          {courseTitleAr && (
             <p className='text-sm text-muted-foreground font-arabic' dir='rtl'>
-              {landingData.title.ar}
+              {courseTitleAr}
             </p>
           )}
-          {landingData.description?.en && (
+          {courseDesc && (
             <p className='text-sm text-muted-foreground line-clamp-2'>
-              {landingData.description.en}
+              {courseDesc}
             </p>
           )}
 
@@ -265,13 +291,15 @@ export function CourseImportPreview({
           {topics.map((topic, idx) => {
             const isOpen = !!openTopics[idx];
             const lessonCount = topic.elements?.length ?? 0;
+            const topicTitle = getText(topic.title);
 
             return (
               <div key={idx}>
                 {/* Section header */}
                 <button
                   onClick={() => toggleTopic(idx)}
-                  className='w-full flex items-center justify-between px-4 py-3 hover:bg-muted/40 transition-colors text-left'>
+                  className='w-full flex items-center justify-between px-4 py-3 hover:bg-muted/40 transition-colors text-left'
+                >
                   <div className='flex items-center gap-2.5'>
                     {isOpen ? (
                       <ChevronDown
@@ -284,9 +312,7 @@ export function CourseImportPreview({
                         className='text-muted-foreground'
                       />
                     )}
-                    <span className='font-medium text-sm'>
-                      {topic.title.en}
-                    </span>
+                    <span className='font-medium text-sm'>{topicTitle}</span>
                   </div>
                   <span className='text-xs text-muted-foreground shrink-0 ml-2'>
                     {lessonCount} lesson{lessonCount !== 1 ? 's' : ''}
@@ -300,16 +326,18 @@ export function CourseImportPreview({
                       const LessonIcon =
                         LESSON_ICON[el.type?.toUpperCase() ?? 'ARTICLE'] ??
                         FileText;
+                      const elTitle = getText(el.title);
                       return (
                         <div
                           key={eIdx}
-                          className='flex items-center gap-3 px-6 py-2.5 text-sm'>
+                          className='flex items-center gap-3 px-6 py-2.5 text-sm'
+                        >
                           <LessonIcon
                             size={13}
                             className='text-muted-foreground shrink-0'
                           />
                           <span className='flex-1 truncate text-muted-foreground'>
-                            {el.title.en}
+                            {elTitle}
                           </span>
                           {metadata.access !== 'FREE' && (
                             <Lock
