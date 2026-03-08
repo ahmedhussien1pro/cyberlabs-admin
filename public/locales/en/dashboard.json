@@ -1,15 +1,23 @@
 {
   "title": "Dashboard",
-  "subtitle": "Platform overview",
+  "subtitle": "CyberLabs platform overview — real-time stats",
+  "warnings": {
+    "analytics": "Analytics endpoints are unavailable. Check that the backend is running and your JWT token is valid."
+  },
   "stats": {
     "totalUsers": "Total Users",
+    "courses": "Courses",
+    "labs": "Labs",
+    "totalEnrollments": "Total Enrollments",
     "totalCourses": "Total Courses",
     "totalLabs": "Total Labs",
-    "newThisMonth": "New This Month",
     "activeUsers": "Active Users",
     "publishedCourses": "Published Courses",
     "publishedLabs": "Published Labs",
-    "totalEnrollments": "Total Enrollments"
+    "newThisMonth": "+{{count}} this month",
+    "published": "{{count}} published",
+    "labCompletions": "{{count}} lab completions",
+    "newThisMonthLabel": "New This Month"
   },
   "sections": {
     "recentActivity": "Recent Activity",
@@ -17,6 +25,29 @@
     "topLabs": "Top Labs",
     "userGrowth": "User Growth",
     "enrollmentTrends": "Enrollment Trends"
+  },
+  "breakdown": {
+    "users": "Users Breakdown",
+    "courses": "Courses Breakdown",
+    "labs": "Labs Breakdown",
+    "newThisMonth": "New This Month",
+    "suspended": "Suspended",
+    "byRole": "By Role",
+    "byState": "By State",
+    "byDifficulty": "By Difficulty",
+    "featured": "Featured",
+    "completions": "Completions",
+    "total": "Total",
+    "unpublished": "Unpublished",
+    "published": "Published"
+  },
+  "overview": {
+    "totalXP": "Total XP Awarded",
+    "totalPoints": "Total Points Awarded"
+  },
+  "emptyState": {
+    "title": "No Data Available",
+    "description": "The dashboard will populate automatically once you have users, courses, and labs. Start by creating your first course or lab!"
   },
   "activity": {
     "userRegistered": "{{name}} registered",

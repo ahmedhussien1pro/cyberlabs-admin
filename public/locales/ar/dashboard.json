@@ -1,27 +1,58 @@
 {
   "title": "لوحة التحكم",
-  "subtitle": "نظرة عامة على المنصة",
+  "subtitle": "نظرة عامة على منصة CyberLabs — إحصائيات فورية",
+  "warnings": {
+    "analytics": "نقاط البيانات التحليلية غير متاحة. تأكد من تشغيل الخادم وصحة رمز JWT."
+  },
   "stats": {
     "totalUsers": "إجمالي المستخدمين",
+    "courses": "الكورسات",
+    "labs": "المعامل",
+    "totalEnrollments": "إجمالي التسجيلات",
     "totalCourses": "إجمالي الكورسات",
     "totalLabs": "إجمالي المعامل",
-    "newThisMonth": "جدد هذا الشهر",
     "activeUsers": "المستخدمون النشطون",
     "publishedCourses": "الكورسات المنشورة",
     "publishedLabs": "المعامل المنشورة",
-    "totalEnrollments": "إجمالي التسجيلات"
+    "newThisMonth": "+{{count}} هذا الشهر",
+    "published": "{{count}} منشور",
+    "labCompletions": "{{count}} إتمام معمل",
+    "newThisMonthLabel": "جديد هذا الشهر"
   },
   "sections": {
     "recentActivity": "النشاط الأخير",
-    "topCourses": "أفضل الكورسات",
-    "topLabs": "أفضل المعامل",
+    "topCourses": "أبرز الكورسات",
+    "topLabs": "أبرز المعامل",
     "userGrowth": "نمو المستخدمين",
     "enrollmentTrends": "اتجاهات التسجيل"
   },
+  "breakdown": {
+    "users": "تفاصيل المستخدمين",
+    "courses": "تفاصيل الكورسات",
+    "labs": "تفاصيل المعامل",
+    "newThisMonth": "جديد هذا الشهر",
+    "suspended": "موقوف",
+    "byRole": "حسب الدور",
+    "byState": "حسب الحالة",
+    "byDifficulty": "حسب الصعوبة",
+    "featured": "مميز",
+    "completions": "إتمام",
+    "total": "الإجمالي",
+    "unpublished": "غير منشور",
+    "published": "منشور"
+  },
+  "overview": {
+    "totalXP": "إجمالي نقاط XP الممنوحة",
+    "totalPoints": "إجمالي النقاط الممنوحة"
+  },
+  "emptyState": {
+    "title": "لا توجد بيانات",
+    "description": "ستُملأ لوحة التحكم تلقائياً حالما تمتلك مستخدمين وكورسات ومعامل. ابدأ بإنشاء أول كورس أو معمل!"
+  },
   "activity": {
-    "userRegistered": "{{name}} سجّل حسابًا",
+    "userRegistered": "سجّل {{name}} دخولاً",
     "courseEnrolled": "{{name}} التحق بـ {{course}}",
-    "labCompleted": "{{name}} أكمل {{lab}}",
-    "noActivity": "لا يوجد نشاط حديث"
+    "labCompleted": "{{name}} أتمّ {{lab}}",
+    "noActivity": "لا يوجد نشاط مؤخراً"
   }
 }
