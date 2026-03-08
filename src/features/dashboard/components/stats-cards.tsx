@@ -1,78 +1,51 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, BookOpen, FlaskConical, Zap } from 'lucide-react';
-import type {
-  AnalyticsOverview,
-  UserStats,
-  CourseStats,
-  LabStats,
-} from '@/core/types';
+import { StatsCard } from './stats-card';
+import type { UserStats, CourseStats, LabStats } from '@/core/types';
+import { Users, BookOpen, FlaskConical, TrendingUp } from 'lucide-react';
 
 interface StatsCardsProps {
-  overview?: AnalyticsOverview;
   userStats?: UserStats;
   courseStats?: CourseStats;
   labStats?: LabStats;
+  isLoading: boolean;
 }
 
 export function StatsCards({
-  overview,
   userStats,
   courseStats,
-  labStats,
+  isLoading,
 }: StatsCardsProps) {
-  const cards = [
-    {
-      title: 'Total Users',
-      value: overview?.users ?? 0,
-      subtitle: `${userStats?.activeToday ?? 0} active today`,
-      icon: Users,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100 dark:bg-blue-950',
-    },
-    {
-      title: 'Courses',
-      value: overview?.courses ?? 0,
-      subtitle: `${courseStats?.published ?? 0} published`,
-      icon: BookOpen,
-      color: 'text-green-600',
-      bgColor: 'bg-green-100 dark:bg-green-950',
-    },
-    {
-      title: 'Labs',
-      value: overview?.labs ?? 0,
-      subtitle: `${overview?.labCompletions ?? 0} completions`,
-      icon: FlaskConical,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-100 dark:bg-purple-950',
-    },
-    {
-      title: 'Total XP Earned',
-      value: (overview?.totalXP ?? 0).toLocaleString(),
-      subtitle: `${(overview?.totalPoints ?? 0).toLocaleString()} points`,
-      icon: Zap,
-      color: 'text-amber-600',
-      bgColor: 'bg-amber-100 dark:bg-amber-950',
-    },
-  ];
+  if (isLoading) {
+    return (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-32 animate-pulse rounded-lg bg-muted" />
+        ))}
+      </div>
+    );
+  }
 
   return (
-    <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
-      {cards.map((card) => (
-        <Card key={card.title}>
-          <CardHeader className='flex flex-row items-center justify-between pb-2'>
-            <CardTitle className='text-sm font-medium text-muted-foreground'>
-              {card.title}
-            </CardTitle>
-            <div className={`rounded-lg p-2 ${card.bgColor}`}>
-              <card.icon className={`h-4 w-4 ${card.color}`} />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className='text-2xl font-bold'>{card.value}</div>
-            <p className='text-xs text-muted-foreground'>{card.subtitle}</p>
-          </CardContent>
-        </Card>
-      ))}
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <StatsCard
+        title="Total Users"
+        value={userStats?.total ?? 0}
+        icon={Users}
+      />
+      <StatsCard
+        title="Active Users"
+        value={userStats?.active ?? 0}
+        icon={TrendingUp}
+      />
+      <StatsCard
+        title="Total Courses"
+        value={courseStats?.total ?? 0}
+        icon={BookOpen}
+      />
+      <StatsCard
+        title="Published Courses"
+        value={courseStats?.published ?? 0}
+        icon={FlaskConical}
+      />
     </div>
   );
 }
