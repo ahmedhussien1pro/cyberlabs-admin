@@ -11,7 +11,9 @@ import type {
 
 export const coursesService = {
   getStats: async (): Promise<CourseStats> => {
-    const { data } = await apiClient.get<CourseStats>(API_ENDPOINTS.ADMIN_COURSES.STATS);
+    const { data } = await apiClient.get<CourseStats>(
+      API_ENDPOINTS.ADMIN_COURSES.STATS,
+    );
     return data;
   },
 
@@ -20,48 +22,76 @@ export const coursesService = {
     limit?: number;
     search?: string;
     difficulty?: string;
+    category?: string;
+    access?: string;
+    state?: string;
     isPublished?: boolean;
   }): Promise<PaginatedResponse<CourseListItem>> => {
     const { data } = await apiClient.get<PaginatedResponse<CourseListItem>>(
       API_ENDPOINTS.ADMIN_COURSES.LIST,
-      { params }
+      { params },
     );
     return data;
   },
 
   getById: async (id: string): Promise<Course> => {
-    const { data } = await apiClient.get<Course>(API_ENDPOINTS.ADMIN_COURSES.DETAIL(id));
+    const { data } = await apiClient.get<Course>(
+      API_ENDPOINTS.ADMIN_COURSES.DETAIL(id),
+    );
     return data;
   },
 
   create: async (payload: CreateCourseRequest): Promise<CourseListItem> => {
     const { data } = await apiClient.post<CourseListItem>(
       API_ENDPOINTS.ADMIN_COURSES.CREATE,
-      payload
+      payload,
     );
     return data;
   },
 
-  update: async (id: string, payload: UpdateCourseRequest): Promise<CourseListItem> => {
+  update: async (
+    id: string,
+    payload: UpdateCourseRequest,
+  ): Promise<CourseListItem> => {
     const { data } = await apiClient.patch<CourseListItem>(
       API_ENDPOINTS.ADMIN_COURSES.UPDATE(id),
-      payload
+      payload,
     );
     return data;
   },
 
-  publish: async (id: string): Promise<{ id: string; slug: string; title: string; isPublished: boolean }> => {
-    const { data } = await apiClient.patch(API_ENDPOINTS.ADMIN_COURSES.PUBLISH(id));
+  publish: async (
+    id: string,
+  ): Promise<{
+    id: string;
+    slug: string;
+    title: string;
+    isPublished: boolean;
+  }> => {
+    const { data } = await apiClient.patch(
+      API_ENDPOINTS.ADMIN_COURSES.PUBLISH(id),
+    );
     return data;
   },
 
-  unpublish: async (id: string): Promise<{ id: string; slug: string; title: string; isPublished: boolean }> => {
-    const { data } = await apiClient.patch(API_ENDPOINTS.ADMIN_COURSES.UNPUBLISH(id));
+  unpublish: async (
+    id: string,
+  ): Promise<{
+    id: string;
+    slug: string;
+    title: string;
+    isPublished: boolean;
+  }> => {
+    const { data } = await apiClient.patch(
+      API_ENDPOINTS.ADMIN_COURSES.UNPUBLISH(id),
+    );
     return data;
   },
 
-  delete: async (id: string): Promise<{ success: boolean; message: string }> => {
-    const { data } = await apiClient.delete(API_ENDPOINTS.ADMIN_COURSES.DELETE(id));
+  delete: async (id: string): Promise<any> => {
+    const { data } = await apiClient.delete(
+      API_ENDPOINTS.ADMIN_COURSES.DELETE(id),
+    );
     return data;
   },
 };

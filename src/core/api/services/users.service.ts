@@ -10,7 +10,9 @@ import type {
 
 export const usersService = {
   getStats: async (): Promise<UserStats> => {
-    const { data } = await apiClient.get<UserStats>(API_ENDPOINTS.ADMIN_USERS.STATS);
+    const { data } = await apiClient.get<UserStats>(
+      API_ENDPOINTS.ADMIN_USERS.STATS,
+    );
     return data;
   },
 
@@ -23,34 +25,42 @@ export const usersService = {
   }): Promise<PaginatedResponse<UserListItem>> => {
     const { data } = await apiClient.get<PaginatedResponse<UserListItem>>(
       API_ENDPOINTS.ADMIN_USERS.LIST,
-      { params }
+      { params },
     );
     return data;
   },
 
   getById: async (id: string): Promise<User> => {
-    const { data } = await apiClient.get<User>(API_ENDPOINTS.ADMIN_USERS.DETAIL(id));
+    const { data } = await apiClient.get<User>(
+      API_ENDPOINTS.ADMIN_USERS.DETAIL(id),
+    );
     return data;
   },
 
-  updateRole: async (id: string, payload: UpdateUserRoleRequest): Promise<User> => {
+  updateRole: async (
+    id: string,
+    payload: UpdateUserRoleRequest,
+  ): Promise<User> => {
     const { data } = await apiClient.patch<User>(
       API_ENDPOINTS.ADMIN_USERS.UPDATE_ROLE(id),
-      payload
+      payload,
     );
     return data;
   },
 
   suspend: async (id: string, reason?: string): Promise<User> => {
+    const body = reason ? { reason } : {};
     const { data } = await apiClient.patch<User>(
       API_ENDPOINTS.ADMIN_USERS.SUSPEND(id),
-      { reason }
+      body,
     );
     return data;
   },
 
   unsuspend: async (id: string): Promise<User> => {
-    const { data } = await apiClient.patch<User>(API_ENDPOINTS.ADMIN_USERS.UNSUSPEND(id));
+    const { data } = await apiClient.patch<User>(
+      API_ENDPOINTS.ADMIN_USERS.UNSUSPEND(id),
+    );
     return data;
   },
 };
