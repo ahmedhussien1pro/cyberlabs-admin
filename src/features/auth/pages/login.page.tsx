@@ -3,7 +3,7 @@ import { Shield } from 'lucide-react';
 import { ThemeToggle } from '@/shared/components/common/theme-toggle';
 import { LanguageSwitcher } from '@/shared/components/common/language-switcher';
 import { Logo } from '@/shared/components/common/Logo';
-import { Preloader } from '@/shared/components/common/preloader';
+// import { Preloader } from '@/shared/components/common/preloader';
 import { LoginForm } from '../components/login-form';
 import '../styles/auth.css';
 import { useTranslation } from 'react-i18next';
@@ -26,7 +26,6 @@ export default function LoginPage() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.3 }}>
-
           {/* ── Left Panel — Branding (desktop only) ── */}
           <div
             className='hidden md:flex w-1/2 flex-col items-center justify-center p-10 text-primary-foreground'
@@ -43,7 +42,11 @@ export default function LoginPage() {
             <div className='text-center space-y-4'>
               <motion.div
                 animate={{ y: [0, -6, 0] }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}>
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                }}>
                 <Shield className='w-16 h-16 mx-auto opacity-90' />
               </motion.div>
 

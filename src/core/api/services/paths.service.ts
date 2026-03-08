@@ -1,4 +1,4 @@
-import apiClient from '../axios-client';
+import { apiClient } from '../client';
 import type {
   LearningPath,
   LearningPathListItem,
@@ -22,7 +22,9 @@ export const pathsService = {
   },
 
   // GET /admin/paths
-  getAll(params?: PathsQueryParams): Promise<PaginatedResponse<LearningPathListItem>> {
+  getAll(
+    params?: PathsQueryParams,
+  ): Promise<PaginatedResponse<LearningPathListItem>> {
     return apiClient.get('/admin/paths', { params }).then((r) => r.data);
   },
 

@@ -28,7 +28,7 @@ export const CourseCreatePage = lazy(
 );
 export const CourseEditPage = lazy(
   () => import('@/features/courses/pages/course-edit.page'),
-); // ← NEW
+);
 
 // Labs
 export const LabsListPage = lazy(
@@ -42,4 +42,18 @@ export const LabCreatePage = lazy(
 );
 export const LabEditPage = lazy(
   () => import('@/features/labs/pages/lab-edit.page'),
-); // ← NEW
+);
+
+// Paths ← NEW
+export const PathsListPage = lazy(
+  () => import('@/features/paths/pages/paths-list.page'),
+);
+export const PathDetailPage = lazy(
+  () => import('@/features/paths/pages/path-detail.page'),
+);
+export const PathCreatePage = lazy(
+  () => import('@/features/paths/pages/path-create.page'),
+);
+export const PathEditPage = lazy(
+  () => import('@/features/paths/pages/path-edit.page'),
+);
