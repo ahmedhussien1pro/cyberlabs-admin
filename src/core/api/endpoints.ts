@@ -1,0 +1,52 @@
+export const API_ENDPOINTS = {
+  // Auth
+  AUTH: {
+    LOGIN: '/auth/login',
+    REGISTER: '/auth/register',
+    ME: '/auth/me',
+    LOGOUT: '/auth/logout',
+  },
+
+  // Admin - Users
+  ADMIN_USERS: {
+    LIST: '/admin/users',
+    STATS: '/admin/users/stats',
+    DETAIL: (id: string) => `/admin/users/${id}`,
+    UPDATE_ROLE: (id: string) => `/admin/users/${id}/role`,
+    SUSPEND: (id: string) => `/admin/users/${id}/suspend`,
+    UNSUSPEND: (id: string) => `/admin/users/${id}/unsuspend`,
+  },
+
+  // Admin - Courses
+  ADMIN_COURSES: {
+    LIST: '/admin/courses',
+    STATS: '/admin/courses/stats',
+    DETAIL: (id: string) => `/admin/courses/${id}`,
+    CREATE: '/admin/courses',
+    UPDATE: (id: string) => `/admin/courses/${id}`,
+    PUBLISH: (id: string) => `/admin/courses/${id}/publish`,
+    UNPUBLISH: (id: string) => `/admin/courses/${id}/unpublish`,
+    DELETE: (id: string) => `/admin/courses/${id}`,
+  },
+
+  // Admin - Labs
+  ADMIN_LABS: {
+    LIST: '/admin/labs',
+    STATS: '/admin/labs/stats',
+    DETAIL: (id: string) => `/admin/labs/${id}`,
+    CREATE: '/admin/labs',
+    UPDATE: (id: string) => `/admin/labs/${id}`,
+    PUBLISH: (id: string) => `/admin/labs/${id}/publish`,
+    UNPUBLISH: (id: string) => `/admin/labs/${id}/unpublish`,
+    DELETE: (id: string) => `/admin/labs/${id}`,
+  },
+
+  // Admin - Analytics
+  ADMIN_ANALYTICS: {
+    OVERVIEW: '/admin/analytics/overview',
+    GROWTH: '/admin/analytics/growth',
+    ENGAGEMENT: '/admin/analytics/engagement',
+    TOP_CONTENT: '/admin/analytics/top-content',
+    RECENT_ACTIVITY: '/admin/analytics/recent-activity',
+  },
+} as const;
