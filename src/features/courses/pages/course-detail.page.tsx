@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { coursesService } from '@/core/api/services';
@@ -29,6 +30,7 @@ import {
   ChevronRight,
   Sparkles,
   DollarSign,
+  Monitor,
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -45,6 +47,7 @@ import { toast } from 'sonner';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ROUTES } from '@/shared/constants';
 import { cn } from '@/lib/utils';
+import { CoursePreviewSheet } from '../components/course-preview-sheet';
 
 const COLOR_BG: Record<string, string> = {
   emerald: 'from-emerald-950 to-emerald-900 border-emerald-800/50',
@@ -129,6 +132,7 @@ export default function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const { data: course, isLoading } = useQuery({
     queryKey: ['course', id],
@@ -166,7 +170,8 @@ export default function CourseDetailPage() {
     },
     onError: (err: any) =>
       toast.error(
-        err.response?.data?.message ?? 'Cannot delete — course may have active enrollments',
+        err.response?.data?.message ??
+          'Cannot delete — course may have active enrollments',
       ),
   });
 
@@ -214,7 +219,7 @@ export default function CourseDetailPage() {
           Courses
         </Link>
         <ChevronRight className='h-3.5 w-3.5' />
-        <span className='max-w-xs truncate text-foreground font-medium'>
+        <span className='max-w-xs truncate font-medium text-foreground'>
           {course.title}
         </span>
       </nav>
@@ -223,14 +228,31 @@ export default function CourseDetailPage() {
       <div className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
         <div className='min-w-0'>
           <div className='flex flex-wrap items-center gap-2'>
-            <h1 className='text-2xl font-bold tracking-tight'>{course.title}</h1>
-            <StateIndicator state={course.state} isPublished={course.isPublished} />
+            <h1 className='text-2xl font-bold tracking-tight'>
+              {course.title}
+            </h1>
+            <StateIndicator
+              state={course.state}
+              isPublished={course.isPublished}
+            />
           </div>
           <p className='mt-1 font-mono text-sm text-muted-foreground'>
             {course.slug}
           </p>
         </div>
         <div className='flex shrink-0 flex-wrap items-center gap-2'>
+          {/* Preview */}
+          <Button
+            variant='outline'
+            size='sm'
+            className='h-9 gap-2'
+            onClick={() => setPreviewOpen(true)}
+          >
+            <Monitor className='h-4 w-4' />
+            Preview
+          </Button>
+
+          {/* Edit */}
           <Link to={ROUTES.COURSE_EDIT(id!)}>
             <Button variant='outline' size='sm' className='h-9 gap-2'>
               <Pencil className='h-4 w-4' />
@@ -238,6 +260,7 @@ export default function CourseDetailPage() {
             </Button>
           </Link>
 
+          {/* Publish / Unpublish */}
           {!isComingSoon && (
             <Button
               variant='outline'
@@ -264,6 +287,7 @@ export default function CourseDetailPage() {
             </Button>
           )}
 
+          {/* Delete */}
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant='destructive' size='sm' className='h-9 gap-2'>
@@ -279,11 +303,13 @@ export default function CourseDetailPage() {
                 </AlertDialogTitle>
                 <AlertDialogDescription>
                   Are you sure you want to permanently delete{' '}
-                  <strong>{course.title}</strong>? This action cannot be undone.
+                  <strong>{course.title}</strong>? This action cannot be
+                  undone.
                   {hasEnrollments && (
                     <span className='mt-2 flex items-center gap-1.5 font-medium text-destructive'>
                       <AlertTriangle className='h-4 w-4' />
-                      This course has {course._count?.enrollments} active enrollments and cannot be deleted.
+                      This course has {course._count?.enrollments} active
+                      enrollments and cannot be deleted.
                     </span>
                   )}
                 </AlertDialogDescription>
@@ -305,7 +331,7 @@ export default function CourseDetailPage() {
 
       {/* ── Body ── */}
       <div className='grid gap-6 xl:grid-cols-3'>
-        {/* ── Left column ── */}
+        {/* Left column */}
         <div className='space-y-5 xl:col-span-2'>
           {/* Thumbnail hero */}
           <Card className='overflow-hidden'>
@@ -334,7 +360,6 @@ export default function CourseDetailPage() {
                   </p>
                 </div>
               )}
-              {/* Access overlay */}
               <div className='absolute left-3 top-3'>
                 {course.access && (
                   <Badge
@@ -450,14 +475,14 @@ export default function CourseDetailPage() {
           )}
         </div>
 
-        {/* ── Right sidebar ── */}
+        {/* Right sidebar */}
         <div className='space-y-5'>
           {/* Stats */}
           <Card>
             <CardHeader>
               <CardTitle className='text-base'>Stats</CardTitle>
             </CardHeader>
-            <CardContent className='space-y-0 divide-y divide-border/50'>
+            <CardContent className='divide-y divide-border/50 space-y-0'>
               {[
                 {
                   icon: Users,
@@ -486,13 +511,13 @@ export default function CourseDetailPage() {
                   value: course._count?.reviews ?? 0,
                   color: 'text-amber-400',
                 },
-              ].map(({ icon: Icon, label, value, color }) => (
+              ].map(({ icon: Icon, label, value, color: c }) => (
                 <div
                   key={label}
                   className='flex items-center justify-between py-3'
                 >
                   <span className='flex items-center gap-2 text-sm text-muted-foreground'>
-                    <Icon className={cn('h-4 w-4', color)} />
+                    <Icon className={cn('h-4 w-4', c)} />
                     {label}
                   </span>
                   <span className='text-sm font-semibold tabular-nums'>
@@ -564,7 +589,9 @@ export default function CourseDetailPage() {
                 {
                   label: 'Category',
                   node: course.category ? (
-                    <span className='text-sm font-medium'>{course.category}</span>
+                    <span className='text-sm font-medium'>
+                      {course.category}
+                    </span>
                   ) : (
                     <span className='text-xs text-muted-foreground'>—</span>
                   ),
@@ -613,7 +640,6 @@ export default function CourseDetailPage() {
                 </div>
               ))}
 
-              {/* Flags */}
               {(course.isFeatured || course.isNew) && (
                 <>
                   <Separator />
@@ -640,7 +666,7 @@ export default function CourseDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Dates */}
+          {/* Timeline */}
           <Card>
             <CardHeader>
               <CardTitle className='text-base'>Timeline</CardTitle>
@@ -680,7 +706,10 @@ export default function CourseDetailPage() {
                     ]
                   : []),
               ].map(({ icon: Icon, label, value, sub }) => (
-                <div key={label} className='flex items-start justify-between gap-3'>
+                <div
+                  key={label}
+                  className='flex items-start justify-between gap-3'
+                >
                   <span className='flex items-center gap-1.5 text-xs text-muted-foreground'>
                     <Icon className='h-3.5 w-3.5' />
                     {label}
@@ -695,6 +724,13 @@ export default function CourseDetailPage() {
           </Card>
         </div>
       </div>
+
+      {/* ── Platform Preview Sheet ── */}
+      <CoursePreviewSheet
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        course={course}
+      />
     </div>
   );
 }
