@@ -9,3 +9,10 @@ export const USER_QUERY_KEYS = {
   paths: ['user', 'paths'] as const,
   public: (id: string) => ['user', 'public', id] as const,
 } as const;
+
+export const PATHS_QUERY_KEYS = {
+  all: ['paths'] as const,
+  stats: ['paths', 'stats'] as const,
+  list: (params?: object) => ['paths', 'list', params] as const,
+  detail: (id: string) => ['paths', 'detail', id] as const,
+} as const;
