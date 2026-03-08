@@ -8,6 +8,7 @@ export const ROUTES = {
   COURSE_CREATE: '/courses/new',
   COURSE_EDIT: (id: string) => `/courses/${id}/edit`,
   COURSE_IMPORT: '/courses/import',
+  COURSE_PLATFORM_PREVIEW: (id: string) => `/courses/${id}/platform-preview`,
   LABS: '/labs',
   LAB_DETAIL: (id: string) => `/labs/${id}`,
   LAB_CREATE: '/labs/new',

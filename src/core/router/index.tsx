@@ -33,6 +33,9 @@ const CourseEditPage = lazy(
 const CourseImportPage = lazy(
   () => import('@/features/courses/pages/course-import.page'),
 );
+const CoursePlatformPreviewPage = lazy(
+  () => import('@/features/courses/pages/course-platform-preview.page'),
+);
 const LabsListPage = lazy(() => import('@/features/labs/pages/labs-list.page'));
 const LabDetailPage = lazy(
   () => import('@/features/labs/pages/lab-detail.page'),
@@ -151,7 +154,10 @@ const router = createBrowserRouter([
           </S>
         ),
       },
-
+      {
+        path: 'courses/:id/platform-preview',
+        element: <CoursePlatformPreviewPage />,
+      },
       // ─── Labs
       {
         path: 'labs',
