@@ -1,3 +1,8 @@
+// src/features/courses/components/platform-curriculum.tsx
+// ─── نسخة طبق الأصل من course-curriculum.tsx (المنصة الأساسية) ──────────────
+// يدعم وضعين:
+//   1. elements: CourseElement[]  → يعرض CourseElementRenderer (import preview / curriculum API)
+//   2. lessons: PreviewLesson[]   → يعرض قائمة الـ lessons (DB preview)
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -11,13 +16,15 @@ import {
   FlaskConical,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import CourseElementRenderer from './CourseElementRenderer';
+import type { CourseElement } from '@/core/types/curriculumCourses.types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface PreviewLesson {
   id?: string;
   title: string;
   ar_title?: string | null;
-  type?: string; // VIDEO | ARTICLE | QUIZ | LAB
+  type?: string;
   duration?: number | null;
   order?: number;
   isPublished?: boolean;
@@ -30,6 +37,8 @@ export interface PreviewSection {
   description?: string | null;
   order?: number;
   lessons?: PreviewLesson[];
+  /** Rich JSON curriculum content — يُعرض بـ CourseElementRenderer */
+  elements?: CourseElement[];
 }
 
 interface PlatformCurriculumProps {
@@ -45,7 +54,7 @@ const LESSON_ICON: Record<string, React.ElementType> = {
   LAB: FlaskConical,
 };
 
-// ─── Skeleton (identical to main platform) ───────────────────────────────────
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
 function CurriculumSkeleton() {
   return (
     <div className='space-y-3'>
@@ -59,7 +68,7 @@ function CurriculumSkeleton() {
   );
 }
 
-// ─── TopicRow  ────────────────────────────────────────────────────────────────
+// ─── TopicRow ─────────────────────────────────────────────────────────────────
 function TopicRow({
   section,
   topicIndex,
@@ -79,8 +88,15 @@ function TopicRow({
   const isLast = topicIndex === total - 1;
   const title =
     lang === 'ar' && section.ar_title ? section.ar_title : section.title;
-  const subtitle = lang === 'ar' ? section.title : (section.ar_title ?? null);
+  const subtitle =
+    lang === 'ar' ? section.title : (section.ar_title ?? null);
   const lessons = section.lessons ?? [];
+  const elements = section.elements ?? [];
+  const hasRichContent = elements.length > 0;
+
+  // عدد العناصر للعرض في الـ header
+  const itemCount = hasRichContent ? elements.length : lessons.length;
+  const itemLabel = hasRichContent ? 'element' : 'lesson';
 
   return (
     <motion.li
@@ -90,6 +106,7 @@ function TopicRow({
       transition={{ duration: 0.25, delay: topicIndex * 0.04 }}
       className='relative'>
       <div className='flex gap-4'>
+        {/* ── Timeline dot ── */}
         <div className='relative flex shrink-0 flex-col items-center'>
           <div
             className={cn(
@@ -130,7 +147,6 @@ function TopicRow({
             </span>
 
             <div className='min-w-0 flex-1'>
-              {/* TOPIC badge */}
               <div className='mb-0.5 flex flex-wrap items-center gap-1.5'>
                 <span
                   className={cn(
@@ -142,13 +158,9 @@ function TopicRow({
                   TOPIC {topicNum}
                 </span>
               </div>
-
-              {/* Primary title */}
               <p className='text-sm font-semibold leading-snug text-foreground'>
                 {title}
               </p>
-
-              {/* Secondary language subtitle */}
               {subtitle && (
                 <p
                   className='mt-0.5 truncate text-xs text-muted-foreground/60'
@@ -156,10 +168,8 @@ function TopicRow({
                   {subtitle}
                 </p>
               )}
-
-              {/* Lesson count */}
               <p className='mt-0.5 text-xs text-muted-foreground'>
-                {lessons.length} lesson{lessons.length !== 1 ? 's' : ''}
+                {itemCount} {itemLabel}{itemCount !== 1 ? 's' : ''}
               </p>
             </div>
 
@@ -171,7 +181,7 @@ function TopicRow({
             />
           </button>
 
-          {/* ── Animated lessons body (AnimatePresence = same as main platform) ── */}
+          {/* ── Animated body ── */}
           <AnimatePresence initial={false}>
             {isOpen && (
               <motion.div
@@ -182,11 +192,15 @@ function TopicRow({
                 transition={{ duration: 0.3, ease: 'easeInOut' }}
                 className='overflow-hidden'>
                 <div className='border-t border-border/40 px-5 pb-5 pt-4'>
-                  {lessons.length === 0 ? (
+                  {/* ── RICH CONTENT (CourseElementRenderer) ── */}
+                  {hasRichContent ? (
+                    <CourseElementRenderer elements={elements} />
+                  ) : lessons.length === 0 ? (
                     <p className='text-sm italic text-muted-foreground'>
                       Content coming soon...
                     </p>
                   ) : (
+                    /* ── FLAT LESSONS LIST (DB preview) ── */
                     <div className='space-y-0.5'>
                       {lessons.map((lesson, lIdx) => {
                         const LessonIcon =
@@ -196,17 +210,13 @@ function TopicRow({
                           lang === 'ar' && lesson.ar_title
                             ? lesson.ar_title
                             : lesson.title;
-
                         return (
                           <div
                             key={lesson.id ?? lIdx}
                             className='flex items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-muted/30'>
-                            {/* Type icon */}
                             <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border/50 bg-muted text-muted-foreground'>
                               <LessonIcon className='h-3.5 w-3.5' />
                             </span>
-
-                            {/* Title + type label */}
                             <div className='min-w-0 flex-1'>
                               <p className='truncate text-sm text-foreground/80'>
                                 {lessonTitle}
@@ -215,26 +225,18 @@ function TopicRow({
                                 {lesson.type ?? 'ARTICLE'}
                               </span>
                             </div>
-
-                            {/* Duration */}
                             {lesson.duration != null && lesson.duration > 0 && (
                               <span className='flex shrink-0 items-center gap-1 text-xs text-muted-foreground/60'>
                                 <Clock3 className='h-3 w-3' />
                                 {lesson.duration}m
                               </span>
                             )}
-
-                            {/* Published indicator */}
                             <span
                               className={cn(
                                 'h-1.5 w-1.5 shrink-0 rounded-full',
-                                lesson.isPublished
-                                  ? 'bg-emerald-500'
-                                  : 'bg-border',
+                                lesson.isPublished ? 'bg-emerald-500' : 'bg-border',
                               )}
-                              title={
-                                lesson.isPublished ? 'Published' : 'Unpublished'
-                              }
+                              title={lesson.isPublished ? 'Published' : 'Unpublished'}
                             />
                           </div>
                         );
@@ -251,22 +253,22 @@ function TopicRow({
   );
 }
 
-// ─── Main export  ─────────────────────────────────────────────────────────────
+// ─── Main Export ──────────────────────────────────────────────────────────────
 export function PlatformCurriculum({
   sections,
   estimatedHours,
 }: PlatformCurriculumProps) {
   const { i18n } = useTranslation();
   const lang = (i18n.language === 'ar' ? 'ar' : 'en') as 'en' | 'ar';
-
-  // Open first section by default (same UX as main platform)
-  const [openId, setOpenId] = useState<string | null>(sections[0]?.id ?? null);
+  const [openId, setOpenId] = useState<string | null>(
+    sections[0]?.id ?? null,
+  );
 
   const toggle = (id: string) => setOpenId((p) => (p === id ? null : id));
-
   const total = sections.length;
   const totalLessons = sections.reduce(
-    (sum, s) => sum + (s.lessons?.length ?? 0),
+    (sum, s) =>
+      sum + (s.elements?.length ?? s.lessons?.length ?? 0),
     0,
   );
 
@@ -292,7 +294,6 @@ export function PlatformCurriculum({
         </p>
       ) : (
         <div className='relative'>
-          {/* Vertical timeline line (same absolute positioning as main platform) */}
           <div
             aria-hidden='true'
             className='absolute bottom-5 start-[25px] top-5 w-px bg-border/40'
