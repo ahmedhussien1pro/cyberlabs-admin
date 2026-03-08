@@ -1,14 +1,17 @@
 export const API_ENDPOINTS = {
+  // Auth
   AUTH: {
     LOGIN: '/auth/login',
     ME: '/auth/me',
     LOGOUT: '/auth/logout',
   },
 
+  // Admin (AdminGuard-protected)
   ADMIN: {
     HEALTH: '/admin/health',
   },
 
+  // Admin - Users
   ADMIN_USERS: {
     LIST: '/admin/users',
     STATS: '/admin/users/stats',
@@ -18,6 +21,7 @@ export const API_ENDPOINTS = {
     UNSUSPEND: (id: string) => `/admin/users/${id}/unsuspend`,
   },
 
+  // Admin - Courses
   ADMIN_COURSES: {
     LIST: '/admin/courses',
     STATS: '/admin/courses/stats',
@@ -29,6 +33,7 @@ export const API_ENDPOINTS = {
     DELETE: (id: string) => `/admin/courses/${id}`,
   },
 
+  // Admin - Labs
   ADMIN_LABS: {
     LIST: '/admin/labs',
     STATS: '/admin/labs/stats',
@@ -40,6 +45,7 @@ export const API_ENDPOINTS = {
     DELETE: (id: string) => `/admin/labs/${id}`,
   },
 
+  // Admin - Analytics
   ADMIN_ANALYTICS: {
     OVERVIEW: '/admin/analytics/overview',
     GROWTH: '/admin/analytics/growth',

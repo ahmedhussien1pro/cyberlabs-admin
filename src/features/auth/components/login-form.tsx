@@ -29,60 +29,58 @@ export function LoginForm() {
   } = useForm<LoginFormData>();
 
   const loginMutation = useMutation({
-    mutationFn: authService.login,
-    onSuccess: (data) => {
-      console.log('📦 Raw response:', data);
-      
-      // Handle multiple token key formats
-      const token = data.accessToken || data.access_token || data.token;
-      
+    mutationFn: async (credentials: LoginFormData) => {
+      // Step 1: Authenticate
+      const data = await authService.login(credentials);
+
+      const token = data.accessToken || (data as any).access_token || (data as any).token;
       if (!token) {
-        console.error('❌ No token found in response!');
-        console.log('Response keys:', Object.keys(data));
-        setError('Authentication failed - no token received');
-        return;
+        throw new Error('Authentication failed - no token received');
       }
-      
-      console.log('✅ Login successful');
-      console.log('👤 User:', data.user.email, '(', data.user.role, ')');
-      console.log('🔑 Token:', token.substring(0, 30) + '...');
-      
-      // Store tokens
-      Cookies.set('access_token', token, { 
+
+      // Step 2: Store tokens so the axios interceptor can attach them
+      Cookies.set('access_token', token, {
         expires: 7,
         path: '/',
         sameSite: 'lax',
       });
-      
-      // Store refresh token if available
       if (data.refreshToken) {
         Cookies.set('refresh_token', data.refreshToken, {
-          expires: 30, // Refresh tokens usually last longer
+          expires: 30,
           path: '/',
           sameSite: 'lax',
         });
       }
-      
-      // Update store
+
+      // Step 3: Verify admin role against backend (GET /admin/health → AdminGuard)
+      try {
+        await authService.verifyAdminHealth();
+      } catch {
+        // Clean up tokens if not admin
+        Cookies.remove('access_token');
+        Cookies.remove('refresh_token');
+        throw new Error('Access denied: Admin role required');
+      }
+
+      return data;
+    },
+
+    onSuccess: (data) => {
+      // Step 4: Persist user in store and redirect
       setUser(data.user);
-      
-      console.log('✅ Token stored in cookie');
-      console.log('✅ User stored in Zustand');
-      console.log('🔄 Navigating to dashboard...');
-      
-      // Navigate WITHOUT reload
       navigate(ROUTES.DASHBOARD, { replace: true });
     },
+
     onError: (err: any) => {
-      console.error('❌ Login error:', err);
-      console.log('Error response:', err.response?.data);
-      const message = err.response?.data?.message || 'Invalid email or password';
+      const message =
+        err.message ||
+        err.response?.data?.message ||
+        'Invalid email or password';
       setError(message);
     },
   });
 
   const onSubmit = (data: LoginFormData) => {
-    console.log('🔐 Attempting login for:', data.email);
     setError('');
     loginMutation.mutate(data);
   };

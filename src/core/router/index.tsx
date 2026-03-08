@@ -2,9 +2,8 @@ import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import { ROUTES } from '@/shared/constants';
 import ProtectedRoute from './protected-route';
 import PublicRoute from './public-route';
+import { AdminGate } from './AdminGate';
 import AdminLayout from '@/shared/components/layout/admin-layout';
-
-// Lazy load pages
 import { lazy } from 'react';
 
 const LoginPage = lazy(() => import('@/features/auth/pages/login.page'));
@@ -30,8 +29,12 @@ const router = createBrowserRouter([
   {
     path: '/',
     element: (
+      // Layer 1 — ProtectedRoute: fast local guard (token + user in store + role in store)
       <ProtectedRoute>
-        <AdminLayout />
+        {/* Layer 2 — AdminGate: backend verification via GET /admin/health (AdminGuard) */}
+        <AdminGate>
+          <AdminLayout />
+        </AdminGate>
       </ProtectedRoute>
     ),
     children: [
