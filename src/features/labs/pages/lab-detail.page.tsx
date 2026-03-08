@@ -109,7 +109,10 @@ export default function LabDetailPage() {
             type='lab'
             onSuccess={refetch}
           />
-          <Button variant='outline'>
+          {/* ✅ Navigate to edit page */}
+          <Button
+            variant='outline'
+            onClick={() => navigate(ROUTES.LAB_EDIT(id!))}>
             <Edit className='mr-2 h-4 w-4' />
             Edit
           </Button>
@@ -133,7 +136,7 @@ export default function LabDetailPage() {
               <div className='text-sm text-muted-foreground'>Title</div>
               <div className='font-medium'>{lab.title}</div>
               {lab.ar_title && (
-                <div className='text-sm text-muted-foreground'>
+                <div className='text-sm text-muted-foreground dir-rtl'>
                   {lab.ar_title}
                 </div>
               )}
@@ -142,9 +145,11 @@ export default function LabDetailPage() {
               <div className='text-sm text-muted-foreground'>Slug</div>
               <div className='font-mono text-sm'>{lab.slug}</div>
             </div>
-            <div className='flex gap-2'>
+            <div className='flex gap-2 flex-wrap'>
               {lab.difficulty && <Badge>{lab.difficulty}</Badge>}
-              {lab.category && <Badge variant='outline'>{lab.category}</Badge>}
+              {lab.category && (
+                <Badge variant='outline'>{lab.category}</Badge>
+              )}
               {lab.executionMode && (
                 <Badge variant='secondary'>{lab.executionMode}</Badge>
               )}
@@ -158,7 +163,7 @@ export default function LabDetailPage() {
             {lab.description && (
               <div>
                 <div className='text-sm text-muted-foreground'>Description</div>
-                <div className='text-sm'>{lab.description}</div>
+                <div className='text-sm leading-relaxed'>{lab.description}</div>
               </div>
             )}
           </CardContent>
@@ -170,23 +175,21 @@ export default function LabDetailPage() {
           </CardHeader>
           <CardContent className='space-y-4'>
             <div className='grid grid-cols-2 gap-4'>
-              {lab.xpReward !== null && lab.xpReward !== undefined && (
+              {lab.xpReward != null && (
                 <div className='flex items-center gap-2'>
-                  <Trophy className='h-4 w-4 text-amber-600' />
+                  <Trophy className='h-4 w-4 text-amber-500' />
                   <div>
-                    <div className='text-sm text-muted-foreground'>
-                      XP Reward
-                    </div>
-                    <div className='font-medium'>{lab.xpReward}</div>
+                    <div className='text-xs text-muted-foreground'>XP Reward</div>
+                    <div className='font-semibold'>{lab.xpReward}</div>
                   </div>
                 </div>
               )}
-              {lab.pointsReward !== null && lab.pointsReward !== undefined && (
+              {lab.pointsReward != null && (
                 <div className='flex items-center gap-2'>
-                  <Trophy className='h-4 w-4 text-blue-600' />
+                  <Trophy className='h-4 w-4 text-blue-500' />
                   <div>
-                    <div className='text-sm text-muted-foreground'>Points</div>
-                    <div className='font-medium'>{lab.pointsReward}</div>
+                    <div className='text-xs text-muted-foreground'>Points</div>
+                    <div className='font-semibold'>{lab.pointsReward}</div>
                   </div>
                 </div>
               )}
@@ -194,26 +197,30 @@ export default function LabDetailPage() {
                 <div className='flex items-center gap-2'>
                   <Clock className='h-4 w-4 text-muted-foreground' />
                   <div>
-                    <div className='text-sm text-muted-foreground'>
-                      Duration
-                    </div>
-                    <div className='font-medium'>{lab.duration} min</div>
+                    <div className='text-xs text-muted-foreground'>Duration</div>
+                    <div className='font-semibold'>{lab.duration} min</div>
                   </div>
                 </div>
               )}
               {lab.maxAttempts && (
                 <div>
-                  <div className='text-sm text-muted-foreground'>
-                    Max Attempts
+                  <div className='text-xs text-muted-foreground'>Max Attempts</div>
+                  <div className='font-semibold'>{lab.maxAttempts}</div>
+                </div>
+              )}
+              {lab.timeLimit && (
+                <div>
+                  <div className='text-xs text-muted-foreground'>
+                    Time Limit
                   </div>
-                  <div className='font-medium'>{lab.maxAttempts}</div>
+                  <div className='font-semibold'>{lab.timeLimit}s</div>
                 </div>
               )}
             </div>
             {lab.skills && lab.skills.length > 0 && (
               <div>
-                <div className='text-sm text-muted-foreground'>Skills</div>
-                <div className='mt-2 flex flex-wrap gap-1'>
+                <div className='text-sm text-muted-foreground mb-2'>Skills</div>
+                <div className='flex flex-wrap gap-1'>
                   {lab.skills.map((skill) => (
                     <Badge key={skill} variant='outline'>
                       {skill}
@@ -233,49 +240,54 @@ export default function LabDetailPage() {
         </CardHeader>
         <CardContent>
           <div className='grid gap-4 md:grid-cols-4'>
-            <div>
+            <div className='text-center'>
+              <div className='text-2xl font-bold'>
+                {lab._count.submissions}
+              </div>
               <div className='text-sm text-muted-foreground'>Submissions</div>
-              <div className='text-2xl font-bold'>{lab._count.submissions}</div>
             </div>
-            <div>
-              <div className='text-sm text-muted-foreground'>In Progress</div>
+            <div className='text-center'>
               <div className='text-2xl font-bold'>
                 {lab._count.usersProgress}
               </div>
+              <div className='text-sm text-muted-foreground'>In Progress</div>
             </div>
-            <div>
+            <div className='text-center'>
+              <div className='text-2xl font-bold'>{lab._count.instances}</div>
               <div className='text-sm text-muted-foreground'>
                 Active Instances
               </div>
-              <div className='text-2xl font-bold'>{lab._count.instances}</div>
             </div>
-            <div>
+            <div className='text-center'>
+              <div className='text-2xl font-bold'>
+                {lab.hints?.length ?? 0}
+              </div>
               <div className='text-sm text-muted-foreground'>Hints</div>
-              <div className='text-2xl font-bold'>{lab.hints?.length ?? 0}</div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Flag Answer - PROTECTED */}
+      {/* Flag Answer — PROTECTED: only visible to admin, never shown to users */}
       {lab.flagAnswer && <FlagAnswerField flagAnswer={lab.flagAnswer} />}
 
-      {/* Delete Dialog */}
+      {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Lab</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{lab.title}"? This action cannot
-              be undone.
+              Are you sure you want to delete &ldquo;{lab.title}&rdquo;? This
+              action cannot be undone and will remove all associated data.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deleteMutation.mutate()}
-              className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
-              Delete
+              className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+              disabled={deleteMutation.isPending}>
+              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
