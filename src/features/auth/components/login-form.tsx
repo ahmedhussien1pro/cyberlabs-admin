@@ -31,12 +31,24 @@ export function LoginForm() {
   const loginMutation = useMutation({
     mutationFn: authService.login,
     onSuccess: (data) => {
+      console.log('📦 Raw response:', data);
+      
+      // Handle both 'token' and 'access_token' keys
+      const token = data.access_token || data.token;
+      
+      if (!token) {
+        console.error('❌ No token found in response!');
+        console.log('Response keys:', Object.keys(data));
+        setError('Authentication failed - no token received');
+        return;
+      }
+      
       console.log('✅ Login successful');
-      console.log('User:', data.user);
-      console.log('Token:', data.access_token.substring(0, 20) + '...');
+      console.log('👤 User:', data.user.email, '(', data.user.role, ')');
+      console.log('🔑 Token:', token.substring(0, 20) + '...');
       
       // Store token
-      Cookies.set('access_token', data.access_token, { 
+      Cookies.set('access_token', token, { 
         expires: 7,
         path: '/',
         sameSite: 'lax',
@@ -54,13 +66,14 @@ export function LoginForm() {
     },
     onError: (err: any) => {
       console.error('❌ Login error:', err);
+      console.log('Error response:', err.response?.data);
       const message = err.response?.data?.message || 'Invalid email or password';
       setError(message);
     },
   });
 
   const onSubmit = (data: LoginFormData) => {
-    console.log('🔐 Attempting login...');
+    console.log('🔐 Attempting login for:', data.email);
     setError('');
     loginMutation.mutate(data);
   };
