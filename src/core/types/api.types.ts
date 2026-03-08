@@ -1,15 +1,21 @@
 // User Types
+export type UserRole = 'USER' | 'ADMIN';
+
 export interface User {
   id: string;
   email: string;
   username: string;
-  role: 'USER' | 'ADMIN';
+  name?: string;
+  role: UserRole;
   isSuspended: boolean;
+  isActive?: boolean;
   createdAt: string;
   updatedAt: string;
+  lastLoginAt?: string;
   _count?: {
     enrollments: number;
     labProgress: number;
+    submissions?: number;
   };
 }
 
@@ -17,20 +23,28 @@ export interface UserListItem {
   id: string;
   email: string;
   username: string;
-  role: 'USER' | 'ADMIN';
+  name?: string;
+  role: UserRole;
   isSuspended: boolean;
+  isActive?: boolean;
   createdAt: string;
   _count: {
     enrollments: number;
     labProgress: number;
+    submissions?: number;
   };
 }
 
 export interface UserStats {
   total: number;
   active: number;
+  activeToday?: number;
   suspended: number;
   admins: number;
+}
+
+export interface UpdateUserRoleRequest {
+  role: UserRole;
 }
 
 // Auth Types
@@ -49,28 +63,42 @@ export interface LoginRequest {
 }
 
 // Course Types
+export type Difficulty = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT';
+
 export interface Course {
   id: string;
   title: string;
+  ar_title?: string;
+  slug?: string;
   description: string;
-  difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+  difficulty: Difficulty;
   isPublished: boolean;
+  enrollmentCount?: number;
+  averageRating?: number;
   createdAt: string;
   updatedAt: string;
   _count?: {
     labs: number;
+    courseLabs?: number;
     enrollments: number;
+    reviews?: number;
   };
+  courseLabs?: Array<{
+    lab: any;
+  }>;
 }
 
 export interface CourseListItem {
   id: string;
   title: string;
-  difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+  slug?: string;
+  difficulty: Difficulty;
   isPublished: boolean;
+  enrollmentCount?: number;
   createdAt: string;
   _count: {
     labs: number;
+    courseLabs?: number;
     enrollments: number;
   };
 }
@@ -78,24 +106,29 @@ export interface CourseListItem {
 export interface CourseStats {
   total: number;
   published: number;
+  unpublished?: number;
   draft: number;
+  totalEnrollments?: number;
   byDifficulty: {
     beginner: number;
     intermediate: number;
     advanced: number;
+    expert?: number;
   };
 }
 
 export interface CreateCourseRequest {
   title: string;
+  slug?: string;
   description: string;
-  difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+  difficulty: Difficulty;
+  imageUrl?: string;
 }
 
 export interface UpdateCourseRequest extends Partial<CreateCourseRequest> {}
 
 // Lab Types
-export type LabCategory =
+export type Category =
   | 'WEB_SECURITY'
   | 'NETWORK_SECURITY'
   | 'CRYPTOGRAPHY'
@@ -105,13 +138,16 @@ export type LabCategory =
   | 'OSINT'
   | 'MISC';
 
-export type LabDifficulty = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT';
+export type LabCategory = Category;
+
+export type LabDifficulty = Difficulty;
 
 export type LabExecutionMode = 'BROWSER' | 'DOCKER' | 'STATIC';
 
 export interface LabListItem {
   id: string;
   title: string;
+  slug?: string;
   category: LabCategory;
   difficulty: LabDifficulty;
   executionMode: LabExecutionMode;
@@ -123,16 +159,24 @@ export interface LabListItem {
     submissions: number;
     usersProgress: number;
     hints: number;
+    instances?: number;
   };
 }
 
-export interface Lab extends LabListItem {
+export interface Lab extends Omit<LabListItem, '_count'> {
   description: string;
+  ar_title?: string;
   flagAnswer: string;
   hints: string[];
   resources: string[];
   dockerImage: string | null;
   staticFiles: string[];
+  xpReward?: number;
+  pointsReward?: number;
+  duration?: number;
+  maxAttempts?: number;
+  timeLimit?: number;
+  skills?: string[];
   course: {
     id: string;
     title: string;
@@ -142,6 +186,7 @@ export interface Lab extends LabListItem {
     submissions: number;
     usersProgress: number;
     hints: number;
+    instances?: number;
   };
 }
 
@@ -149,9 +194,11 @@ export interface LabStats {
   total: number;
   published: number;
   draft: number;
+  totalCompletions?: number;
   byCategory: Record<LabCategory, number>;
   byDifficulty: {
     beginner: number;
+    BEGINNER?: number;
     intermediate: number;
     advanced: number;
     expert: number;
@@ -165,6 +212,7 @@ export interface LabStats {
 
 export interface CreateLabRequest {
   title: string;
+  slug?: string;
   description: string;
   category: LabCategory;
   difficulty: LabDifficulty;
@@ -176,6 +224,11 @@ export interface CreateLabRequest {
   dockerImage?: string;
   staticFiles?: string[];
   courseId?: string;
+  xpReward?: number;
+  pointsReward?: number;
+  duration?: number;
+  maxAttempts?: number;
+  timeLimit?: number;
 }
 
 export interface UpdateLabRequest extends Partial<CreateLabRequest> {}
@@ -199,10 +252,18 @@ export interface GrowthData {
   labs: number[];
 }
 
+export interface GrowthTrends {
+  users: Array<{ date: string; count: number }>;
+  courses: Array<{ date: string; count: number }>;
+}
+
 export interface EngagementMetrics {
   avgTimePerLab: number;
   completionRate: number;
   activeUsers: number;
+  labLaunches?: number;
+  submissions?: number;
+  avgSessionDuration?: number;
   topCategories: Array<{
     category: string;
     count: number;
@@ -215,6 +276,21 @@ export interface TopContentItem {
   type: 'course' | 'lab';
   views: number;
   completions: number;
+}
+
+export interface TopContent {
+  courses: Array<{
+    id: string;
+    title: string;
+    enrollments: number;
+    completions: number;
+  }>;
+  labs: Array<{
+    id: string;
+    title: string;
+    attempts: number;
+    completions: number;
+  }>;
 }
 
 export interface RecentActivityItem {
@@ -232,6 +308,21 @@ export interface RecentActivityItem {
   timestamp: string;
 }
 
+export interface ActivityEvent {
+  id: string;
+  type: 'enrollment' | 'completion' | 'lab_start' | 'submission';
+  user: {
+    id: string;
+    name: string;
+  };
+  target: {
+    id: string;
+    title: string;
+    type: 'course' | 'lab';
+  };
+  timestamp: string;
+}
+
 // Pagination
 export interface PaginationParams {
   page?: number;
@@ -239,12 +330,15 @@ export interface PaginationParams {
   search?: string;
 }
 
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+  meta?: PaginationMeta;
+  pagination?: PaginationMeta;
 }
