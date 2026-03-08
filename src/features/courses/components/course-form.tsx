@@ -147,7 +147,8 @@ function CoursePreview({ data }: { data: Partial<CreateCourseRequest> }) {
                 {data.access}
               </Badge>
             )}
-            {(data.duration ?? 0) > 0 && (
+            {/* ✅ Fix #1: cast to Number to avoid string|number > number TS error */}
+            {Number(data.duration ?? 0) > 0 && (
               <Badge
                 variant='outline'
                 className='text-[10px] text-muted-foreground border-border/40'>
@@ -304,20 +305,22 @@ export function CourseForm({
   });
 
   // Auto-load data in edit mode
+  // ✅ Fix #2: getById (not getOne)
   const { data: courseDetail, isLoading: isLoadingDetail } = useQuery({
     queryKey: ['course-detail', courseId],
-    queryFn: () => coursesService.getOne(courseId!),
+    queryFn: () => coursesService.getById(courseId!),
     enabled: mode === 'edit' && !!courseId,
   });
 
   useEffect(() => {
-    if (courseDetail) reset(courseDetail);
+    if (courseDetail) reset(courseDetail as unknown as CreateCourseRequest);
   }, [courseDetail, reset]);
 
   // Users list for instructorId picker
+  // ✅ Fix #3: getAll (not getList)
   const { data: usersData } = useQuery({
     queryKey: ['admin-users-list'],
-    queryFn: () => usersService.getList({ limit: 100 }),
+    queryFn: () => usersService.getAll({ limit: 100 }),
   });
 
   const watched = watch();
@@ -696,7 +699,7 @@ export function CourseForm({
                   <Label>Duration (hours)</Label>
                   <Input
                     type='number'
-                    {...register('duration', { valueAsNumber: true, min: 1 })}
+                    {...register('duration', { min: 1 })}
                     placeholder='10'
                   />
                 </div>
