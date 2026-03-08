@@ -2,7 +2,11 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { coursesService } from '@/core/api/services';
-import { PlatformCurriculum } from '../components/platform-curriculum';
+import {
+  PlatformCurriculum,
+  type PreviewSection,
+} from '../components/platform-curriculum';
+
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -81,7 +85,7 @@ export default function CoursePlatformPreviewPage() {
   const c = course as any;
   const colors = COLOR_MAP[c?.color ?? 'BLUE'] ?? COLOR_MAP['BLUE'];
   const access = c?.access ?? 'FREE';
-  const sections = c?.sections ?? [];
+  const sections: PreviewSection[] = (c?.sections ?? []) as PreviewSection[];
   const totalLessons = sections.reduce(
     (s: number, sec: any) => s + (sec.lessons ?? sec.elements ?? []).length,
     0,

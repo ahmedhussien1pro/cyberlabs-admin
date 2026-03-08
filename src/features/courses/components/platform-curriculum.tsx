@@ -1,7 +1,3 @@
-// src/features/courses/components/platform-curriculum.tsx
-// ─── نسخة طبق الأصل من course-curriculum.tsx في المنصة الأساسية ───────────
-// فروق مقصودة: لا progress ، لا enrollment gating ، لا mark-complete
-// الداتا تيجي من /admin/courses/:id  (sections + lessons مباشر)
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -83,8 +79,7 @@ function TopicRow({
   const isLast = topicIndex === total - 1;
   const title =
     lang === 'ar' && section.ar_title ? section.ar_title : section.title;
-  const subtitle =
-    lang === 'ar' ? section.title : (section.ar_title ?? null);
+  const subtitle = lang === 'ar' ? section.title : (section.ar_title ?? null);
   const lessons = section.lessons ?? [];
 
   return (
@@ -95,7 +90,6 @@ function TopicRow({
       transition={{ duration: 0.25, delay: topicIndex * 0.04 }}
       className='relative'>
       <div className='flex gap-4'>
-        {/* ── Timeline dot (same radius / colours as main platform) ── */}
         <div className='relative flex shrink-0 flex-col items-center'>
           <div
             className={cn(
@@ -266,9 +260,7 @@ export function PlatformCurriculum({
   const lang = (i18n.language === 'ar' ? 'ar' : 'en') as 'en' | 'ar';
 
   // Open first section by default (same UX as main platform)
-  const [openId, setOpenId] = useState<string | null>(
-    sections[0]?.id ?? null,
-  );
+  const [openId, setOpenId] = useState<string | null>(sections[0]?.id ?? null);
 
   const toggle = (id: string) => setOpenId((p) => (p === id ? null : id));
 
