@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { authService } from '@/core/api/services';
@@ -14,24 +14,23 @@ interface ProtectedRouteProps {
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, setUser, clearAuth } = useAuthStore();
   const token = Cookies.get('access_token');
-  const [shouldFetch, setShouldFetch] = useState(!!token && !user);
 
   // Fetch user if token exists but no user in store
-  const { isLoading, error } = useQuery({
+  const { isLoading, isError } = useQuery({
     queryKey: ['auth', 'me'],
     queryFn: authService.getMe,
-    enabled: shouldFetch,
+    enabled: !!token && !user,
     retry: false,
-    onSuccess: (data) => {
-      setUser(data);
-      setShouldFetch(false);
-    },
-    onError: () => {
+    staleTime: Infinity,
+  });
+
+  // Update store when query succeeds
+  useEffect(() => {
+    if (isError && token) {
       clearAuth();
       Cookies.remove('access_token');
-      setShouldFetch(false);
-    },
-  });
+    }
+  }, [isError, token, clearAuth]);
 
   // No token - redirect to login
   if (!token) {
@@ -39,17 +38,20 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   // Loading user data
-  if (isLoading || shouldFetch) {
+  if (isLoading) {
     return <Preloader />;
   }
 
-  // Failed to load user
-  if (error || !user) {
+  // Failed to load user or no user in store
+  if ((isError || !user) && token) {
+    // Clear everything and redirect
+    clearAuth();
+    Cookies.remove('access_token');
     return <Navigate to={ROUTES.LOGIN} replace />;
   }
 
   // Not admin - access denied
-  if (user.role !== 'ADMIN') {
+  if (user && user.role !== 'ADMIN') {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">

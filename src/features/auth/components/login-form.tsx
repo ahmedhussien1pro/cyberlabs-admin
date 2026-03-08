@@ -31,14 +31,20 @@ export function LoginForm() {
   const loginMutation = useMutation({
     mutationFn: authService.login,
     onSuccess: (data) => {
-      // Store token in cookie
-      Cookies.set('access_token', data.access_token, { expires: 7 });
+      // Store token in cookie (7 days expiry)
+      Cookies.set('access_token', data.access_token, { 
+        expires: 7,
+        sameSite: 'strict',
+        secure: window.location.protocol === 'https:'
+      });
       
-      // Update auth store
+      // Update auth store (will persist to localStorage)
       setUser(data.user);
       
-      // Redirect to dashboard
-      navigate(ROUTES.DASHBOARD, { replace: true });
+      // Small delay to ensure state is persisted
+      setTimeout(() => {
+        navigate(ROUTES.DASHBOARD, { replace: true });
+      }, 100);
     },
     onError: (err: any) => {
       const message = err.response?.data?.message || 'Invalid email or password';

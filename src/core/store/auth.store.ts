@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { User } from '@/core/types';
 
 interface AuthState {
@@ -14,20 +14,23 @@ export const useAuthStore = create<AuthState>()(  persist(
       user: null,
       isAuthenticated: false,
 
-      setUser: (user) =>
+      setUser: (user) => {
         set({
           user,
           isAuthenticated: !!user,
-        }),
+        });
+      },
 
-      clearAuth: () =>
+      clearAuth: () => {
         set({
           user: null,
           isAuthenticated: false,
-        }),
+        });
+      },
     }),
     {
-      name: 'auth-storage',
+      name: 'cyberlabs-auth',
+      storage: createJSONStorage(() => localStorage),
     }
   )
 );
