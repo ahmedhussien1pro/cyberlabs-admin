@@ -1,4 +1,6 @@
-import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosError } from 'axios';
+import type { InternalAxiosRequestConfig } from 'axios';
+
 import Cookies from 'js-cookie';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -22,7 +24,7 @@ apiClient.interceptors.request.use(
     }
     return config;
   },
-  (error: AxiosError) => Promise.reject(error)
+  (error: AxiosError) => Promise.reject(error),
 );
 
 // Response interceptor - handle 401
@@ -34,7 +36,7 @@ apiClient.interceptors.response.use(
       // Clear token and reload to trigger redirect
       Cookies.remove('access_token');
       localStorage.removeItem('cyberlabs-auth');
-      
+
       // Only redirect if not already on login page
       if (!window.location.pathname.includes('/login')) {
         console.log('🔄 Redirecting to login...');
@@ -42,5 +44,5 @@ apiClient.interceptors.response.use(
       }
     }
     return Promise.reject(error);
-  }
+  },
 );
