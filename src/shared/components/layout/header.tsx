@@ -11,12 +11,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, Sun, Moon, Languages } from 'lucide-react';
 import Cookies from 'js-cookie';
+import { useTheme } from 'next-themes';
+import { useTranslation } from 'react-i18next';
 
 export function Header() {
   const navigate = useNavigate();
   const { user, clearAuth } = useAuthStore();
+  const { theme, setTheme } = useTheme();
+  const { i18n, t } = useTranslation('common');
 
   const handleLogout = () => {
     Cookies.remove('access_token');
@@ -33,42 +37,76 @@ export function Header() {
       .slice(0, 2);
   };
 
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
+
+  const toggleLanguage = () => {
+    const next = i18n.language === 'ar' ? 'en' : 'ar';
+    i18n.changeLanguage(next);
+  };
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-card px-6">
       <div>
-        <h2 className="text-xl font-semibold">Admin Panel</h2>
-        <p className="text-sm text-muted-foreground">Manage your CyberLabs platform</p>
+        <h2 className="text-xl font-semibold">{t('adminPanel', 'Admin Panel')}</h2>
+        <p className="text-sm text-muted-foreground">
+          {t('adminSubtitle', 'Manage your CyberLabs platform')}
+        </p>
       </div>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-            <Avatar>
-              <AvatarFallback className="bg-primary text-primary-foreground">
-                {user?.name ? getInitials(user.name) : 'AD'}
-              </AvatarFallback>
-            </Avatar>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel>
-            <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium">{user?.name || 'Admin'}</p>
-              <p className="text-xs text-muted-foreground">{user?.email}</p>
-            </div>
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem className="cursor-pointer">
-            <User className="mr-2 h-4 w-4" />
-            <span>Profile</span>
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive">
-            <LogOut className="mr-2 h-4 w-4" />
-            <span>Logout</span>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="flex items-center gap-2">
+        {/* Language Toggle */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleLanguage}
+          title={i18n.language === 'ar' ? 'Switch to English' : 'التبديل للعربية'}
+        >
+          <Languages className="h-5 w-5" />
+          <span className="sr-only">Toggle Language</span>
+        </Button>
+
+        {/* Theme Toggle */}
+        <Button variant="ghost" size="icon" onClick={toggleTheme} title="Toggle theme">
+          {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          <span className="sr-only">Toggle Theme</span>
+        </Button>
+
+        {/* User Menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+              <Avatar>
+                <AvatarFallback className="bg-primary text-primary-foreground">
+                  {user?.name ? getInitials(user.name) : 'AD'}
+                </AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium">{user?.name || 'Admin'}</p>
+                <p className="text-xs text-muted-foreground">{user?.email}</p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="cursor-pointer">
+              <User className="mr-2 h-4 w-4" />
+              <span>{t('profile', 'Profile')}</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="cursor-pointer text-destructive"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>{t('logout', 'Logout')}</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </header>
   );
 }
