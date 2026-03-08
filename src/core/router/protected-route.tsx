@@ -1,44 +1,34 @@
-import type { ReactNode } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { useAuthStore } from '@/core/store';
+import { Navigate, Outlet } from 'react-router-dom';
+import { useAuthStore } from '@/core/store/auth.store';
 import { ROUTES } from '@/shared/constants';
+import Cookies from 'js-cookie';
 
 interface ProtectedRouteProps {
-  children: ReactNode;
-  requireAuth?: boolean;
-  requireGuest?: boolean;
+  children?: React.ReactNode;
 }
 
-export function ProtectedRoute({
-  children,
-  requireAuth = true,
-  requireGuest = false,
-}: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading } = useAuthStore();
-  const location = useLocation();
+export default function ProtectedRoute({ children }: ProtectedRouteProps) {
+  const { isAuthenticated, user } = useAuthStore();
+  const token = Cookies.get('access_token');
 
-  // Show loading while checking auth status
-  if (isLoading) {
+  // Not authenticated - redirect to login
+  if (!isAuthenticated || !token) {
+    return <Navigate to={ROUTES.LOGIN} replace />;
+  }
+
+  // Authenticated but not admin - access denied
+  if (user?.role !== 'ADMIN') {
     return (
-      <div className='flex min-h-screen items-center justify-center'>
-        <div className='h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent' />
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold">Access Denied</h1>
+          <p className="mt-2 text-muted-foreground">
+            You need admin privileges to access this panel.
+          </p>
+        </div>
       </div>
     );
   }
 
-  // Redirect to login if auth is required but user is not authenticated
-  if (requireAuth && !isAuthenticated) {
-    return (
-      <Navigate to={ROUTES.AUTH.LOGIN} state={{ from: location }} replace />
-    );
-  }
-
-  // Redirect to dashboard if guest route but user is authenticated
-  if (requireGuest && isAuthenticated) {
-    return <Navigate to={ROUTES.DASHBOARD.DashboardPage} replace />;
-  }
-
-  return <>{children}</>;
+  return children ? <>{children}</> : <Outlet />;
 }
-
-export default ProtectedRoute;

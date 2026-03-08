@@ -4,6 +4,7 @@ import * as Pages from './lazy-routes';
 import { ROUTES } from '@/shared/constants';
 import { Preloader } from '@/shared/components/common/preloader';
 import ProtectedRoute from './protected-route';
+import AdminLayout from '@/shared/components/layout/admin-layout';
 
 const LazyPage = ({
   Component,
@@ -15,6 +16,57 @@ const LazyPage = ({
   </Suspense>
 );
 
-export const routes: RouteObject[] = [];
+export const routes: RouteObject[] = [
+  {
+    path: ROUTES.LOGIN,
+    element: <LazyPage Component={Pages.LoginPage} />,
+  },
+  {
+    path: '/',
+    element: (
+      <ProtectedRoute>
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      {
+        index: true,
+        element: <LazyPage Component={Pages.DashboardPage} />,
+      },
+      {
+        path: 'users',
+        element: <LazyPage Component={Pages.UsersListPage} />,
+      },
+      {
+        path: 'users/:id',
+        element: <LazyPage Component={Pages.UserDetailPage} />,
+      },
+      {
+        path: 'courses',
+        element: <LazyPage Component={Pages.CoursesListPage} />,
+      },
+      {
+        path: 'courses/new',
+        element: <LazyPage Component={Pages.CourseCreatePage} />,
+      },
+      {
+        path: 'courses/:id',
+        element: <LazyPage Component={Pages.CourseDetailPage} />,
+      },
+      {
+        path: 'labs',
+        element: <LazyPage Component={Pages.LabsListPage} />,
+      },
+      {
+        path: 'labs/new',
+        element: <LazyPage Component={Pages.LabCreatePage} />,
+      },
+      {
+        path: 'labs/:id',
+        element: <LazyPage Component={Pages.LabDetailPage} />,
+      },
+    ],
+  },
+];
 
 export default routes;
