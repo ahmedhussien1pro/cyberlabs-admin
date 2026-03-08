@@ -20,6 +20,7 @@ export default function ProtectedRoute({
     }
   }, [token, user, clearAuth, _hasHydrated]);
 
+  // انتظر Zustand يخلص تحميل localStorage
   if (!_hasHydrated) return <Preloader />;
 
   if (!token) return <Navigate to={ROUTES.LOGIN} replace />;

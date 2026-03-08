@@ -18,23 +18,11 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       _hasHydrated: false,
 
-      setHasHydrated: (state) => {
-        set({ _hasHydrated: state });
-      },
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
 
-      setUser: (user) => {
-        set({
-          user,
-          isAuthenticated: !!user,
-        });
-      },
+      setUser: (user) => set({ user, isAuthenticated: !!user }),
 
-      clearAuth: () => {
-        set({
-          user: null,
-          isAuthenticated: false,
-        });
-      },
+      clearAuth: () => set({ user: null, isAuthenticated: false }),
     }),
     {
       name: 'cyberlabs-auth',
