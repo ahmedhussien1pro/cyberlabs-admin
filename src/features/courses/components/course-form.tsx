@@ -19,13 +19,22 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, AlertCircle, X } from 'lucide-react';
+import {
+  Loader2,
+  AlertCircle,
+  X,
+  Clock,
+  Star,
+  Sparkles,
+  Languages,
+  BookOpen,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { ROUTES } from '@/shared/constants';
 import { cn } from '@/lib/utils';
 import type { CreateCourseRequest } from '@/core/types';
 
-// ─── Preview Component (بنفس تصميم SharedCourseCard) ──────────────────────
+// ─── Preview Component (matches SharedCourseCard design) ────────────────────
 const COLOR_BG: Record<string, string> = {
   emerald: 'from-emerald-950 to-emerald-900 border-emerald-800/50',
   blue: 'from-blue-950    to-blue-900    border-blue-800/50',
@@ -44,12 +53,12 @@ const COLOR_TEXT: Record<string, string> = {
 };
 const DIFF_COLORS: Record<string, string> = {
   BEGINNER: 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10',
-  INTERMEDIATE: 'text-yellow-400 border-yellow-500/40 bg-yellow-500/10',
-  ADVANCED: 'text-rose-400 border-rose-500/40 bg-rose-500/10',
+  INTERMEDIATE: 'text-amber-400 border-amber-500/40 bg-amber-500/10',
+  ADVANCED: 'text-orange-400 border-orange-500/40 bg-orange-500/10',
+  EXPERT: 'text-rose-400 border-rose-500/40 bg-rose-500/10',
 };
 const ACCESS_COLORS: Record<string, string> = {
   FREE: 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10',
-  PRO: 'text-blue-400 border-blue-500/40 bg-blue-500/10',
   PREMIUM: 'text-violet-400 border-violet-500/40 bg-violet-500/10',
 };
 
@@ -59,23 +68,18 @@ function CoursePreview({ data }: { data: Partial<CreateCourseRequest> }) {
 
   return (
     <div className='sticky top-4'>
-      <p className='text-xs text-muted-foreground mb-3 font-medium uppercase tracking-wider'>
-        Live Preview — كما تظهر في المنصة
+      <p className='mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground'>
+        Live Preview
       </p>
 
-      {/* ── Full Card Preview ─────────────────────────── */}
-      <div
-        className={cn(
-          'rounded-2xl border bg-card overflow-hidden shadow-xl ring-1 ring-transparent',
-          'transition-all duration-300',
-        )}>
+      <div className='overflow-hidden rounded-2xl border bg-card shadow-xl'>
         {/* Thumbnail */}
         <div className='relative aspect-video overflow-hidden bg-muted'>
           {hasThumbnail ? (
             <img
               src={data.thumbnail}
               alt={data.title ?? 'Course'}
-              className='w-full h-full object-cover'
+              className='h-full w-full object-cover'
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = 'none';
               }}
@@ -83,45 +87,47 @@ function CoursePreview({ data }: { data: Partial<CreateCourseRequest> }) {
           ) : (
             <div
               className={cn(
-                'w-full h-full flex items-center justify-center bg-gradient-to-br border',
+                'flex h-full w-full items-center justify-center bg-gradient-to-br border',
                 COLOR_BG[color] ?? 'from-zinc-900 to-zinc-800 border-zinc-700',
-              )}>
+              )}
+            >
               <p
                 className={cn(
-                  'font-black text-center px-3 leading-tight text-lg',
+                  'px-4 text-center font-black leading-tight text-lg',
                   COLOR_TEXT[color] ?? 'text-zinc-400',
-                )}>
+                )}
+              >
                 {data.title || 'Course Title'}
               </p>
             </div>
           )}
-          {/* Available badge */}
-          <div className='absolute top-3 start-3'>
+          <div className='absolute left-3 top-3'>
             <span className='inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2.5 py-1 text-[11px] font-bold text-white shadow-md'>
-              <span className='h-1.5 w-1.5 rounded-full bg-white' /> Available
+              <span className='h-1.5 w-1.5 rounded-full bg-white' />
+              Available
             </span>
           </div>
         </div>
 
         {/* Body */}
-        <div className='flex flex-col p-4 gap-3'>
+        <div className='flex flex-col gap-3 p-4'>
           <div className='flex items-start justify-between gap-2'>
-            <h3 className='text-sm font-bold text-foreground leading-snug line-clamp-2 flex-1'>
+            <h3 className='line-clamp-2 flex-1 text-sm font-bold leading-snug'>
               {data.ar_title || data.title || (
-                <span className='text-muted-foreground italic'>
-                  العنوان بالعربي / Title
+                <span className='italic text-muted-foreground'>
+                  Course Title
                 </span>
               )}
             </h3>
             {data.category && (
-              <span className='text-[11px] text-muted-foreground shrink-0'>
+              <span className='shrink-0 text-[11px] text-muted-foreground'>
                 {data.category}
               </span>
             )}
           </div>
 
           {data.description && (
-            <p className='text-xs text-muted-foreground leading-relaxed line-clamp-2'>
+            <p className='line-clamp-2 text-xs leading-relaxed text-muted-foreground'>
               {data.description}
             </p>
           )}
@@ -133,7 +139,8 @@ function CoursePreview({ data }: { data: Partial<CreateCourseRequest> }) {
                 className={cn(
                   'gap-1 text-[10px] font-semibold',
                   DIFF_COLORS[data.difficulty as string],
-                )}>
+                )}
+              >
                 {data.difficulty}
               </Badge>
             )}
@@ -143,72 +150,72 @@ function CoursePreview({ data }: { data: Partial<CreateCourseRequest> }) {
                 className={cn(
                   'gap-1 text-[10px] font-bold',
                   ACCESS_COLORS[data.access as string],
-                )}>
+                )}
+              >
                 {data.access}
               </Badge>
             )}
-            {/* ✅ Fix #1: cast to Number to avoid string|number > number TS error */}
             {Number(data.duration ?? 0) > 0 && (
               <Badge
                 variant='outline'
-                className='text-[10px] text-muted-foreground border-border/40'>
-                ⏱ {data.duration}h
+                className='gap-1 text-[10px] text-muted-foreground border-border/40'
+              >
+                <Clock className='h-3 w-3' />
+                {data.duration}h
               </Badge>
             )}
             {data.isFeatured && (
               <Badge
                 variant='outline'
-                className='text-[10px] text-yellow-400 border-yellow-500/40 bg-yellow-500/10'>
-                ⭐ Featured
+                className='gap-1 text-[10px] text-amber-400 border-amber-500/40 bg-amber-500/10'
+              >
+                <Star className='h-3 w-3' />
+                Featured
               </Badge>
             )}
             {data.isNew && (
               <Badge
                 variant='outline'
-                className='text-[10px] text-cyan-400 border-cyan-500/40 bg-cyan-500/10'>
-                ✨ New
+                className='gap-1 text-[10px] text-cyan-400 border-cyan-500/40 bg-cyan-500/10'
+              >
+                <Sparkles className='h-3 w-3' />
+                New
               </Badge>
             )}
           </div>
 
-          {/* Tags */}
           {(data.tags ?? []).length > 0 && (
             <div className='flex flex-wrap gap-1'>
               {(data.tags ?? []).map((tag) => (
                 <span
                   key={tag}
-                  className='text-[10px] bg-muted/60 text-muted-foreground rounded-md px-1.5 py-0.5 border border-border/40'>
+                  className='rounded-md border border-border/40 bg-muted/60 px-1.5 py-0.5 text-[10px] text-muted-foreground'
+                >
                   #{tag}
                 </span>
               ))}
             </div>
           )}
 
-          <div className='flex gap-2 mt-auto pt-1'>
-            <Button size='sm' className='flex-1 h-9 text-xs' disabled>
-              Start Learning →
+          <div className='mt-auto pt-1'>
+            <Button size='sm' className='h-9 w-full text-xs' disabled>
+              Start Learning
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Arabic Title indicator */}
       {data.ar_title && (
-        <div
-          className={cn(
-            'mt-3 rounded-xl border bg-card overflow-hidden p-3',
-            'border-border/50',
-          )}>
-          <p className='text-[11px] text-muted-foreground mb-1'>
-            Arabic version:
-          </p>
-          <p className='text-sm font-bold text-right' dir='rtl'>
+        <div className='mt-3 overflow-hidden rounded-xl border bg-card p-3'>
+          <p className='mb-1 text-[11px] text-muted-foreground'>Arabic version</p>
+          <p className='text-right text-sm font-bold' dir='rtl'>
             {data.ar_title}
           </p>
           {data.ar_description && (
             <p
-              className='text-xs text-muted-foreground text-right mt-1 line-clamp-2'
-              dir='rtl'>
+              className='mt-1 line-clamp-2 text-right text-xs text-muted-foreground'
+              dir='rtl'
+            >
               {data.ar_description}
             </p>
           )}
@@ -218,7 +225,7 @@ function CoursePreview({ data }: { data: Partial<CreateCourseRequest> }) {
   );
 }
 
-// ─── TagInput Component ────────────────────────────────────────────────────
+// ─── TagInput Component ────────────────────────────────────────────────
 function TagInput({
   value = [],
   onChange,
@@ -235,21 +242,23 @@ function TagInput({
     setInput('');
   };
   return (
-    <div className='flex flex-wrap gap-1.5 p-2 border rounded-md bg-background min-h-[42px]'>
+    <div className='flex min-h-[42px] flex-wrap gap-1.5 rounded-md border bg-background p-2'>
       {value.map((tag) => (
         <span
           key={tag}
-          className='flex items-center gap-1 text-xs bg-muted rounded px-2 py-0.5 text-foreground'>
+          className='flex items-center gap-1 rounded bg-muted px-2 py-0.5 text-xs text-foreground'
+        >
           {tag}
           <button
             type='button'
-            onClick={() => onChange(value.filter((t) => t !== tag))}>
+            onClick={() => onChange(value.filter((t) => t !== tag))}
+          >
             <X className='h-3 w-3' />
           </button>
         </span>
       ))}
       <input
-        className='flex-1 min-w-[100px] outline-none bg-transparent text-sm placeholder:text-muted-foreground'
+        className='min-w-[100px] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground'
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => {
@@ -264,7 +273,7 @@ function TagInput({
   );
 }
 
-// ─── Main CourseForm ───────────────────────────────────────────────────────
+// ─── Main CourseForm ─────────────────────────────────────────────────────
 interface CourseFormProps {
   mode?: 'create' | 'edit';
   courseId?: string;
@@ -304,8 +313,6 @@ export function CourseForm({
     },
   });
 
-  // Auto-load data in edit mode
-  // ✅ Fix #2: getById (not getOne)
   const { data: courseDetail, isLoading: isLoadingDetail } = useQuery({
     queryKey: ['course-detail', courseId],
     queryFn: () => coursesService.getById(courseId!),
@@ -316,8 +323,6 @@ export function CourseForm({
     if (courseDetail) reset(courseDetail as unknown as CreateCourseRequest);
   }, [courseDetail, reset]);
 
-  // Users list for instructorId picker
-  // ✅ Fix #3: getAll (not getList)
   const { data: usersData } = useQuery({
     queryKey: ['admin-users-list'],
     queryFn: () => usersService.getAll({ limit: 100 }),
@@ -325,7 +330,6 @@ export function CourseForm({
 
   const watched = watch();
 
-  // Auto-generate slug from title
   useEffect(() => {
     if (mode === 'create' && watched.title) {
       const slug = watched.title
@@ -375,25 +379,28 @@ export function CourseForm({
   }
 
   return (
-    <div className='grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6'>
+    <div className='grid grid-cols-1 gap-6 xl:grid-cols-[1fr_320px]'>
       {/* ── Form ─────────────────────────────────────── */}
       <form onSubmit={handleSubmit(onSubmit)} className='space-y-4'>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className='grid w-full grid-cols-4'>
             <TabsTrigger value='basic'>Basic</TabsTrigger>
-            <TabsTrigger value='arabic'>🇸🇦 Arabic</TabsTrigger>
+            <TabsTrigger value='arabic' className='gap-1.5'>
+              <Languages className='h-3.5 w-3.5' />
+              Arabic
+            </TabsTrigger>
             <TabsTrigger value='meta'>Metadata</TabsTrigger>
             <TabsTrigger value='advanced'>Advanced</TabsTrigger>
           </TabsList>
 
-          {/* ── TAB: Basic ─────────────────────────── */}
-          <TabsContent value='basic' className='space-y-4 mt-4'>
+          {/* ── TAB: Basic ─────────────────────────────── */}
+          <TabsContent value='basic' className='mt-4 space-y-4'>
             <Card>
               <CardHeader>
                 <CardTitle>Basic Information</CardTitle>
               </CardHeader>
               <CardContent className='space-y-4'>
-                {/* instructorId — Required! */}
+                {/* Instructor */}
                 <div className='space-y-2'>
                   <Label>
                     Instructor <span className='text-destructive'>*</span>
@@ -405,7 +412,8 @@ export function CourseForm({
                     render={({ field }) => (
                       <Select
                         value={field.value}
-                        onValueChange={field.onChange}>
+                        onValueChange={field.onChange}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder='Select instructor...' />
                         </SelectTrigger>
@@ -426,7 +434,7 @@ export function CourseForm({
                   )}
                 </div>
 
-                {/* Title */}
+                {/* Title + Slug */}
                 <div className='grid gap-4 md:grid-cols-2'>
                   <div className='space-y-2'>
                     <Label>
@@ -451,8 +459,7 @@ export function CourseForm({
                         required: 'Slug is required',
                         pattern: {
                           value: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-                          message:
-                            'Lowercase letters, numbers, and hyphens only',
+                          message: 'Lowercase letters, numbers, hyphens only',
                         },
                       })}
                       placeholder='intro-to-web-security'
@@ -474,7 +481,6 @@ export function CourseForm({
                     rows={3}
                   />
                 </div>
-
                 <div className='space-y-2'>
                   <Label>Long Description</Label>
                   <Textarea
@@ -500,16 +506,16 @@ export function CourseForm({
                     render={({ field }) => (
                       <Select
                         value={field.value}
-                        onValueChange={field.onChange}>
+                        onValueChange={field.onChange}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder='Select...' />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value='BEGINNER'>Beginner</SelectItem>
-                          <SelectItem value='INTERMEDIATE'>
-                            Intermediate
-                          </SelectItem>
+                          <SelectItem value='INTERMEDIATE'>Intermediate</SelectItem>
                           <SelectItem value='ADVANCED'>Advanced</SelectItem>
+                          <SelectItem value='EXPERT'>Expert</SelectItem>
                         </SelectContent>
                       </Select>
                     )}
@@ -525,13 +531,13 @@ export function CourseForm({
                     render={({ field }) => (
                       <Select
                         value={field.value}
-                        onValueChange={field.onChange}>
+                        onValueChange={field.onChange}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder='Select...' />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value='FREE'>Free</SelectItem>
-                          <SelectItem value='PRO'>Pro</SelectItem>
                           <SelectItem value='PREMIUM'>Premium</SelectItem>
                         </SelectContent>
                       </Select>
@@ -548,15 +554,14 @@ export function CourseForm({
                     render={({ field }) => (
                       <Select
                         value={field.value}
-                        onValueChange={field.onChange}>
+                        onValueChange={field.onChange}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder='Select...' />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value='PRACTICAL'>Practical</SelectItem>
-                          <SelectItem value='THEORETICAL'>
-                            Theoretical
-                          </SelectItem>
+                          <SelectItem value='THEORETICAL'>Theoretical</SelectItem>
                           <SelectItem value='MIXED'>Mixed</SelectItem>
                         </SelectContent>
                       </Select>
@@ -573,7 +578,8 @@ export function CourseForm({
                     render={({ field }) => (
                       <Select
                         value={field.value ?? ''}
-                        onValueChange={field.onChange}>
+                        onValueChange={field.onChange}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder='Select...' />
                         </SelectTrigger>
@@ -581,16 +587,10 @@ export function CourseForm({
                           <SelectItem value='WEB'>Web Security</SelectItem>
                           <SelectItem value='NETWORK'>Network</SelectItem>
                           <SelectItem value='FORENSICS'>Forensics</SelectItem>
-                          <SelectItem value='CRYPTOGRAPHY'>
-                            Cryptography
-                          </SelectItem>
-                          <SelectItem value='REVERSE_ENGINEERING'>
-                            Reverse Engineering
-                          </SelectItem>
+                          <SelectItem value='CRYPTOGRAPHY'>Cryptography</SelectItem>
+                          <SelectItem value='REVERSE_ENGINEERING'>Reverse Engineering</SelectItem>
                           <SelectItem value='OSINT'>OSINT</SelectItem>
-                          <SelectItem value='MALWARE_ANALYSIS'>
-                            Malware Analysis
-                          </SelectItem>
+                          <SelectItem value='MALWARE_ANALYSIS'>Malware Analysis</SelectItem>
                           <SelectItem value='GENERAL'>General</SelectItem>
                         </SelectContent>
                       </Select>
@@ -607,7 +607,8 @@ export function CourseForm({
                     render={({ field }) => (
                       <Select
                         value={field.value ?? 'blue'}
-                        onValueChange={field.onChange}>
+                        onValueChange={field.onChange}
+                      >
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
@@ -623,8 +624,11 @@ export function CourseForm({
                             <SelectItem key={c} value={c}>
                               <span className='flex items-center gap-2 capitalize'>
                                 <span
-                                  className={`w-3 h-3 rounded-full bg-${c}-500`}
-                                />{' '}
+                                  className={cn(
+                                    'h-3 w-3 rounded-full',
+                                    `bg-${c}-500`,
+                                  )}
+                                />
                                 {c}
                               </span>
                             </SelectItem>
@@ -644,17 +648,15 @@ export function CourseForm({
                     render={({ field }) => (
                       <Select
                         value={field.value ?? 'DRAFT'}
-                        onValueChange={field.onChange}>
+                        onValueChange={field.onChange}
+                      >
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value='DRAFT'>Draft</SelectItem>
                           <SelectItem value='PUBLISHED'>Published</SelectItem>
-                          <SelectItem value='COMING_SOON'>
-                            Coming Soon
-                          </SelectItem>
-                          <SelectItem value='ARCHIVED'>Archived</SelectItem>
+                          <SelectItem value='COMING_SOON'>Coming Soon</SelectItem>
                         </SelectContent>
                       </Select>
                     )}
@@ -670,7 +672,10 @@ export function CourseForm({
               <CardContent className='grid gap-4 md:grid-cols-2'>
                 <div className='space-y-2'>
                   <Label>Thumbnail URL</Label>
-                  <Input {...register('thumbnail')} placeholder='https://...' />
+                  <Input
+                    {...register('thumbnail')}
+                    placeholder='https://...'
+                  />
                 </div>
                 <div className='space-y-2'>
                   <Label>Background Image URL</Label>
@@ -719,7 +724,7 @@ export function CourseForm({
 
             <Card>
               <CardHeader>
-                <CardTitle>Tags & Skills</CardTitle>
+                <CardTitle>Tags &amp; Skills</CardTitle>
               </CardHeader>
               <CardContent className='space-y-4'>
                 <div className='space-y-2'>
@@ -786,7 +791,7 @@ export function CourseForm({
                 <CardTitle>Flags</CardTitle>
               </CardHeader>
               <CardContent className='grid gap-4 md:grid-cols-2'>
-                <div className='flex items-center justify-between p-3 border rounded-lg'>
+                <div className='flex items-center justify-between rounded-lg border p-3'>
                   <div>
                     <Label className='font-semibold'>Featured Course</Label>
                     <p className='text-xs text-muted-foreground'>
@@ -804,11 +809,11 @@ export function CourseForm({
                     )}
                   />
                 </div>
-                <div className='flex items-center justify-between p-3 border rounded-lg'>
+                <div className='flex items-center justify-between rounded-lg border p-3'>
                   <div>
                     <Label className='font-semibold'>Mark as New</Label>
                     <p className='text-xs text-muted-foreground'>
-                      Show "New" badge on card
+                      Show badge on card
                     </p>
                   </div>
                   <Controller
@@ -826,12 +831,13 @@ export function CourseForm({
             </Card>
           </TabsContent>
 
-          {/* ── TAB: Arabic ─────────────────────────── */}
-          <TabsContent value='arabic' className='space-y-4 mt-4'>
+          {/* ── TAB: Arabic ───────────────────────────── */}
+          <TabsContent value='arabic' className='mt-4 space-y-4'>
             <Card>
               <CardHeader>
                 <CardTitle className='flex items-center gap-2'>
-                  🇸🇦 Arabic Content
+                  <Languages className='h-5 w-5' />
+                  Arabic Content
                   <Badge variant='outline' className='text-xs'>
                     RTL
                   </Badge>
@@ -868,34 +874,34 @@ export function CourseForm({
             </Card>
           </TabsContent>
 
-          {/* ── TAB: Metadata ─────────────────────── */}
+          {/* ── TAB: Metadata ─────────────────────────── */}
           <TabsContent value='meta' className='mt-4'>
             <Card>
               <CardHeader>
-                <CardTitle>Raw Metadata Summary</CardTitle>
+                <CardTitle>Raw Metadata</CardTitle>
               </CardHeader>
               <CardContent>
-                <pre className='text-xs bg-muted/50 p-4 rounded-lg overflow-auto max-h-64 text-foreground'>
+                <pre className='max-h-64 overflow-auto rounded-lg bg-muted/50 p-4 text-xs text-foreground'>
                   {JSON.stringify(watched, null, 2)}
                 </pre>
-                <p className='text-xs text-muted-foreground mt-2'>
-                  هذه هي البيانات اللي هتتبعت للـ Backend عند الحفظ.
+                <p className='mt-2 text-xs text-muted-foreground'>
+                  This is the exact payload that will be sent to the backend on save.
                 </p>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* ── TAB: Advanced ──────────────────────── */}
+          {/* ── TAB: Advanced ────────────────────────── */}
           <TabsContent value='advanced' className='mt-4'>
             <Card>
               <CardHeader>
                 <CardTitle>Advanced Settings</CardTitle>
               </CardHeader>
-              <CardContent className='space-y-4'>
+              <CardContent>
                 <Alert>
                   <AlertCircle className='h-4 w-4' />
                   <AlertDescription>
-                    Publishing is separate from saving. After{' '}
+                    Publishing is controlled separately from saving. After{' '}
                     {mode === 'create' ? 'creating' : 'updating'} the course,
                     use the <strong>Publish</strong> button on the course detail
                     page.
@@ -917,7 +923,8 @@ export function CourseForm({
           <Button
             type='button'
             variant='outline'
-            onClick={() => navigate(ROUTES.COURSES)}>
+            onClick={() => navigate(ROUTES.COURSES)}
+          >
             Cancel
           </Button>
           <Button type='submit' disabled={isPending}>
@@ -927,7 +934,7 @@ export function CourseForm({
         </div>
       </form>
 
-      {/* ── Live Preview ──────────────────────────── */}
+      {/* ── Live Preview ───────────────────────────── */}
       <div className='hidden xl:block'>
         <CoursePreview data={watched} />
       </div>
