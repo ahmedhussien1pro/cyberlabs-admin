@@ -18,12 +18,12 @@ i18n
       'users',
       'courses',
       'labs',
+      'paths',
       'analytics',
       'errors',
     ],
     defaultNS: 'common',
 
-    // ✅ debug فقط في dev
     debug: import.meta.env.DEV,
 
     backend: {

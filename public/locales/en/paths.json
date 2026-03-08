@@ -1,0 +1,71 @@
+{
+  "title": "Learning Paths",
+  "subtitle": "Manage structured learning paths",
+  "newPath": "New Path",
+  "editPath": "Edit Path",
+  "deletePath": "Delete Path",
+  "pathDetails": "Path Details",
+  "stats": {
+    "total": "Total Paths",
+    "published": "Published",
+    "unpublished": "Unpublished"
+  },
+  "fields": {
+    "title": "Title",
+    "ar_title": "Arabic Title",
+    "slug": "Slug",
+    "description": "Description",
+    "ar_description": "Arabic Description",
+    "isPublished": "Published",
+    "thumbnail": "Thumbnail URL",
+    "estimatedHours": "Estimated Hours",
+    "difficulty": "Difficulty",
+    "modules": "Modules"
+  },
+  "placeholders": {
+    "title": "Enter path title",
+    "ar_title": "Enter Arabic title",
+    "slug": "path-slug",
+    "description": "Enter path description",
+    "search": "Search paths..."
+  },
+  "filters": {
+    "all": "All",
+    "published": "Published",
+    "unpublished": "Unpublished"
+  },
+  "modules": {
+    "title": "Modules",
+    "empty": "No modules yet",
+    "type": {
+      "COURSE": "Course",
+      "LAB": "Lab"
+    },
+    "estimatedHours": "{{hours}}h",
+    "locked": "Locked"
+  },
+  "actions": {
+    "publish": "Publish",
+    "unpublish": "Unpublish",
+    "edit": "Edit",
+    "delete": "Delete",
+    "view": "View",
+    "save": "Save",
+    "cancel": "Cancel",
+    "creating": "Creating...",
+    "saving": "Saving..."
+  },
+  "messages": {
+    "createSuccess": "Path created successfully",
+    "updateSuccess": "Path updated successfully",
+    "deleteSuccess": "Path deleted successfully",
+    "publishSuccess": "Path published successfully",
+    "unpublishSuccess": "Path unpublished successfully",
+    "deleteConfirm": "Are you sure you want to delete this path?",
+    "deleteWarning": "This action cannot be undone.",
+    "noResults": "No paths found",
+    "loading": "Loading paths..."
+  },
+  "enrollments": "Enrollments",
+  "modulesCount": "{{count}} modules"
+}

@@ -1,0 +1,71 @@
+{
+  "title": "مسارات التعلم",
+  "subtitle": "إدارة مسارات التعلم المنظمة",
+  "newPath": "مسار جديد",
+  "editPath": "تعديل المسار",
+  "deletePath": "حذف المسار",
+  "pathDetails": "تفاصيل المسار",
+  "stats": {
+    "total": "إجمالي المسارات",
+    "published": "منشور",
+    "unpublished": "غير منشور"
+  },
+  "fields": {
+    "title": "العنوان",
+    "ar_title": "العنوان بالعربية",
+    "slug": "الرابط",
+    "description": "الوصف",
+    "ar_description": "الوصف بالعربية",
+    "isPublished": "منشور",
+    "thumbnail": "رابط الصورة",
+    "estimatedHours": "الساعات التقديرية",
+    "difficulty": "الصعوبة",
+    "modules": "الموديولات"
+  },
+  "placeholders": {
+    "title": "أدخل عنوان المسار",
+    "ar_title": "أدخل العنوان بالعربية",
+    "slug": "رابط-المسار",
+    "description": "أدخل وصف المسار",
+    "search": "ابحث عن مسار..."
+  },
+  "filters": {
+    "all": "الكل",
+    "published": "منشور",
+    "unpublished": "غير منشور"
+  },
+  "modules": {
+    "title": "الموديولات",
+    "empty": "لا توجد موديولات بعد",
+    "type": {
+      "COURSE": "كورس",
+      "LAB": "معمل"
+    },
+    "estimatedHours": "{{hours}} ساعة",
+    "locked": "مقفل"
+  },
+  "actions": {
+    "publish": "نشر",
+    "unpublish": "إلغاء النشر",
+    "edit": "تعديل",
+    "delete": "حذف",
+    "view": "عرض",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "creating": "جاري الإنشاء...",
+    "saving": "جاري الحفظ..."
+  },
+  "messages": {
+    "createSuccess": "تم إنشاء المسار بنجاح",
+    "updateSuccess": "تم تحديث المسار بنجاح",
+    "deleteSuccess": "تم حذف المسار بنجاح",
+    "publishSuccess": "تم نشر المسار بنجاح",
+    "unpublishSuccess": "تم إلغاء نشر المسار بنجاح",
+    "deleteConfirm": "هل أنت متأكد من حذف هذا المسار؟",
+    "deleteWarning": "لا يمكن التراجع عن هذا الإجراء.",
+    "noResults": "لا توجد مسارات",
+    "loading": "جاري تحميل المسارات..."
+  },
+  "enrollments": "التسجيلات",
+  "modulesCount": "{{count}} موديول"
+}
