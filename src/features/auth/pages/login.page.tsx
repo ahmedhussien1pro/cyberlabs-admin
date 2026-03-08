@@ -1,22 +1,6 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@/core/store/auth.store';
 import { LoginForm } from '../components/login-form';
-import { ROUTES } from '@/shared/constants';
-import Cookies from 'js-cookie';
 
 export default function LoginPage() {
-  const navigate = useNavigate();
-  const { isAuthenticated } = useAuthStore();
-  const token = Cookies.get('access_token');
-
-  useEffect(() => {
-    // Redirect to dashboard if already logged in
-    if (isAuthenticated && token) {
-      navigate(ROUTES.DASHBOARD, { replace: true });
-    }
-  }, [isAuthenticated, token, navigate]);
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
       <div className="w-full max-w-md space-y-8 p-8">
