@@ -28,8 +28,14 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
-      // Don't auto-redirect here, let ProtectedRoute handle it
+      // Clear token and reload to trigger redirect
       Cookies.remove('access_token');
+      localStorage.removeItem('cyberlabs-auth');
+      
+      // Only redirect if not already on login page
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

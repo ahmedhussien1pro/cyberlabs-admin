@@ -31,22 +31,27 @@ export function LoginForm() {
   const loginMutation = useMutation({
     mutationFn: authService.login,
     onSuccess: (data) => {
-      // Store token in cookie (7 days expiry)
+      console.log('Login successful:', { user: data.user, hasToken: !!data.access_token });
+      
+      // Store token in cookie with proper settings
       Cookies.set('access_token', data.access_token, { 
         expires: 7,
-        sameSite: 'strict',
-        secure: window.location.protocol === 'https:'
+        path: '/',
+        sameSite: 'lax',
       });
       
-      // Update auth store (will persist to localStorage)
+      // Update auth store
       setUser(data.user);
       
-      // Small delay to ensure state is persisted
+      console.log('Token stored:', Cookies.get('access_token'));
+      
+      // Navigate to dashboard
       setTimeout(() => {
         navigate(ROUTES.DASHBOARD, { replace: true });
       }, 100);
     },
     onError: (err: any) => {
+      console.error('Login error:', err);
       const message = err.response?.data?.message || 'Invalid email or password';
       setError(message);
     },
@@ -67,6 +72,7 @@ export function LoginForm() {
               id="email"
               type="email"
               placeholder="admin@cyberlabs.com"
+              autoComplete="email"
               {...register('email', {
                 required: 'Email is required',
                 pattern: {
@@ -87,6 +93,7 @@ export function LoginForm() {
               id="password"
               type="password"
               placeholder="••••••••"
+              autoComplete="current-password"
               {...register('password', {
                 required: 'Password is required',
                 minLength: {
