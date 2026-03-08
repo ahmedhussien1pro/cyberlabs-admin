@@ -29,10 +29,10 @@ export const CourseCreatePage = lazy(
 export const CourseEditPage = lazy(
   () => import('@/features/courses/pages/course-edit.page'),
 );
+
 export const CourseImportPage = lazy(
   () => import('@/features/courses/pages/course-import.page'),
 );
-
 // Labs
 export const LabsListPage = lazy(
   () => import('@/features/labs/pages/labs-list.page'),

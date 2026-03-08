@@ -44,6 +44,10 @@ export const routes: RouteObject[] = [
         element: <LazyPage Component={Pages.CourseCreatePage} />,
       },
       {
+        path: 'courses/import',
+        element: <LazyPage Component={Pages.CourseImportPage} />,
+      },
+      {
         path: 'courses/:id',
         element: <LazyPage Component={Pages.CourseDetailPage} />,
       },
@@ -52,10 +56,6 @@ export const routes: RouteObject[] = [
         element: <LazyPage Component={Pages.CourseEditPage} />,
       },
 
-      {
-        path: 'courses/import',
-        element: <LazyPage Component={Pages.CourseImportPage} />,
-      },
       { path: 'labs', element: <LazyPage Component={Pages.LabsListPage} /> },
       {
         path: 'labs/new',
