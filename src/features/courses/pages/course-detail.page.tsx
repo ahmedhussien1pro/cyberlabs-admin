@@ -1,41 +1,57 @@
-import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useParams, Link } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { coursesService } from '@/core/api/services';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PublishToggle } from '../components/publish-toggle';
-import { ROUTES } from '@/shared/constants';
-import { AlertCircle, ArrowLeft, Edit, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
-import { useState } from 'react';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+  ArrowLeft,
+  Eye,
+  EyeOff,
+  BookOpen,
+  Users,
+  Star,
+  FlaskConical,
+  Pencil,
+  Trash2,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { formatDistanceToNow } from 'date-fns';
+import { ROUTES } from '@/shared/constants';
+import { useNavigate } from 'react-router-dom';
 
 export default function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const queryClient = useQueryClient();
 
-  const {
-    data: course,
-    isLoading,
-    error,
-    refetch,
-  } = useQuery({
-    queryKey: ['courses', 'detail', id],
+  const { data: course, isLoading } = useQuery({
+    queryKey: ['courses', id],
     queryFn: () => coursesService.getById(id!),
     enabled: !!id,
+  });
+
+  const publishMutation = useMutation({
+    mutationFn: () => coursesService.publish(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      toast.success('Course published successfully');
+    },
+    onError: () => {
+      toast.error('Failed to publish course');
+    },
+  });
+
+  const unpublishMutation = useMutation({
+    mutationFn: () => coursesService.unpublish(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      toast.success('Course unpublished successfully');
+    },
+    onError: () => {
+      toast.error('Failed to unpublish course');
+    },
   });
 
   const deleteMutation = useMutation({
@@ -44,37 +60,25 @@ export default function CourseDetailPage() {
       toast.success('Course deleted successfully');
       navigate(ROUTES.COURSES);
     },
-    onError: (err: any) => {
-      toast.error(err.response?.data?.message || 'Failed to delete course');
+    onError: () => {
+      toast.error('Failed to delete course');
     },
   });
-
-  if (error) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Alert variant="destructive" className="max-w-md">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>Failed to load course details.</AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
 
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <Skeleton className="h-10 w-64" />
-        <Skeleton className="h-64" />
+        <Skeleton className="h-12 w-64" />
+        <Skeleton className="h-96" />
       </div>
     );
   }
 
   if (!course) {
     return (
-      <Alert variant="destructive" className="max-w-md">
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>Course not found.</AlertDescription>
-      </Alert>
+      <div className="flex h-full items-center justify-center">
+        <p className="text-muted-foreground">Course not found</p>
+      </div>
     );
   }
 
@@ -82,141 +86,140 @@ export default function CourseDetailPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(ROUTES.COURSES)}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Link to={ROUTES.COURSES}>
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+            </Link>
             <h1 className="text-3xl font-bold tracking-tight">{course.title}</h1>
             <p className="text-muted-foreground">{course.slug}</p>
           </div>
         </div>
         <div className="flex gap-2">
-          <PublishToggle
-            id={course.id}
-            isPublished={course.isPublished}
-            type="course"
-            onSuccess={refetch}
-          />
-          <Button variant="outline">
-            <Edit className="mr-2 h-4 w-4" />
+          <Button variant="outline" size="sm">
+            <Pencil className="h-4 w-4 mr-2" />
             Edit
           </Button>
-          <Button variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
-            <Trash2 className="mr-2 h-4 w-4" />
+          {course.isPublished ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => unpublishMutation.mutate()}
+              disabled={unpublishMutation.isPending}
+            >
+              <EyeOff className="h-4 w-4 mr-2" />
+              Unpublish
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              onClick={() => publishMutation.mutate()}
+              disabled={publishMutation.isPending}
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              Publish
+            </Button>
+          )}
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => deleteMutation.mutate()}
+            disabled={deleteMutation.isPending}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
             Delete
           </Button>
         </div>
       </div>
 
-      {/* Course Info */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Course Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      {/* Details Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Course Details</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <div className="text-sm text-muted-foreground">Title</div>
-              <div className="font-medium">{course.title}</div>
-              {course.ar_title && (
-                <div className="text-sm text-muted-foreground">{course.ar_title}</div>
-              )}
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">Slug</div>
-              <div className="font-mono text-sm">{course.slug}</div>
-            </div>
-            {course.difficulty && (
-              <div>
-                <div className="text-sm text-muted-foreground">Difficulty</div>
-                <Badge>{course.difficulty}</Badge>
-              </div>
-            )}
-            <div>
-              <div className="text-sm text-muted-foreground">Status</div>
+              <p className="text-sm font-medium text-muted-foreground">Status</p>
               <Badge variant={course.isPublished ? 'default' : 'secondary'}>
                 {course.isPublished ? 'Published' : 'Draft'}
               </Badge>
             </div>
-            {course.description && (
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Difficulty</p>
+              <Badge variant="outline">{course.difficulty}</Badge>
+            </div>
+            {course.ar_title && (
               <div>
-                <div className="text-sm text-muted-foreground">Description</div>
-                <div className="text-sm">{course.description}</div>
+                <p className="text-sm font-medium text-muted-foreground">Arabic Title</p>
+                <div className="text-sm text-muted-foreground">{course.ar_title}</div>
               </div>
             )}
-          </CardContent>
-        </Card>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Slug</p>
+              <div className="font-mono text-sm">{course.slug}</div>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Created</p>
+              <div className="text-sm">
+                {formatDistanceToNow(new Date(course.createdAt), { addSuffix: true })}
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Last Updated</p>
+              <div className="text-sm">
+                {formatDistanceToNow(new Date(course.updatedAt), { addSuffix: true })}
+              </div>
+            </div>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Description</p>
+            <p className="text-sm">{course.description}</p>
+          </div>
+        </CardContent>
+      </Card>
 
+      {/* Stats */}
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
-          <CardHeader>
-            <CardTitle>Statistics</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <div className="text-sm text-muted-foreground">Enrollments</div>
-              <div className="text-2xl font-bold">{course.enrollmentCount}</div>
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <p className="text-sm font-medium text-muted-foreground">Enrollments</p>
             </div>
-            <div>
-              <div className="text-sm text-muted-foreground">Labs</div>
-              <div className="text-2xl font-bold">{course._count.courseLabs}</div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">Reviews</div>
-              <div className="text-2xl font-bold">{course._count.reviews}</div>
-            </div>
-            {course.averageRating && (
-              <div>
-                <div className="text-sm text-muted-foreground">Average Rating</div>
-                <div className="text-2xl font-bold">{course.averageRating.toFixed(1)} / 5</div>
-              </div>
-            )}
+            <div className="text-2xl font-bold">{course.enrollmentCount ?? course._count?.enrollments ?? 0}</div>
           </CardContent>
         </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2">
+              <FlaskConical className="h-4 w-4 text-muted-foreground" />
+              <p className="text-sm font-medium text-muted-foreground">Labs</p>
+            </div>
+            <div className="text-2xl font-bold">{course._count?.courseLabs ?? course._count?.labs ?? 0}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2">
+              <Star className="h-4 w-4 text-muted-foreground" />
+              <p className="text-sm font-medium text-muted-foreground">Reviews</p>
+            </div>
+            <div className="text-2xl font-bold">{course._count?.reviews ?? 0}</div>
+          </CardContent>
+        </Card>
+        {course.averageRating && (
+          <Card>
+            <CardContent className="p-6">
+              <p className="text-sm font-medium text-muted-foreground">Average Rating</p>
+              <div className="text-2xl font-bold">{course.averageRating.toFixed(1)} / 5</div>
+            </CardContent>
+          </Card>
+        )}
       </div>
-
-      {/* Labs */}
-      {course.courseLabs && course.courseLabs.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Course Labs</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {course.courseLabs.map(({ lab }) => (
-                <div key={lab.id} className="flex items-center justify-between rounded-lg border p-3">
-                  <div>
-                    <div className="font-medium">{lab.title}</div>
-                    <div className="text-sm text-muted-foreground">{lab.slug}</div>
-                  </div>
-                  {lab.difficulty && <Badge>{lab.difficulty}</Badge>}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Delete Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Course</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{course.title}"? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteMutation.mutate()}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

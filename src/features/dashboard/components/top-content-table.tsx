@@ -1,11 +1,25 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { TopContent } from '@/core/types';
-import { TrendingUp, BookOpen, FlaskConical } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface TopContentTableProps {
   data?: TopContent;
+}
+
+function getDifficultyColor(difficulty: string): string {
+  switch (difficulty.toUpperCase()) {
+    case 'BEGINNER':
+      return 'text-green-600';
+    case 'INTERMEDIATE':
+      return 'text-yellow-600';
+    case 'ADVANCED':
+      return 'text-orange-600';
+    case 'EXPERT':
+      return 'text-red-600';
+    default:
+      return 'text-gray-600';
+  }
 }
 
 export function TopContentTable({ data }: TopContentTableProps) {
@@ -13,7 +27,7 @@ export function TopContentTable({ data }: TopContentTableProps) {
     return (
       <Card>
         <CardHeader>
-          <Skeleton className="h-6 w-32" />
+          <CardTitle>Top Content</CardTitle>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-64" />
@@ -22,44 +36,21 @@ export function TopContentTable({ data }: TopContentTableProps) {
     );
   }
 
-  const getDifficultyColor = (difficulty?: string) => {
-    switch (difficulty) {
-      case 'BEGINNER':
-        return 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400';
-      case 'INTERMEDIATE':
-        return 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400';
-      case 'ADVANCED':
-        return 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400';
-      default:
-        return 'bg-gray-100 text-gray-700 dark:bg-gray-950 dark:text-gray-400';
-    }
-  };
-
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <TrendingUp className="h-5 w-5" />
-          Top Content
-        </CardTitle>
-        <CardDescription>Most popular courses and labs</CardDescription>
+        <CardTitle>Top Content</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
-          {/* Top Courses */}
+      <CardContent className="space-y-6">
+        {/* Top Courses */}
+        {data.courses && data.courses.length > 0 && (
           <div>
-            <div className="mb-3 flex items-center gap-2 text-sm font-medium">
-              <BookOpen className="h-4 w-4" />
-              Top Courses
-            </div>
-            <div className="space-y-2">
+            <h3 className="mb-3 text-sm font-medium">Most Enrolled Courses</h3>
+            <div className="space-y-3">
               {data.courses.slice(0, 5).map((course) => (
-                <div
-                  key={course.id}
-                  className="flex items-center justify-between rounded-lg border p-3 text-sm"
-                >
+                <div key={course.id} className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="font-medium">{course.title}</div>
+                    <p className="font-medium">{course.title}</p>
                     {course.difficulty && (
                       <Badge variant="outline" className={`mt-1 ${getDifficultyColor(course.difficulty)}`}>
                         {course.difficulty}
@@ -67,28 +58,24 @@ export function TopContentTable({ data }: TopContentTableProps) {
                     )}
                   </div>
                   <div className="text-right">
-                    <div className="font-semibold">{course.enrollmentCount}</div>
+                    <div className="font-semibold">{course.enrollments}</div>
                     <div className="text-xs text-muted-foreground">enrollments</div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
+        )}
 
-          {/* Top Labs */}
+        {/* Top Labs */}
+        {data.labs && data.labs.length > 0 && (
           <div>
-            <div className="mb-3 flex items-center gap-2 text-sm font-medium">
-              <FlaskConical className="h-4 w-4" />
-              Top Labs
-            </div>
-            <div className="space-y-2">
+            <h3 className="mb-3 text-sm font-medium">Most Attempted Labs</h3>
+            <div className="space-y-3">
               {data.labs.slice(0, 5).map((lab) => (
-                <div
-                  key={lab.id}
-                  className="flex items-center justify-between rounded-lg border p-3 text-sm"
-                >
+                <div key={lab.id} className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="font-medium">{lab.title}</div>
+                    <p className="font-medium">{lab.title}</p>
                     {lab.difficulty && (
                       <Badge variant="outline" className={`mt-1 ${getDifficultyColor(lab.difficulty)}`}>
                         {lab.difficulty}
@@ -96,14 +83,14 @@ export function TopContentTable({ data }: TopContentTableProps) {
                     )}
                   </div>
                   <div className="text-right">
-                    <div className="font-semibold">{lab.completions}</div>
-                    <div className="text-xs text-muted-foreground">completions</div>
+                    <div className="font-semibold">{lab.attempts}</div>
+                    <div className="text-xs text-muted-foreground">attempts</div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );

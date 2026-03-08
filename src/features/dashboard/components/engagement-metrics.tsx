@@ -1,10 +1,17 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import type { EngagementMetrics } from '@/core/types';
+import { Activity, Users, TrendingUp, Clock } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { EngagementMetrics as EngagementData } from '@/core/types';
-import { Activity, Play, Send, Clock } from 'lucide-react';
 
 interface EngagementMetricsProps {
-  data?: EngagementData;
+  data?: EngagementMetrics;
+}
+
+function formatDuration(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
 }
 
 export function EngagementMetrics({ data }: EngagementMetricsProps) {
@@ -12,7 +19,7 @@ export function EngagementMetrics({ data }: EngagementMetricsProps) {
     return (
       <Card>
         <CardHeader>
-          <Skeleton className="h-6 w-32" />
+          <CardTitle>Engagement Metrics</CardTitle>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-64" />
@@ -21,72 +28,72 @@ export function EngagementMetrics({ data }: EngagementMetricsProps) {
     );
   }
 
-  const formatDuration = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    return `${minutes} min`;
-  };
-
   const metrics = [
     {
+      icon: Users,
       label: 'Active Users',
       value: data.activeUsers,
+    },
+    {
       icon: Activity,
-      description: 'Last 30 days',
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100 dark:bg-blue-950',
-    },
-    {
       label: 'Lab Launches',
-      value: data.labLaunches,
-      icon: Play,
-      description: 'Last 30 days',
-      color: 'text-green-600',
-      bgColor: 'bg-green-100 dark:bg-green-950',
+      value: data.labLaunches ?? 0,
     },
     {
+      icon: TrendingUp,
+      label: 'Completion Rate',
+      value: `${data.completionRate}%`,
+    },
+    {
+      icon: TrendingUp,
       label: 'Submissions',
-      value: data.submissions,
-      icon: Send,
-      description: 'Last 30 days',
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-100 dark:bg-purple-950',
+      value: data.submissions ?? 0,
     },
     {
-      label: 'Avg. Session',
-      value: formatDuration(data.avgSessionDuration),
       icon: Clock,
-      description: 'Average duration',
-      color: 'text-amber-600',
-      bgColor: 'bg-amber-100 dark:bg-amber-950',
+      label: 'Avg Time/Lab',
+      value: `${data.avgTimePerLab}min`,
+    },
+    {
+      icon: Clock,
+      label: 'Avg Session',
+      value: data.avgSessionDuration ? formatDuration(data.avgSessionDuration) : 'N/A',
     },
   ];
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Activity className="h-5 w-5" />
-          Engagement Metrics
-        </CardTitle>
-        <CardDescription>User activity over the last 30 days</CardDescription>
+        <CardTitle>Engagement Metrics</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 gap-4">
-          {metrics.map((metric) => (
-            <div key={metric.label} className="rounded-lg border p-4">
-              <div className="flex items-center justify-between">
-                <div className={`rounded-lg p-2 ${metric.bgColor}`}>
-                  <metric.icon className={`h-4 w-4 ${metric.color}`} />
-                </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          {metrics.map((metric, idx) => (
+            <div key={idx} className="flex items-center gap-3">
+              <div className="rounded-full bg-primary/10 p-2">
+                <metric.icon className="h-4 w-4 text-primary" />
               </div>
-              <div className="mt-3">
-                <div className="text-2xl font-bold">{metric.value}</div>
-                <div className="text-sm text-muted-foreground">{metric.label}</div>
-                <div className="text-xs text-muted-foreground">{metric.description}</div>
+              <div>
+                <p className="text-sm text-muted-foreground">{metric.label}</p>
+                <p className="text-lg font-semibold">{metric.value}</p>
               </div>
             </div>
           ))}
         </div>
+
+        {data.topCategories && data.topCategories.length > 0 && (
+          <div className="mt-6">
+            <h4 className="mb-3 text-sm font-medium">Top Categories</h4>
+            <div className="space-y-2">
+              {data.topCategories.slice(0, 5).map((cat, idx) => (
+                <div key={idx} className="flex items-center justify-between">
+                  <span className="text-sm">{cat.category}</span>
+                  <span className="text-sm font-semibold">{cat.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

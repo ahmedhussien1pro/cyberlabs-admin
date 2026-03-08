@@ -253,8 +253,9 @@ export interface GrowthData {
 }
 
 export interface GrowthTrends {
-  users: Array<{ date: string; count: number }>;
-  courses: Array<{ date: string; count: number }>;
+  users: Array<{ date: string; month: string; count: number }>;
+  courses: Array<{ date: string; month: string; count: number }>;
+  enrollments: Array<{ date: string; month: string; count: number }>;
 }
 
 export interface EngagementMetrics {
@@ -282,12 +283,15 @@ export interface TopContent {
   courses: Array<{
     id: string;
     title: string;
+    difficulty?: Difficulty;
     enrollments: number;
+    enrollmentCount?: number;
     completions: number;
   }>;
   labs: Array<{
     id: string;
     title: string;
+    difficulty?: Difficulty;
     attempts: number;
     completions: number;
   }>;
@@ -310,7 +314,7 @@ export interface RecentActivityItem {
 
 export interface ActivityEvent {
   id: string;
-  type: 'enrollment' | 'completion' | 'lab_start' | 'submission';
+  type: 'enrollment' | 'completion' | 'submission' | 'lab_start' | 'user_registered' | 'course_enrolled' | 'lab_completed';
   user: {
     id: string;
     name: string;
@@ -319,6 +323,14 @@ export interface ActivityEvent {
     id: string;
     title: string;
     type: 'course' | 'lab';
+  };
+  course?: {
+    id: string;
+    title: string;
+  };
+  lab?: {
+    id: string;
+    title: string;
   };
   timestamp: string;
 }
