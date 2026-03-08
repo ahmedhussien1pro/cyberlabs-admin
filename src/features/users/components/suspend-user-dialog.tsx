@@ -33,7 +33,7 @@ export function SuspendUserDialog({
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
 
-  // ✅ Use security.isSuspended — isActive alone is not reliable
+  // ✅ security.isSuspended is the authoritative field — isActive alone is unreliable
   const isSuspended = user.security?.isSuspended ?? false;
 
   const suspendMutation = useMutation({
@@ -43,9 +43,7 @@ export function SuspendUserDialog({
         : usersService.suspend(user.id, reason || undefined),
     onSuccess: () => {
       toast.success(
-        isSuspended
-          ? 'User unsuspended successfully'
-          : 'User suspended successfully',
+        isSuspended ? 'User unsuspended successfully' : 'User suspended successfully',
       );
       onSuccess();
       onOpenChange(false);
@@ -61,9 +59,7 @@ export function SuspendUserDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>
-            {isSuspended ? 'Unsuspend User' : 'Suspend User'}
-          </DialogTitle>
+          <DialogTitle>{isSuspended ? 'Unsuspend User' : 'Suspend User'}</DialogTitle>
           <DialogDescription>
             {isSuspended
               ? `Restore access for ${user.name ?? user.email}`
@@ -83,12 +79,15 @@ export function SuspendUserDialog({
               />
             </div>
           )}
+
+          {/* Show existing suspension reason when unsuspending */}
           {isSuspended && user.security?.suspensionReason && (
             <div className='rounded-md bg-muted p-3 text-sm'>
               <span className='font-medium'>Suspension reason: </span>
               {user.security.suspensionReason}
             </div>
           )}
+
           {error && (
             <Alert variant='destructive'>
               <AlertCircle className='h-4 w-4' />
@@ -107,7 +106,8 @@ export function SuspendUserDialog({
               setError('');
               suspendMutation.mutate();
             }}
-            disabled={suspendMutation.isPending}>
+            disabled={suspendMutation.isPending}
+          >
             {suspendMutation.isPending && (
               <Loader2 className='mr-2 h-4 w-4 animate-spin' />
             )}

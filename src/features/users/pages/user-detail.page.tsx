@@ -62,8 +62,12 @@ export default function UserDetailPage() {
       <div className='space-y-6'>
         <Skeleton className='h-10 w-64' />
         <div className='grid gap-6 md:grid-cols-2'>
-          <Skeleton className='h-80' />
-          <Skeleton className='h-80' />
+          <Skeleton className='h-96' />
+          <div className='space-y-4'>
+            <Skeleton className='h-36' />
+            <Skeleton className='h-36' />
+            <Skeleton className='h-36' />
+          </div>
         </div>
       </div>
     );
@@ -78,7 +82,7 @@ export default function UserDetailPage() {
     );
   }
 
-  // ✅ isSuspended uses security.isSuspended — the authoritative field
+  // ✅ security.isSuspended is the single source of truth for suspension state
   const isSuspended = user.security?.isSuspended ?? false;
   const isActive = user.isActive !== false && !isSuspended;
 
@@ -90,7 +94,8 @@ export default function UserDetailPage() {
           <Button
             variant='ghost'
             size='icon'
-            onClick={() => navigate(ROUTES.USERS)}>
+            onClick={() => navigate(ROUTES.USERS)}
+          >
             <ArrowLeft className='h-4 w-4' />
           </Button>
           <div>
@@ -113,7 +118,8 @@ export default function UserDetailPage() {
           ) : (
             <Button
               variant='destructive'
-              onClick={() => setSuspendDialogOpen(true)}>
+              onClick={() => setSuspendDialogOpen(true)}
+            >
               <XCircle className='mr-2 h-4 w-4' />
               Suspend User
             </Button>
@@ -122,12 +128,13 @@ export default function UserDetailPage() {
       </div>
 
       <div className='grid gap-6 md:grid-cols-2'>
-        {/* Basic Info */}
+        {/* ── Left column: Basic Info ── */}
         <Card>
           <CardHeader>
             <CardTitle>User Information</CardTitle>
           </CardHeader>
           <CardContent className='space-y-4'>
+            {/* Email */}
             <div className='flex items-center gap-3'>
               <Mail className='h-4 w-4 text-muted-foreground shrink-0' />
               <div>
@@ -136,17 +143,20 @@ export default function UserDetailPage() {
               </div>
             </div>
 
+            {/* Role */}
             <div className='flex items-center gap-3'>
               <Shield className='h-4 w-4 text-muted-foreground shrink-0' />
               <div>
                 <p className='text-xs text-muted-foreground'>Role</p>
                 <Badge
-                  variant={user.role === 'ADMIN' ? 'default' : 'secondary'}>
+                  variant={user.role === 'ADMIN' ? 'default' : 'secondary'}
+                >
                   {user.role}
                 </Badge>
               </div>
             </div>
 
+            {/* Status */}
             <div className='flex items-center gap-3'>
               <Activity className='h-4 w-4 text-muted-foreground shrink-0' />
               <div>
@@ -158,7 +168,8 @@ export default function UserDetailPage() {
                       : isActive
                         ? 'default'
                         : 'secondary'
-                  }>
+                  }
+                >
                   {isSuspended ? 'Suspended' : isActive ? 'Active' : 'Inactive'}
                 </Badge>
               </div>
@@ -196,6 +207,7 @@ export default function UserDetailPage() {
 
             <Separator />
 
+            {/* Joined */}
             <div className='flex items-center gap-3'>
               <Calendar className='h-4 w-4 text-muted-foreground shrink-0' />
               <div>
@@ -211,6 +223,7 @@ export default function UserDetailPage() {
               </div>
             </div>
 
+            {/* Last Login */}
             {user.lastLoginAt && (
               <div className='flex items-center gap-3'>
                 <Clock className='h-4 w-4 text-muted-foreground shrink-0' />
@@ -227,7 +240,7 @@ export default function UserDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Stats & Activity */}
+        {/* ── Right column: Stats ── */}
         <div className='space-y-4'>
           {/* Points & Level */}
           {user.points && (
@@ -235,7 +248,7 @@ export default function UserDetailPage() {
               <CardHeader className='pb-3'>
                 <CardTitle className='text-base flex items-center gap-2'>
                   <Trophy className='h-4 w-4 text-yellow-500' />
-                  Progress & Points
+                  Progress &amp; Points
                 </CardTitle>
               </CardHeader>
               <CardContent className='grid grid-cols-3 gap-4 text-center'>
@@ -261,7 +274,7 @@ export default function UserDetailPage() {
             </Card>
           )}
 
-          {/* Enrollments & Labs */}
+          {/* Activity Counts */}
           {user._count && (
             <Card>
               <CardHeader className='pb-3'>
@@ -299,7 +312,7 @@ export default function UserDetailPage() {
             </Card>
           )}
 
-          {/* Security / Suspension Info */}
+          {/* Suspension Details — only when suspended */}
           {isSuspended && user.security && (
             <Card className='border-destructive/50 bg-destructive/5'>
               <CardHeader className='pb-3'>
@@ -312,19 +325,16 @@ export default function UserDetailPage() {
                 {user.security.suspensionReason && (
                   <div>
                     <p className='text-xs text-muted-foreground'>Reason</p>
-                    <p className='font-medium'>
-                      {user.security.suspensionReason}
-                    </p>
+                    <p className='font-medium'>{user.security.suspensionReason}</p>
                   </div>
                 )}
                 {user.security.suspendedAt && (
                   <div>
                     <p className='text-xs text-muted-foreground'>Suspended</p>
                     <p className='font-medium'>
-                      {formatDistanceToNow(
-                        new Date(user.security.suspendedAt),
-                        { addSuffix: true },
-                      )}
+                      {formatDistanceToNow(new Date(user.security.suspendedAt), {
+                        addSuffix: true,
+                      })}
                     </p>
                   </div>
                 )}
@@ -332,7 +342,7 @@ export default function UserDetailPage() {
             </Card>
           )}
 
-          {/* Meta */}
+          {/* Account Meta */}
           <Card>
             <CardHeader className='pb-3'>
               <CardTitle className='text-base'>Account Meta</CardTitle>
