@@ -29,10 +29,14 @@ export const CourseCreatePage = lazy(
 export const CourseEditPage = lazy(
   () => import('@/features/courses/pages/course-edit.page'),
 );
-
 export const CourseImportPage = lazy(
   () => import('@/features/courses/pages/course-import.page'),
 );
+// ✅ Platform Preview — fullscreen, no AdminLayout
+export const CoursePlatformPreviewPage = lazy(
+  () => import('@/features/courses/pages/course-platform-preview.page'),
+);
+
 // Labs
 export const LabsListPage = lazy(
   () => import('@/features/labs/pages/labs-list.page'),
