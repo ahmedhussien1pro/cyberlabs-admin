@@ -233,7 +233,12 @@ export type LabCategory =
 export type Category = LabCategory;
 
 export type LabDifficulty = Difficulty;
-export type LabExecutionMode = 'FRONTEND' | 'SHARED_BACKEND' | 'DOCKER' | 'BROWSER' | 'STATIC';
+export type LabExecutionMode =
+  | 'FRONTEND'
+  | 'SHARED_BACKEND'
+  | 'DOCKER'
+  | 'BROWSER'
+  | 'STATIC';
 
 export interface LabListItem {
   id: string;
@@ -393,7 +398,7 @@ export interface CreatePathRequest {
   }>;
 }
 
-export interface UpdatePathRequest extends Partial<Omit<CreatePathRequest, 'modules'>> {}
+export interface UpdatePathRequest extends Partial<CreatePathRequest> {}
 
 // ─── Analytics Types ───────────────────────────────────────────────────────────
 /** Shape returned by GET /admin/analytics/overview */

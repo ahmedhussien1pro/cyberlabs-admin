@@ -1,4 +1,5 @@
 import { apiClient } from '../client';
+import { API_ENDPOINTS } from '../endpoints';
 import type {
   LearningPath,
   LearningPathListItem,
@@ -16,45 +17,61 @@ export interface PathsQueryParams {
 }
 
 export const pathsService = {
-  // GET /admin/paths/stats
   getStats(): Promise<PathStats> {
-    return apiClient.get('/admin/paths/stats').then((r) => r.data);
+    return apiClient.get(API_ENDPOINTS.ADMIN_PATHS.STATS).then((r) => r.data);
   },
 
-  // GET /admin/paths
   getAll(
     params?: PathsQueryParams,
   ): Promise<PaginatedResponse<LearningPathListItem>> {
-    return apiClient.get('/admin/paths', { params }).then((r) => r.data);
+    return apiClient
+      .get(API_ENDPOINTS.ADMIN_PATHS.LIST, { params })
+      .then((r) => r.data);
   },
 
-  // GET /admin/paths/:id
   getById(id: string): Promise<LearningPath> {
-    return apiClient.get(`/admin/paths/${id}`).then((r) => r.data);
+    return apiClient
+      .get(API_ENDPOINTS.ADMIN_PATHS.DETAIL(id))
+      .then((r) => r.data);
   },
 
-  // POST /admin/paths
   create(data: CreatePathRequest): Promise<LearningPath> {
-    return apiClient.post('/admin/paths', data).then((r) => r.data);
+    return apiClient
+      .post(API_ENDPOINTS.ADMIN_PATHS.CREATE, data)
+      .then((r) => r.data);
   },
 
-  // PATCH /admin/paths/:id
   update(id: string, data: UpdatePathRequest): Promise<LearningPath> {
-    return apiClient.patch(`/admin/paths/${id}`, data).then((r) => r.data);
+    return apiClient
+      .patch(API_ENDPOINTS.ADMIN_PATHS.UPDATE(id), data)
+      .then((r) => r.data);
   },
 
-  // PATCH /admin/paths/:id/publish
+  // ← Method جديد: يبعت الـ modules array كاملة للـ backend
+  updateModules(
+    id: string,
+    modules: CreatePathRequest['modules'],
+  ): Promise<LearningPath> {
+    return apiClient
+      .patch(API_ENDPOINTS.ADMIN_PATHS.UPDATE(id), { modules })
+      .then((r) => r.data);
+  },
+
   publish(id: string): Promise<LearningPath> {
-    return apiClient.patch(`/admin/paths/${id}/publish`).then((r) => r.data);
+    return apiClient
+      .patch(API_ENDPOINTS.ADMIN_PATHS.PUBLISH(id))
+      .then((r) => r.data);
   },
 
-  // PATCH /admin/paths/:id/unpublish
   unpublish(id: string): Promise<LearningPath> {
-    return apiClient.patch(`/admin/paths/${id}/unpublish`).then((r) => r.data);
+    return apiClient
+      .patch(API_ENDPOINTS.ADMIN_PATHS.UNPUBLISH(id))
+      .then((r) => r.data);
   },
 
-  // DELETE /admin/paths/:id
   delete(id: string): Promise<void> {
-    return apiClient.delete(`/admin/paths/${id}`).then((r) => r.data);
+    return apiClient
+      .delete(API_ENDPOINTS.ADMIN_PATHS.DELETE(id))
+      .then((r) => r.data);
   },
 };

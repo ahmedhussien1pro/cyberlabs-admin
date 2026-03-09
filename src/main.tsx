@@ -6,6 +6,7 @@ import './index.css';
 import '@/core/styles/globals.css';
 import '@/core/config/i18n.config';
 
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AppProviders>
