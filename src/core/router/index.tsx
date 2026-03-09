@@ -56,7 +56,12 @@ const PathCreatePage = lazy(
 const PathEditPage = lazy(
   () => import('@/features/paths/pages/path-edit.page'),
 );
-import ContentMapPage from '@/features/map/pages/content-map.page';
+const CourseEditorPage = lazy(
+  () => import('@/features/courses/pages/course-edit.page'),
+);
+const ContentMapPage = lazy(
+  () => import('@/features/map/pages/content-map.page'),
+);
 // Suspense wrapper
 const S = ({ children }: { children: React.ReactNode }) => (
   <Suspense fallback={<Preloader />}>{children}</Suspense>
@@ -158,6 +163,8 @@ const router = createBrowserRouter([
         path: 'courses/:id/platform-preview',
         element: <CoursePlatformPreviewPage />,
       },
+      { path: '/courses/editor', element: <CourseEditorPage /> },
+      { path: '/courses/:id/content', element: <CourseEditorPage /> },
       // ─── Labs
       {
         path: 'labs',
