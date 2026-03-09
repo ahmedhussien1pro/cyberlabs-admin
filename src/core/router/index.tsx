@@ -56,7 +56,7 @@ const PathCreatePage = lazy(
 const PathEditPage = lazy(
   () => import('@/features/paths/pages/path-edit.page'),
 );
-
+import ContentMapPage from '@/features/map/pages/content-map.page';
 // Suspense wrapper
 const S = ({ children }: { children: React.ReactNode }) => (
   <Suspense fallback={<Preloader />}>{children}</Suspense>
@@ -225,6 +225,7 @@ const router = createBrowserRouter([
           </S>
         ),
       },
+      { path: ROUTES.MAP, element: <ContentMapPage /> },
     ],
   },
 ]);
