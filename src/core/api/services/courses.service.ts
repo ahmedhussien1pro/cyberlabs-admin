@@ -9,6 +9,24 @@ import type {
   UpdateCourseRequest,
 } from '@/core/types';
 
+export interface CourseLabItem {
+  order: number;
+  lab: {
+    id: string;
+    title: string;
+    ar_title?: string;
+    slug: string;
+    difficulty: string;
+    category: string;
+    duration?: number;
+    xpReward: number;
+    pointsReward: number;
+    isPublished: boolean;
+    imageUrl?: string;
+    executionMode: string;
+  };
+}
+
 export const coursesService = {
   getStats: async (): Promise<CourseStats> => {
     const { data } = await apiClient.get<CourseStats>(
@@ -60,37 +78,60 @@ export const coursesService = {
     return data;
   },
 
-  publish: async (
-    id: string,
-  ): Promise<{
-    id: string;
-    slug: string;
-    title: string;
-    isPublished: boolean;
-  }> => {
+  publish: async (id: string) => {
     const { data } = await apiClient.patch(
       API_ENDPOINTS.ADMIN_COURSES.PUBLISH(id),
     );
     return data;
   },
 
-  unpublish: async (
-    id: string,
-  ): Promise<{
-    id: string;
-    slug: string;
-    title: string;
-    isPublished: boolean;
-  }> => {
+  unpublish: async (id: string) => {
     const { data } = await apiClient.patch(
       API_ENDPOINTS.ADMIN_COURSES.UNPUBLISH(id),
     );
     return data;
   },
 
-  delete: async (id: string): Promise<any> => {
+  delete: async (id: string): Promise<{ success: boolean }> => {
     const { data } = await apiClient.delete(
       API_ENDPOINTS.ADMIN_COURSES.DELETE(id),
+    );
+    return data;
+  },
+
+  // ── CourseLab Management ──────────────────────────────────────────
+
+  getCourseLabs: async (courseId: string): Promise<CourseLabItem[]> => {
+    const { data } = await apiClient.get<CourseLabItem[]>(
+      API_ENDPOINTS.ADMIN_COURSES.LABS(courseId),
+    );
+    return data;
+  },
+
+  attachLab: async (courseId: string, labId: string): Promise<CourseLabItem> => {
+    const { data } = await apiClient.post<CourseLabItem>(
+      API_ENDPOINTS.ADMIN_COURSES.ATTACH_LAB(courseId, labId),
+    );
+    return data;
+  },
+
+  detachLab: async (
+    courseId: string,
+    labId: string,
+  ): Promise<{ success: boolean; message: string }> => {
+    const { data } = await apiClient.delete(
+      API_ENDPOINTS.ADMIN_COURSES.DETACH_LAB(courseId, labId),
+    );
+    return data;
+  },
+
+  reorderLabs: async (
+    courseId: string,
+    labIds: string[],
+  ): Promise<{ success: boolean }> => {
+    const { data } = await apiClient.patch(
+      API_ENDPOINTS.ADMIN_COURSES.REORDER_LABS(courseId),
+      { labIds },
     );
     return data;
   },

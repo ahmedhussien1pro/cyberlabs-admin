@@ -18,4 +18,5 @@ export const ROUTES = {
   PATH_DETAIL: (id: string) => `/paths/${id}`,
   PATH_CREATE: '/paths/create',
   PATH_EDIT: (id: string) => `/paths/${id}/edit`,
+  MAP: '/map',
 } as const;
