@@ -11,6 +11,8 @@ import {
   FlaskConical,
   Map,
   Layers,
+  Award,
+  Settings,
   ChevronLeft,
   ChevronRight,
   X,
@@ -32,26 +34,57 @@ export function Sidebar() {
     { icon: Users,           label: t('nav.users'),     path: ROUTES.USERS },
     { icon: BookOpen,        label: t('nav.courses'),   path: ROUTES.COURSES },
     { icon: FlaskConical,    label: t('nav.labs'),      path: ROUTES.LABS },
-    { icon: Map,             label: t('nav.paths'),     path: ROUTES.PATHS },
-    { icon: Layers,          label: t('nav.map'),       path: ROUTES.MAP },
+    { icon: Layers,          label: t('nav.paths'),     path: ROUTES.PATHS },
+    { icon: Map,             label: t('nav.map'),       path: ROUTES.MAP },
+    { icon: Award,           label: t('nav.badges'),    path: ROUTES.BADGES },
   ];
+
+  const bottomItems = [
+    { icon: Settings, label: t('nav.settings'), path: ROUTES.SETTINGS },
+  ];
+
+  const NavLink = ({ item }: { item: typeof navItems[number] }) => {
+    const isActive =
+      location.pathname === item.path ||
+      (item.path !== ROUTES.DASHBOARD &&
+        location.pathname.startsWith(item.path));
+
+    return (
+      <Link
+        key={item.path}
+        to={item.path}
+        onClick={closeMobileSidebar}
+        className={cn(
+          'flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors',
+          isActive
+            ? 'bg-primary text-primary-foreground'
+            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+          sidebarCollapsed && 'lg:justify-center lg:px-2',
+        )}
+        title={sidebarCollapsed ? item.label : undefined}
+      >
+        <item.icon className="h-5 w-5 flex-shrink-0" />
+        <span
+          className={cn(
+            'truncate text-sm font-medium',
+            sidebarCollapsed && 'lg:hidden',
+          )}
+        >
+          {item.label}
+        </span>
+      </Link>
+    );
+  };
 
   return (
     <aside
       className={cn(
-        // Base positioning
         'fixed top-0 z-40 h-screen bg-card',
         'ltr:left-0 ltr:border-r rtl:right-0 rtl:border-l',
         'transition-all duration-300 ease-in-out',
-
-        // ── Mobile (< lg): off-screen by default, slides in when open ──────────
         'ltr:-translate-x-full rtl:translate-x-full',
         mobileOpen && 'ltr:!translate-x-0 rtl:!translate-x-0',
-
-        // ── Desktop (≥ lg): always visible ──────────────────────────────
         'lg:ltr:translate-x-0 lg:rtl:translate-x-0',
-
-        // ── Width ──────────────────────────────────────────────────────
         'w-72',
         sidebarCollapsed ? 'lg:w-20' : 'lg:w-64',
       )}
@@ -60,7 +93,6 @@ export function Sidebar() {
 
         {/* ── Logo area ──────────────────────────────────────────────── */}
         <div className="flex h-16 items-center justify-between gap-2 border-b px-4">
-
           <div
             className={cn(
               'flex items-center overflow-hidden transition-all duration-300',
@@ -99,41 +131,19 @@ export function Sidebar() {
           </Button>
         </div>
 
-        {/* ── Navigation ───────────────────────────────────────────── */}
+        {/* ── Main Navigation ───────────────────────────────────────── */}
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-          {navItems.map((item) => {
-            const isActive =
-              location.pathname === item.path ||
-              (item.path !== ROUTES.DASHBOARD &&
-                location.pathname.startsWith(item.path));
-
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={closeMobileSidebar}
-                className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors',
-                  isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                  sidebarCollapsed && 'lg:justify-center lg:px-2',
-                )}
-              >
-                <item.icon className="h-5 w-5 flex-shrink-0" />
-
-                <span
-                  className={cn(
-                    'truncate text-sm font-medium',
-                    sidebarCollapsed && 'lg:hidden',
-                  )}
-                >
-                  {item.label}
-                </span>
-              </Link>
-            );
-          })}
+          {navItems.map((item) => (
+            <NavLink key={item.path} item={item} />
+          ))}
         </nav>
+
+        {/* ── Bottom Navigation (Settings) ──────────────────────────── */}
+        <div className="border-t p-3 space-y-1">
+          {bottomItems.map((item) => (
+            <NavLink key={item.path} item={item} />
+          ))}
+        </div>
 
       </div>
     </aside>

@@ -69,3 +69,13 @@ export const PathEditPage = lazy(
 export const ContentMapPage = lazy(
   () => import('@/features/map/pages/content-map.page'),
 );
+
+// Badges
+export const BadgesListPage = lazy(
+  () => import('@/features/badges/pages/badges-list.page'),
+);
+
+// Settings
+export const SettingsPage = lazy(
+  () => import('@/features/settings/pages/settings.page'),
+);

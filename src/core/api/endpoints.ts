@@ -24,7 +24,6 @@ export const API_ENDPOINTS = {
     PUBLISH: (id: string) => `/admin/courses/${id}/publish`,
     UNPUBLISH: (id: string) => `/admin/courses/${id}/unpublish`,
     DELETE: (id: string) => `/admin/courses/${id}`,
-    // CourseLab management
     LABS: (id: string) => `/admin/courses/${id}/labs`,
     ATTACH_LAB: (id: string, labId: string) => `/admin/courses/${id}/labs/${labId}`,
     DETACH_LAB: (id: string, labId: string) => `/admin/courses/${id}/labs/${labId}`,
@@ -56,5 +55,8 @@ export const API_ENDPOINTS = {
     ENGAGEMENT: '/admin/analytics/engagement',
     TOP_CONTENT: '/admin/analytics/top-content',
     RECENT_ACTIVITY: '/admin/analytics/recent-activity',
+  },
+  BADGES: {
+    LIST: '/badges',
   },
 } as const;

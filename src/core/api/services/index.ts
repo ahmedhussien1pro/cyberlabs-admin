@@ -5,3 +5,5 @@ export { labsService } from './labs.service';
 export { analyticsService } from './analytics.service';
 export { pathsService } from './paths.service';
 export type { PathsQueryParams } from './paths.service';
+export { badgesService } from './badges.service';
+export type { BadgeItem } from './badges.service';

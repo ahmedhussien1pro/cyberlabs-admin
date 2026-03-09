@@ -13,10 +13,12 @@ export const ROUTES = {
   LAB_DETAIL: (id: string) => `/labs/${id}`,
   LAB_CREATE: '/labs/new',
   LAB_EDIT: (id: string) => `/labs/${id}/edit`,
-  UN_AUTHORIZED: '/401',
   PATHS: '/paths',
   PATH_DETAIL: (id: string) => `/paths/${id}`,
   PATH_CREATE: '/paths/create',
   PATH_EDIT: (id: string) => `/paths/${id}/edit`,
   MAP: '/map',
+  BADGES: '/badges',
+  SETTINGS: '/settings',
+  UN_AUTHORIZED: '/401',
 } as const;
