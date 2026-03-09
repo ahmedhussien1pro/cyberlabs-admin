@@ -1,0 +1,30 @@
+{
+  "title": "الإعدادات",
+  "subtitle": "إدارة تفضيلاتك في لوحة الإدارة",
+  "profile": {
+    "title": "الملف الشخصي",
+    "subtitle": "معلومات حساب المسؤول",
+    "notLoggedIn": "غير مسجّل الدخول"
+  },
+  "appearance": {
+    "title": "المظهر",
+    "subtitle": "اختر مظهر الواجهة المفضل لديك",
+    "light": "فاتح",
+    "dark": "داكن",
+    "system": "النظام"
+  },
+  "language": {
+    "title": "اللغة",
+    "subtitle": "اختر لغة عرض لوحة الإدارة",
+    "english": "الإنجليزية",
+    "arabic": "العربية"
+  },
+  "about": {
+    "title": "حول",
+    "platform": "المنصة",
+    "version": "الإصدار",
+    "environment": "البيئة",
+    "production": "إنتاج",
+    "development": "تطوير"
+  }
+}

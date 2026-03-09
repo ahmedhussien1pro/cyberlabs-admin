@@ -1,0 +1,31 @@
+{
+  "title": "Badges",
+  "subtitle": "Platform achievement badges catalog",
+  "total": "badges total",
+  "types": {
+    "LAB": "Lab",
+    "COURSE": "Course",
+    "PATH": "Path",
+    "STREAK": "Streak",
+    "SPECIAL": "Special",
+    "OTHER": "Other"
+  },
+  "sections": {
+    "LAB": "Lab Badges",
+    "COURSE": "Course Badges",
+    "PATH": "Path Badges",
+    "STREAK": "Streak Badges",
+    "SPECIAL": "Special Badges",
+    "OTHER": "Other Badges"
+  },
+  "card": {
+    "xp": "XP",
+    "points": "pts",
+    "arTitle": "Arabic title"
+  },
+  "empty": {
+    "title": "No badges configured yet",
+    "subtitle": "Badges are awarded automatically based on user activity."
+  },
+  "error": "Failed to load badges. Please try again."
+}
