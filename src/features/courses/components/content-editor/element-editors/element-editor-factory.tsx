@@ -2,7 +2,8 @@
 // Renders the correct editor based on element.type.
 // Add new element types here — never in the parent component.
 
-import { CourseElement } from '../../../types/course-editor.types';
+import type { CourseElement } from '../../../types/course-editor.types';
+
 import { TextElementEditor } from './text-element-editor';
 import { ImageElementEditor } from './image-element-editor';
 import { VideoElementEditor } from './video-element-editor';
@@ -28,7 +29,7 @@ export function ElementEditorFactory({ element, onChange }: Props) {
       return <QuizElementEditor element={element} onChange={onChange} />;
     default:
       return (
-        <p className="text-sm text-muted-foreground">
+        <p className='text-sm text-muted-foreground'>
           Unknown element type: {(element as any).type}
         </p>
       );

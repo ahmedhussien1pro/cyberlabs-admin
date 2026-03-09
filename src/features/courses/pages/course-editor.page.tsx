@@ -9,6 +9,7 @@ import { EditorTopbar } from '../components/content-editor/editor-topbar';
 import { CardInfoPanel } from '../components/content-editor/panels/card-info-panel';
 import { HeroInfoPanel } from '../components/content-editor/panels/hero-info-panel';
 import { CurriculumPanel } from '../components/content-editor/panels/curriculum-panel';
+import { adminApiClient } from '@/core/api/admin-client';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 
@@ -59,12 +60,12 @@ export function CourseEditorPage() {
   }, []);
 
   return (
-    <div className="flex flex-col h-screen bg-background overflow-hidden">
+    <div className='flex flex-col h-screen bg-background overflow-hidden'>
       {/* Topbar */}
       <EditorTopbar />
 
       {/* Panel tabs */}
-      <nav className="flex border-b border-border/40 bg-background shrink-0 px-1">
+      <nav className='flex border-b border-border/40 bg-background shrink-0 px-1'>
         {PANELS.map((panel) => (
           <button
             key={panel.id}
@@ -74,30 +75,29 @@ export function CourseEditorPage() {
               activePanel === panel.id
                 ? 'border-primary text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
-            )}
-          >
+            )}>
             {panel.label}
           </button>
         ))}
 
         {/* Global saving indicator */}
         {isSaving && (
-          <div className="ml-auto flex items-center gap-1.5 px-4 text-xs text-muted-foreground">
-            <Loader2 className="h-3 w-3 animate-spin" />
+          <div className='ml-auto flex items-center gap-1.5 px-4 text-xs text-muted-foreground'>
+            <Loader2 className='h-3 w-3 animate-spin' />
             Saving…
           </div>
         )}
       </nav>
 
       {/* Panel content */}
-      <main className="flex-1 overflow-hidden">
+      <main className='flex-1 overflow-hidden'>
         {activePanel === 'card' && (
-          <div className="h-full overflow-y-auto">
+          <div className='h-full overflow-y-auto'>
             <CardInfoPanel />
           </div>
         )}
         {activePanel === 'hero' && (
-          <div className="h-full overflow-y-auto">
+          <div className='h-full overflow-y-auto'>
             <HeroInfoPanel />
           </div>
         )}
@@ -111,9 +111,6 @@ export function CourseEditorPage() {
 
 async function fetchCourse(id: string): Promise<any | null> {
   try {
-    // Use the same axios instance as the rest of the admin app.
-    // Adjust the import path if your admin API client lives elsewhere.
-    const { adminApiClient } = await import('@/core/api/admin-client');
     const res = await adminApiClient.get(`/admin/courses/${id}`);
     return res.data ?? res;
   } catch (err) {

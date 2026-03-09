@@ -1,5 +1,5 @@
 // src/features/courses/components/content-editor/element-editors/text-element-editor.tsx
-import { CourseElement } from '../../../types/course-editor.types';
+import type { CourseElement } from '../../../types/course-editor.types';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,53 +11,53 @@ interface Props {
 
 export function TextElementEditor({ element, onChange }: Props) {
   return (
-    <div className="space-y-4">
+    <div className='space-y-4'>
       {/* Title */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">Title (EN)</Label>
+      <div className='grid grid-cols-2 gap-3'>
+        <div className='space-y-1'>
+          <Label className='text-xs text-muted-foreground'>Title (EN)</Label>
           <Input
             value={element.title}
-            placeholder="Element title"
+            placeholder='Element title'
             onChange={(e) => onChange({ title: e.target.value })}
           />
         </div>
-        <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">Title (AR)</Label>
+        <div className='space-y-1'>
+          <Label className='text-xs text-muted-foreground'>Title (AR)</Label>
           <Input
-            dir="rtl"
+            dir='rtl'
             value={element.ar_title ?? ''}
-            placeholder="عنوان العنصر"
+            placeholder='عنوان العنصر'
             onChange={(e) => onChange({ ar_title: e.target.value })}
           />
         </div>
       </div>
 
       {/* Content */}
-      <div className="space-y-1">
-        <Label className="text-xs text-muted-foreground">
+      <div className='space-y-1'>
+        <Label className='text-xs text-muted-foreground'>
           Content (EN) — Markdown supported
         </Label>
         <Textarea
           rows={8}
           value={element.content ?? ''}
-          placeholder="Write your content here... (Markdown supported)"
+          placeholder='Write your content here... (Markdown supported)'
           onChange={(e) => onChange({ content: e.target.value })}
-          className="font-mono text-sm resize-y"
+          className='font-mono text-sm resize-y'
         />
       </div>
 
-      <div className="space-y-1">
-        <Label className="text-xs text-muted-foreground">
+      <div className='space-y-1'>
+        <Label className='text-xs text-muted-foreground'>
           Content (AR) — Markdown
         </Label>
         <Textarea
-          dir="rtl"
+          dir='rtl'
           rows={6}
           value={element.ar_content ?? ''}
-          placeholder="اكتب المحتوى بالعربي..."
+          placeholder='اكتب المحتوى بالعربي...'
           onChange={(e) => onChange({ ar_content: e.target.value })}
-          className="font-mono text-sm resize-y"
+          className='font-mono text-sm resize-y'
         />
       </div>
     </div>

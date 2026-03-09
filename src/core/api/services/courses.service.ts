@@ -1,6 +1,7 @@
 // src/core/api/services/courses.service.ts
 import { apiClient } from '../client';
 import { ENDPOINTS } from '../endpoints';
+import type { CourseState } from '@/core/types';
 
 export interface CourseQueryParams {
   page?: number;
@@ -24,18 +25,34 @@ export interface UpdateCoursePayload {
   difficulty?: string;
   category?: string;
   access?: string;
-  state?: string;
+  contentType?: string;
+  color?: string;
+  state?: CourseState;
   isPublished?: boolean;
   isFeatured?: boolean;
   isNew?: boolean;
   price?: number;
+  duration?: string;
+  estimatedHours?: number;
   thumbnail?: string;
-  color?: string;
+  backgroundImage?: string;
   tags?: string[];
   topics?: string[];
   skills?: string[];
   prerequisites?: string[];
   instructorId?: string;
+}
+
+export interface CourseLabItem {
+  order: number;
+  lab: {
+    id: string;
+    title: string;
+    ar_title?: string;
+    slug: string;
+    difficulty: string;
+    isPublished: boolean;
+  };
 }
 
 export const coursesService = {
@@ -44,26 +61,41 @@ export const coursesService = {
     apiClient.get(ENDPOINTS.COURSES.LIST, { params }).then((r) => r.data),
 
   // GET /admin/courses/stats
-  getStats: () =>
-    apiClient.get(ENDPOINTS.COURSES.STATS).then((r) => r.data),
+  getStats: () => apiClient.get(ENDPOINTS.COURSES.STATS).then((r) => r.data),
 
   // GET /admin/courses/:id
   getOne: (id: string) =>
+    apiClient.get(ENDPOINTS.COURSES.DETAIL(id)).then((r) => r.data),
+
+  // Alias for getOne — used in course-form, course-detail, course-platform-preview
+  getById: (id: string) =>
     apiClient.get(ENDPOINTS.COURSES.DETAIL(id)).then((r) => r.data),
 
   // POST /admin/courses
   create: (data: Record<string, unknown>) =>
     apiClient.post(ENDPOINTS.COURSES.LIST, data).then((r) => r.data),
 
-  // PATCH /admin/courses/:id  ← single endpoint for all field updates incl. state
+  // PATCH /admin/courses/:id
   update: (id: string, data: UpdateCoursePayload) =>
     apiClient.patch(ENDPOINTS.COURSES.DETAIL(id), data).then((r) => r.data),
 
+  // PATCH /admin/courses/:id/publish
+  publish: (id: string) =>
+    apiClient.patch(ENDPOINTS.COURSES.PUBLISH(id)).then((r) => r.data),
+
+  // PATCH /admin/courses/:id/unpublish
+  unpublish: (id: string) =>
+    apiClient.patch(ENDPOINTS.COURSES.UNPUBLISH(id)).then((r) => r.data),
+
   // DELETE /admin/courses/:id
+  delete: (id: string) =>
+    apiClient.delete(ENDPOINTS.COURSES.DETAIL(id)).then((r) => r.data),
+
+  // Alias kept for backward compat
   remove: (id: string) =>
     apiClient.delete(ENDPOINTS.COURSES.DETAIL(id)).then((r) => r.data),
 
-  // GET /admin/courses/:id/curriculum  (PUT returns full course)
+  // GET /admin/courses/:id/curriculum
   getCurriculum: (id: string) =>
     apiClient.get(ENDPOINTS.COURSES.CURRICULUM(id)).then((r) => r.data),
 
@@ -72,7 +104,7 @@ export const coursesService = {
     apiClient.put(ENDPOINTS.COURSES.CURRICULUM(id), data).then((r) => r.data),
 
   // GET /admin/courses/:id/labs
-  getCourseLabs: (id: string) =>
+  getCourseLabs: (id: string): Promise<CourseLabItem[]> =>
     apiClient.get(ENDPOINTS.COURSES.LABS(id)).then((r) => r.data),
 
   // POST /admin/courses/:id/labs/:labId

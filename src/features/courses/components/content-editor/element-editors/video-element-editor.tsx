@@ -1,5 +1,6 @@
 // src/features/courses/components/content-editor/element-editors/video-element-editor.tsx
-import { CourseElement } from '../../../types/course-editor.types';
+import type { CourseElement } from '../../../types/course-editor.types';
+
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 
@@ -29,63 +30,63 @@ export function VideoElementEditor({ element, onChange }: Props) {
   const embedUrl = element.videoUrl ? toEmbedUrl(element.videoUrl) : null;
 
   return (
-    <div className="space-y-4">
+    <div className='space-y-4'>
       {/* Title */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">Title (EN)</Label>
+      <div className='grid grid-cols-2 gap-3'>
+        <div className='space-y-1'>
+          <Label className='text-xs text-muted-foreground'>Title (EN)</Label>
           <Input
             value={element.title}
-            placeholder="Video title"
+            placeholder='Video title'
             onChange={(e) => onChange({ title: e.target.value })}
           />
         </div>
-        <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">Title (AR)</Label>
+        <div className='space-y-1'>
+          <Label className='text-xs text-muted-foreground'>Title (AR)</Label>
           <Input
-            dir="rtl"
+            dir='rtl'
             value={element.ar_title ?? ''}
-            placeholder="عنوان الفيديو"
+            placeholder='عنوان الفيديو'
             onChange={(e) => onChange({ ar_title: e.target.value })}
           />
         </div>
       </div>
 
       {/* Video URL */}
-      <div className="space-y-1">
-        <Label className="text-xs text-muted-foreground">
+      <div className='space-y-1'>
+        <Label className='text-xs text-muted-foreground'>
           Video URL (YouTube / Vimeo)
         </Label>
         <Input
           value={element.videoUrl ?? ''}
-          placeholder="https://www.youtube.com/watch?v=..."
+          placeholder='https://www.youtube.com/watch?v=...'
           onChange={(e) => onChange({ videoUrl: e.target.value })}
         />
       </div>
 
       {/* Embed preview */}
       {embedUrl && (
-        <div className="rounded-lg overflow-hidden border border-border/40 aspect-video">
+        <div className='rounded-lg overflow-hidden border border-border/40 aspect-video'>
           <iframe
             src={embedUrl}
-            title="Video preview"
-            className="w-full h-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            title='Video preview'
+            className='w-full h-full'
+            allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
             allowFullScreen
           />
         </div>
       )}
 
       {/* Duration */}
-      <div className="space-y-1 w-40">
-        <Label className="text-xs text-muted-foreground">
+      <div className='space-y-1 w-40'>
+        <Label className='text-xs text-muted-foreground'>
           Duration (seconds)
         </Label>
         <Input
-          type="number"
+          type='number'
           min={0}
           value={element.videoDuration ?? ''}
-          placeholder="e.g. 300"
+          placeholder='e.g. 300'
           onChange={(e) =>
             onChange({ videoDuration: Number(e.target.value) || undefined })
           }

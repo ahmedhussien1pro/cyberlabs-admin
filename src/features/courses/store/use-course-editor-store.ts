@@ -1,16 +1,17 @@
-// src/features/courses/store/use-course-editor-store.ts
 import { create } from 'zustand';
-import {
+import type {
   CourseElement,
-  DEFAULT_CARD_INFO,
-  DEFAULT_HERO_INFO,
   EditorCardInfo,
   EditorHeroInfo,
   EditorMode,
   EditorPanel,
   EditorTopic,
-  ELEMENT_TYPE_TO_LESSON_TYPE,
   ElementType,
+} from '../types/course-editor.types';
+import {
+  DEFAULT_CARD_INFO,
+  DEFAULT_HERO_INFO,
+  ELEMENT_TYPE_TO_LESSON_TYPE,
 } from '../types/course-editor.types';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -25,9 +26,7 @@ function elementToContent(el: CourseElement): string {
     case 'TEXT':
       return el.content ?? '';
     case 'IMAGE':
-      return el.imageUrl
-        ? `![${el.altText ?? ''}](${el.imageUrl})`
-        : '';
+      return el.imageUrl ? `![${el.altText ?? ''}](${el.imageUrl})` : '';
     case 'VIDEO':
       return el.videoUrl ?? '';
     case 'CODE':
@@ -67,13 +66,20 @@ interface CourseEditorStore {
   // —— Topics
   addTopic: () => void;
   deleteTopic: (id: string) => void;
-  updateTopic: (id: string, updates: Partial<Omit<EditorTopic, 'id' | 'elements'>>) => void;
+  updateTopic: (
+    id: string,
+    updates: Partial<Omit<EditorTopic, 'id' | 'elements'>>,
+  ) => void;
   moveTopic: (fromIndex: number, toIndex: number) => void;
   selectTopic: (id: string | null) => void;
 
   // —— Elements
   addElement: (topicId: string, type: ElementType) => void;
-  updateElement: (topicId: string, elementId: string, updates: Partial<CourseElement>) => void;
+  updateElement: (
+    topicId: string,
+    elementId: string,
+    updates: Partial<CourseElement>,
+  ) => void;
   deleteElement: (topicId: string, elementId: string) => void;
   moveElement: (topicId: string, fromIndex: number, toIndex: number) => void;
 
@@ -155,9 +161,11 @@ export const useCourseEditorStore = create<CourseEditorStore>((set, get) => ({
       order: idx + 1,
       elements: (t.elements ?? []).map((el: any, eIdx: number) => ({
         id: el.id ?? uid(),
-        type: (el.type?.toUpperCase() === 'VIDEO' ? 'VIDEO'
-          : el.type?.toUpperCase() === 'QUIZ' ? 'QUIZ'
-          : 'TEXT') as ElementType,
+        type: (el.type?.toUpperCase() === 'VIDEO'
+          ? 'VIDEO'
+          : el.type?.toUpperCase() === 'QUIZ'
+            ? 'QUIZ'
+            : 'TEXT') as ElementType,
         title: el.title?.en ?? el.title ?? '',
         ar_title: el.title?.ar ?? '',
         order: el.order ?? eIdx + 1,
@@ -221,9 +229,11 @@ export const useCourseEditorStore = create<CourseEditorStore>((set, get) => ({
         order: section.order ?? sIdx + 1,
         elements: (section.lessons ?? []).map((lesson: any, lIdx: number) => ({
           id: lesson.id ?? uid(),
-          type: (lesson.type === 'VIDEO' ? 'VIDEO'
-            : lesson.type === 'QUIZ' ? 'QUIZ'
-            : 'TEXT') as ElementType,
+          type: (lesson.type === 'VIDEO'
+            ? 'VIDEO'
+            : lesson.type === 'QUIZ'
+              ? 'QUIZ'
+              : 'TEXT') as ElementType,
           title: lesson.title ?? '',
           ar_title: lesson.ar_title ?? '',
           order: lesson.order ?? lIdx + 1,
@@ -356,7 +366,10 @@ export const useCourseEditorStore = create<CourseEditorStore>((set, get) => ({
         const arr = [...t.elements];
         const [moved] = arr.splice(fromIndex, 1);
         arr.splice(toIndex, 0, moved);
-        return { ...t, elements: arr.map((el, i) => ({ ...el, order: i + 1 })) };
+        return {
+          ...t,
+          elements: arr.map((el, i) => ({ ...el, order: i + 1 })),
+        };
       }),
       isDirty: true,
     })),
