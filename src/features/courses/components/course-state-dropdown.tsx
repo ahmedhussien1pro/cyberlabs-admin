@@ -17,7 +17,6 @@ interface CourseStateDropdownProps {
   courseId: string;
   currentState?: CourseState;
   isPublished: boolean;
-  size?: 'sm' | 'xs';
 }
 
 const STATE_CONFIG: Record<
@@ -51,7 +50,6 @@ export function CourseStateDropdown({
 }: CourseStateDropdownProps) {
   const queryClient = useQueryClient();
 
-  // Derive effective state
   const effectiveState: CourseState =
     currentState ?? (isPublished ? 'PUBLISHED' : 'DRAFT');
   const config = STATE_CONFIG[effectiveState] ?? STATE_CONFIG['DRAFT'];
@@ -79,7 +77,8 @@ export function CourseStateDropdown({
             config.bg,
             config.color,
           )}
-          disabled={mutation.isPending}>
+          disabled={mutation.isPending}
+        >
           {mutation.isPending ? (
             <Loader2 className='h-3 w-3 animate-spin' />
           ) : (
@@ -89,28 +88,26 @@ export function CourseStateDropdown({
           <ChevronDown className='h-2.5 w-2.5 opacity-60' />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align='start' className='w-40'>
-        {(
-          Object.entries(STATE_CONFIG) as [
-            CourseState,
-            (typeof STATE_CONFIG)[string],
-          ][]
-        ).map(([state, cfg]) => {
-          const ItemIcon = cfg.icon;
-          return (
-            <DropdownMenuItem
-              key={state}
-              disabled={state === effectiveState}
-              onClick={() => mutation.mutate(state)}
-              className={cn(
-                'gap-2 text-xs cursor-pointer',
-                state === effectiveState && 'opacity-50 cursor-default',
-              )}>
-              <ItemIcon className={cn('h-3.5 w-3.5', cfg.color)} />
-              {cfg.label}
-            </DropdownMenuItem>
-          );
-        })}
+      <DropdownMenuContent align='start' className='w-44'>
+        {(Object.entries(STATE_CONFIG) as [CourseState, (typeof STATE_CONFIG)[string]][]).map(
+          ([state, cfg]) => {
+            const ItemIcon = cfg.icon;
+            return (
+              <DropdownMenuItem
+                key={state}
+                disabled={state === effectiveState}
+                onClick={() => mutation.mutate(state)}
+                className={cn(
+                  'gap-2 text-xs cursor-pointer',
+                  state === effectiveState && 'opacity-50 cursor-default',
+                )}
+              >
+                <ItemIcon className={cn('h-3.5 w-3.5', cfg.color)} />
+                {cfg.label}
+              </DropdownMenuItem>
+            );
+          },
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

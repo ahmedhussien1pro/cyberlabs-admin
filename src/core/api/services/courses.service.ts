@@ -1,4 +1,3 @@
-// src/core/api/services/courses.service.ts
 import { apiClient } from '../client';
 import { API_ENDPOINTS } from '../endpoints';
 import type {
@@ -29,16 +28,6 @@ export interface CourseLabItem {
   };
 }
 
-export interface CurriculumSection {
-  id?: string;
-  title: string;
-  ar_title?: string;
-  description?: string;
-  ar_description?: string;
-  order?: number;
-  lessons?: CurriculumLesson[];
-}
-
 export interface CurriculumLesson {
   id?: string;
   title: string;
@@ -48,6 +37,16 @@ export interface CurriculumLesson {
   videoUrl?: string;
   duration?: number;
   order?: number;
+}
+
+export interface CurriculumSection {
+  id?: string;
+  title: string;
+  ar_title?: string;
+  description?: string;
+  ar_description?: string;
+  order?: number;
+  lessons?: CurriculumLesson[];
 }
 
 export const coursesService = {
@@ -115,7 +114,7 @@ export const coursesService = {
     return data;
   },
 
-  // ✅ NEW — update state to PUBLISHED | DRAFT | COMING_SOON
+  // ✅ Update state: PUBLISHED | DRAFT | COMING_SOON
   updateState: async (
     id: string,
     state: CourseState,
@@ -136,7 +135,7 @@ export const coursesService = {
 
   // ── Curriculum Management ────────────────────────────────────────────
 
-  // ✅ NEW — GET /admin/courses/:id/curriculum
+  // GET /admin/courses/:id/curriculum
   getCurriculum: async (
     id: string,
   ): Promise<{ sections: CurriculumSection[] }> => {
@@ -146,7 +145,7 @@ export const coursesService = {
     return data;
   },
 
-  // ✅ NEW — PUT /admin/courses/:id/curriculum
+  // PUT /admin/courses/:id/curriculum
   updateCurriculum: async (
     id: string,
     topics: object[],
@@ -167,10 +166,7 @@ export const coursesService = {
     return data;
   },
 
-  attachLab: async (
-    courseId: string,
-    labId: string,
-  ): Promise<CourseLabItem> => {
+  attachLab: async (courseId: string, labId: string): Promise<CourseLabItem> => {
     const { data } = await apiClient.post<CourseLabItem>(
       API_ENDPOINTS.ADMIN_COURSES.ATTACH_LAB(courseId, labId),
     );

@@ -1,4 +1,3 @@
-// src/core/api/endpoints.ts
 export const API_ENDPOINTS = {
   AUTH: {
     LOGIN: '/auth/login',
@@ -25,15 +24,11 @@ export const API_ENDPOINTS = {
     PUBLISH: (id: string) => `/admin/courses/${id}/publish`,
     UNPUBLISH: (id: string) => `/admin/courses/${id}/unpublish`,
     DELETE: (id: string) => `/admin/courses/${id}`,
-    // ✅ NEW
     STATE: (id: string) => `/admin/courses/${id}/state`,
     CURRICULUM: (id: string) => `/admin/courses/${id}/curriculum`,
-    // Labs
     LABS: (id: string) => `/admin/courses/${id}/labs`,
-    ATTACH_LAB: (id: string, labId: string) =>
-      `/admin/courses/${id}/labs/${labId}`,
-    DETACH_LAB: (id: string, labId: string) =>
-      `/admin/courses/${id}/labs/${labId}`,
+    ATTACH_LAB: (id: string, labId: string) => `/admin/courses/${id}/labs/${labId}`,
+    DETACH_LAB: (id: string, labId: string) => `/admin/courses/${id}/labs/${labId}`,
     REORDER_LABS: (id: string) => `/admin/courses/${id}/labs/reorder`,
   },
   ADMIN_LABS: {

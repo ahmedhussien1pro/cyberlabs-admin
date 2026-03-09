@@ -1,3 +1,4 @@
+// src/features/courses/pages/course-detail.page.tsx
 import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -16,7 +17,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  ArrowLeft,
   Globe,
+  EyeOff,
   Users,
   Star,
   BookOpen,
@@ -62,7 +65,7 @@ import { cn } from '@/lib/utils';
 import { CoursePreviewSheet } from '../components/course-preview-sheet';
 import { CourseStateDropdown } from '../components/course-state-dropdown';
 
-// ── constants (same as before) ─────────────────────────────────────────
+// ── Color / styling constants ──────────────────────────────────────────
 const COLOR_BG: Record<string, string> = {
   emerald: 'from-emerald-950 to-emerald-900 border-emerald-800/50',
   blue: 'from-blue-950 to-blue-900 border-blue-800/50',
@@ -88,202 +91,7 @@ const DIFFICULTY_BADGE: Record<string, string> = {
 
 type TabId = 'overview' | 'labs';
 
-// ── Labs Tab Component ─────────────────────────────────────────────────
-function CourseLabsTab({ courseId }: { courseId: string }) {
-  const queryClient = useQueryClient();
-  const [addOpen, setAddOpen] = useState(false);
-  const [labSearch, setLabSearch] = useState('');
-
-  // Get attached labs
-  const { data: courseLabs = [], isLoading } = useQuery({
-    queryKey: ['course-labs', courseId],
-    queryFn: () => coursesService.getCourseLabs(courseId),
-  });
-
-  // Search all labs for the add modal
-  const { data: allLabsData } = useQuery({
-    queryKey: ['labs', 'list', 'for-attach', labSearch],
-    queryFn: () =>
-      labsService.getAll({ search: labSearch || undefined, limit: 20 }),
-    enabled: addOpen,
-  });
-
-  const attachMutation = useMutation({
-    mutationFn: (labId: string) => coursesService.attachLab(courseId, labId),
-    onSuccess: () => {
-      toast.success('Lab attached');
-      queryClient.invalidateQueries({ queryKey: ['course-labs', courseId] });
-    },
-    onError: (err: any) =>
-      toast.error(err?.response?.data?.message ?? 'Failed to attach lab'),
-  });
-
-  const detachMutation = useMutation({
-    mutationFn: (labId: string) => coursesService.detachLab(courseId, labId),
-    onSuccess: () => {
-      toast.success('Lab removed');
-      queryClient.invalidateQueries({ queryKey: ['course-labs', courseId] });
-    },
-    onError: () => toast.error('Failed to remove lab'),
-  });
-
-  const attachedLabIds = new Set(courseLabs.map((cl) => cl.lab.id));
-
-  if (isLoading) {
-    return (
-      <div className='space-y-3'>
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton key={i} className='h-16 rounded-xl' />
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <div className='space-y-4'>
-      {/* Header */}
-      <div className='flex items-center justify-between'>
-        <div>
-          <h3 className='font-semibold'>Attached Labs</h3>
-          <p className='text-xs text-muted-foreground'>
-            {courseLabs.length} lab{courseLabs.length !== 1 ? 's' : ''} in this
-            course
-          </p>
-        </div>
-        <Button
-          size='sm'
-          className='h-8 gap-2'
-          onClick={() => setAddOpen(true)}>
-          <Plus className='h-3.5 w-3.5' />
-          Add Lab
-        </Button>
-      </div>
-
-      {/* Labs list */}
-      {courseLabs.length === 0 ? (
-        <Card className='flex flex-col items-center justify-center gap-3 p-12 text-center'>
-          <div className='flex h-12 w-12 items-center justify-center rounded-full bg-muted'>
-            <FlaskConical className='h-5 w-5 text-muted-foreground' />
-          </div>
-          <p className='font-medium'>No labs attached yet</p>
-          <p className='text-sm text-muted-foreground'>
-            Click "Add Lab" to attach labs to this course.
-          </p>
-        </Card>
-      ) : (
-        <div className='space-y-2'>
-          {courseLabs.map((item, index) => (
-            <Card key={index} className='flex items-center gap-4 p-3'>
-              <GripVertical className='h-4 w-4 text-muted-foreground/40 shrink-0' />
-              <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/10 border border-violet-500/20'>
-                <FlaskConical className='h-4 w-4 text-violet-400' />
-              </div>
-              <div className='flex-1 min-w-0'>
-                <p className='truncate text-sm font-semibold'>
-                  {item.lab.title}
-                </p>
-                <div className='flex items-center gap-2 text-xs text-muted-foreground'>
-                  <span>{item.lab.category}</span>
-                  <span>·</span>
-                  <span>{item.lab.difficulty}</span>
-                  <span>·</span>
-                  <span>{item.lab.executionMode}</span>
-                </div>
-              </div>
-              <div className='flex items-center gap-2 shrink-0'>
-                <Badge variant='outline' className='text-[10px]'>
-                  Order {item.order}
-                </Badge>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant='ghost'
-                      size='sm'
-                      className='h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10'>
-                      <X className='h-3.5 w-3.5' />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Remove Lab</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Remove <strong>{item.lab.title}</strong> from this
-                        course?
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => detachMutation.mutate(item.lab.id)}
-                        className='bg-destructive text-destructive-foreground'>
-                        Remove
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* Add Lab Modal */}
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent className='sm:max-w-lg'>
-          <DialogHeader>
-            <DialogTitle className='flex items-center gap-2'>
-              <FlaskConical className='h-4 w-4 text-violet-400' />
-              Add Lab to Course
-            </DialogTitle>
-          </DialogHeader>
-          <div className='space-y-3'>
-            <div className='relative'>
-              <Search className='absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground' />
-              <Input
-                placeholder='Search labs...'
-                value={labSearch}
-                onChange={(e) => setLabSearch(e.target.value)}
-                className='pl-9 h-9'
-              />
-            </div>
-            <div className='max-h-72 space-y-1 overflow-y-auto'>
-              {(allLabsData?.data ?? []).map((lab) => {
-                const isAttached = attachedLabIds.has(lab.id);
-                return (
-                  <div
-                    key={lab.id}
-                    className={cn(
-                      'flex items-center justify-between rounded-lg px-3 py-2.5 text-sm',
-                      isAttached
-                        ? 'opacity-50 bg-muted/30'
-                        : 'hover:bg-muted/50 cursor-pointer',
-                    )}>
-                    <div className='min-w-0'>
-                      <p className='truncate font-medium'>{lab.title}</p>
-                      <p className='text-xs text-muted-foreground'>
-                        {lab.category} · {lab.difficulty}
-                      </p>
-                    </div>
-                    <Button
-                      size='sm'
-                      variant={isAttached ? 'outline' : 'default'}
-                      className='h-7 shrink-0 text-xs'
-                      disabled={isAttached || attachMutation.isPending}
-                      onClick={() => attachMutation.mutate(lab.id)}>
-                      {isAttached ? 'Added' : 'Add'}
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
-
-// ── State Indicator (helper) ────────────────────────────────────────────
+// ── Helper Components ──────────────────────────────────────────────────
 function StateIndicator({
   state,
   isPublished,
@@ -329,10 +137,212 @@ function ChipList({
           className={cn(
             'inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium',
             colorClass,
-          )}>
+          )}
+        >
           {item}
         </span>
       ))}
+    </div>
+  );
+}
+
+// ── Labs Tab ────────────────────────────────────────────────────────────
+function CourseLabsTab({ courseId }: { courseId: string }) {
+  const queryClient = useQueryClient();
+  const [addOpen, setAddOpen] = useState(false);
+  const [labSearch, setLabSearch] = useState('');
+
+  const { data: courseLabs = [], isLoading: labsLoading } = useQuery({
+    queryKey: ['course-labs', courseId],
+    queryFn: () => coursesService.getCourseLabs(courseId),
+  });
+
+  const { data: allLabsData } = useQuery({
+    queryKey: ['labs', 'list', 'for-attach', labSearch],
+    queryFn: () =>
+      labsService.getAll({ search: labSearch || undefined, limit: 20 }),
+    enabled: addOpen,
+  });
+
+  const attachMutation = useMutation({
+    mutationFn: (labId: string) => coursesService.attachLab(courseId, labId),
+    onSuccess: () => {
+      toast.success('Lab attached');
+      queryClient.invalidateQueries({ queryKey: ['course-labs', courseId] });
+    },
+    onError: (err: any) =>
+      toast.error(err?.response?.data?.message ?? 'Failed to attach lab'),
+  });
+
+  const detachMutation = useMutation({
+    mutationFn: (labId: string) => coursesService.detachLab(courseId, labId),
+    onSuccess: () => {
+      toast.success('Lab removed');
+      queryClient.invalidateQueries({ queryKey: ['course-labs', courseId] });
+    },
+    onError: () => toast.error('Failed to remove lab'),
+  });
+
+  const attachedLabIds = new Set(courseLabs.map((cl) => cl.lab.id));
+
+  if (labsLoading) {
+    return (
+      <div className='space-y-3'>
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className='h-16 rounded-xl' />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className='space-y-4'>
+      {/* Labs header */}
+      <div className='flex items-center justify-between'>
+        <div>
+          <h3 className='font-semibold'>Attached Labs</h3>
+          <p className='text-xs text-muted-foreground'>
+            {courseLabs.length} lab{courseLabs.length !== 1 ? 's' : ''} in this
+            course
+          </p>
+        </div>
+        <Button
+          size='sm'
+          className='h-8 gap-2'
+          onClick={() => setAddOpen(true)}
+        >
+          <Plus className='h-3.5 w-3.5' />
+          Add Lab
+        </Button>
+      </div>
+
+      {/* Labs list */}
+      {courseLabs.length === 0 ? (
+        <Card className='flex flex-col items-center justify-center gap-3 p-12 text-center'>
+          <div className='flex h-12 w-12 items-center justify-center rounded-full bg-muted'>
+            <FlaskConical className='h-5 w-5 text-muted-foreground' />
+          </div>
+          <p className='font-medium'>No labs attached yet</p>
+          <p className='text-sm text-muted-foreground'>
+            Click "Add Lab" to attach labs to this course.
+          </p>
+        </Card>
+      ) : (
+        <div className='space-y-2'>
+          {courseLabs.map((item) => (
+            <Card
+              key={item.lab.id}
+              className='flex items-center gap-4 p-3'
+            >
+              <GripVertical className='h-4 w-4 shrink-0 text-muted-foreground/40' />
+              <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-violet-500/20 bg-violet-500/10'>
+                <FlaskConical className='h-4 w-4 text-violet-400' />
+              </div>
+              <div className='min-w-0 flex-1'>
+                <p className='truncate text-sm font-semibold'>
+                  {item.lab.title}
+                </p>
+                <div className='flex items-center gap-2 text-xs text-muted-foreground'>
+                  <span>{item.lab.category}</span>
+                  <span>·</span>
+                  <span>{item.lab.difficulty}</span>
+                  <span>·</span>
+                  <span>{item.lab.executionMode}</span>
+                </div>
+              </div>
+              <div className='flex shrink-0 items-center gap-2'>
+                <Badge variant='outline' className='text-[10px]'>
+                  Order {item.order}
+                </Badge>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      className='h-7 w-7 p-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive'
+                    >
+                      <X className='h-3.5 w-3.5' />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Remove Lab</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Remove <strong>{item.lab.title}</strong> from this
+                        course?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => detachMutation.mutate(item.lab.id)}
+                        className='bg-destructive text-destructive-foreground'
+                      >
+                        Remove
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Add Lab Dialog */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className='sm:max-w-lg'>
+          <DialogHeader>
+            <DialogTitle className='flex items-center gap-2'>
+              <FlaskConical className='h-4 w-4 text-violet-400' />
+              Add Lab to Course
+            </DialogTitle>
+          </DialogHeader>
+          <div className='space-y-3'>
+            <div className='relative'>
+              <Search className='absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground' />
+              <Input
+                placeholder='Search labs...'
+                value={labSearch}
+                onChange={(e) => setLabSearch(e.target.value)}
+                className='h-9 pl-9'
+              />
+            </div>
+            <div className='max-h-72 space-y-1 overflow-y-auto'>
+              {(allLabsData?.data ?? []).map((lab) => {
+                const isAttached = attachedLabIds.has(lab.id);
+                return (
+                  <div
+                    key={lab.id}
+                    className={cn(
+                      'flex items-center justify-between rounded-lg px-3 py-2.5 text-sm',
+                      isAttached
+                        ? 'bg-muted/30 opacity-50'
+                        : 'hover:bg-muted/50',
+                    )}
+                  >
+                    <div className='min-w-0'>
+                      <p className='truncate font-medium'>{lab.title}</p>
+                      <p className='text-xs text-muted-foreground'>
+                        {lab.category} · {lab.difficulty}
+                      </p>
+                    </div>
+                    <Button
+                      size='sm'
+                      variant={isAttached ? 'outline' : 'default'}
+                      className='h-7 shrink-0 text-xs'
+                      disabled={isAttached || attachMutation.isPending}
+                      onClick={() => attachMutation.mutate(lab.id)}
+                    >
+                      {isAttached ? 'Added' : 'Add'}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -413,11 +423,9 @@ export default function CourseDetailPage() {
     );
   }
 
-  const color = course.color ?? 'blue';
+  const color = (course.color ?? 'blue').toLowerCase();
   const isPublished = course.isPublished || course.state === 'PUBLISHED';
-  const isComingSoon = course.state === 'COMING_SOON';
   const hasEnrollments = (course._count?.enrollments ?? 0) > 0;
-  const isToggling = publishMutation.isPending || unpublishMutation.isPending;
 
   return (
     <div className='space-y-6'>
@@ -425,7 +433,8 @@ export default function CourseDetailPage() {
       <nav className='flex items-center gap-1.5 text-sm text-muted-foreground'>
         <Link
           to={ROUTES.COURSES}
-          className='transition-colors hover:text-foreground'>
+          className='transition-colors hover:text-foreground'
+        >
           Courses
         </Link>
         <ChevronRight className='h-3.5 w-3.5' />
@@ -455,30 +464,36 @@ export default function CourseDetailPage() {
             variant='outline'
             size='sm'
             className='h-9 gap-2'
-            onClick={() => setPreviewOpen(true)}>
+            onClick={() => setPreviewOpen(true)}
+          >
             <Monitor className='h-4 w-4' />
             Preview
           </Button>
+
           <Link to={ROUTES.COURSE_EDIT(id!)}>
             <Button variant='outline' size='sm' className='h-9 gap-2'>
               <Pencil className='h-4 w-4' />
               Edit
             </Button>
           </Link>
+
           <Button
             variant='outline'
             size='sm'
             className='h-9 gap-2 border-primary/50 text-primary hover:bg-primary/10 hover:text-primary'
-            onClick={() => navigate(`/courses/${id}/content`)}>
+            onClick={() => navigate(`/courses/${id}/content`)}
+          >
             <LayoutTemplate className='h-4 w-4' />
             Edit Content
           </Button>
-          {/* State dropdown in header */}
+
+          {/* State dropdown */}
           <CourseStateDropdown
             courseId={id!}
             currentState={course.state as any}
             isPublished={course.isPublished}
           />
+
           {/* Delete */}
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -494,13 +509,14 @@ export default function CourseDetailPage() {
                   Delete Course
                 </AlertDialogTitle>
                 <AlertDialogDescription>
-                  Permanently delete <strong>{course.title}</strong>? This
-                  cannot be undone.
+                  Are you sure you want to permanently delete{' '}
+                  <strong>{course.title}</strong>? This action cannot be
+                  undone.
                   {hasEnrollments && (
                     <span className='mt-2 flex items-center gap-1.5 font-medium text-destructive'>
                       <AlertTriangle className='h-4 w-4' />
                       This course has {course._count?.enrollments} active
-                      enrollments.
+                      enrollments and cannot be deleted.
                     </span>
                   )}
                 </AlertDialogDescription>
@@ -510,7 +526,8 @@ export default function CourseDetailPage() {
                 <AlertDialogAction
                   onClick={() => deleteMutation.mutate()}
                   className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
-                  disabled={deleteMutation.isPending || hasEnrollments}>
+                  disabled={deleteMutation.isPending || hasEnrollments}
+                >
                   Delete Course
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -521,25 +538,24 @@ export default function CourseDetailPage() {
 
       {/* ── Tabs ── */}
       <div className='flex border-b border-border/50'>
-        {(
-          [
-            { id: 'overview', label: 'Overview', icon: BookOpen },
-            {
-              id: 'labs',
-              label: `Labs (${course._count?.sections ?? 0})`,
-              icon: FlaskConical,
-            },
-          ] as { id: TabId; label: string; icon: any }[]
-        ).map(({ id: tabId, label, icon: Icon }) => (
+        {([
+          { id: 'overview' as TabId, label: 'Overview', icon: BookOpen },
+          {
+            id: 'labs' as TabId,
+            label: `Labs`,
+            icon: FlaskConical,
+          },
+        ]).map(({ id: tabId, label, icon: Icon }) => (
           <button
             key={tabId}
             onClick={() => setActiveTab(tabId)}
             className={cn(
-              'flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors',
+              'flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors',
               activeTab === tabId
                 ? 'border-primary text-foreground'
-                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
-            )}>
+                : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground',
+            )}
+          >
             <Icon className='h-3.5 w-3.5' />
             {label}
           </button>
@@ -550,10 +566,11 @@ export default function CourseDetailPage() {
       {activeTab === 'labs' ? (
         <CourseLabsTab courseId={id!} />
       ) : (
-        // ── Overview (existing layout preserved) ──
+        // ── Overview (original layout preserved) ──────────────────────
         <div className='grid gap-6 xl:grid-cols-3'>
+          {/* Left column */}
           <div className='space-y-5 xl:col-span-2'>
-            {/* Thumbnail */}
+            {/* Thumbnail hero */}
             <Card className='overflow-hidden'>
               <div className='relative aspect-video w-full'>
                 {course.thumbnail ? (
@@ -568,12 +585,14 @@ export default function CourseDetailPage() {
                       'flex h-full w-full items-center justify-center bg-gradient-to-br border-b',
                       COLOR_BG[color] ??
                         'from-zinc-900 to-zinc-800 border-zinc-700',
-                    )}>
+                    )}
+                  >
                     <p
                       className={cn(
                         'px-8 text-center text-xl font-black leading-snug',
                         COLOR_TEXT[color] ?? 'text-zinc-400',
-                      )}>
+                      )}
+                    >
                       {course.title}
                     </p>
                   </div>
@@ -586,7 +605,8 @@ export default function CourseDetailPage() {
                         course.access === 'FREE'
                           ? 'bg-emerald-500 text-white'
                           : 'bg-violet-600 text-white',
-                      )}>
+                      )}
+                    >
                       {course.access === 'FREE' ? (
                         <Unlock className='h-3 w-3' />
                       ) : (
@@ -638,7 +658,7 @@ export default function CourseDetailPage() {
               </Card>
             )}
 
-            {/* Tags / Topics / Skills */}
+            {/* Tags / Topics / Skills / Prerequisites */}
             {((course.tags?.length ?? 0) > 0 ||
               (course.topics?.length ?? 0) > 0 ||
               (course.skills?.length ?? 0) > 0 ||
@@ -651,8 +671,7 @@ export default function CourseDetailPage() {
                   {(course.tags?.length ?? 0) > 0 && (
                     <div className='space-y-2'>
                       <p className='flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground'>
-                        <Tag className='h-3.5 w-3.5' />
-                        Tags
+                        <Tag className='h-3.5 w-3.5' /> Tags
                       </p>
                       <ChipList items={course.tags ?? []} />
                     </div>
@@ -660,8 +679,7 @@ export default function CourseDetailPage() {
                   {(course.topics?.length ?? 0) > 0 && (
                     <div className='space-y-2'>
                       <p className='flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground'>
-                        <Cpu className='h-3.5 w-3.5' />
-                        Topics
+                        <Cpu className='h-3.5 w-3.5' /> Topics
                       </p>
                       <ChipList
                         items={course.topics ?? []}
@@ -672,8 +690,7 @@ export default function CourseDetailPage() {
                   {(course.skills?.length ?? 0) > 0 && (
                     <div className='space-y-2'>
                       <p className='flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground'>
-                        <GraduationCap className='h-3.5 w-3.5' />
-                        Skills
+                        <GraduationCap className='h-3.5 w-3.5' /> Skills
                       </p>
                       <ChipList
                         items={course.skills ?? []}
@@ -684,8 +701,7 @@ export default function CourseDetailPage() {
                   {(course.prerequisites?.length ?? 0) > 0 && (
                     <div className='space-y-2'>
                       <p className='flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground'>
-                        <AlertTriangle className='h-3.5 w-3.5' />
-                        Prerequisites
+                        <AlertTriangle className='h-3.5 w-3.5' /> Prerequisites
                       </p>
                       <ChipList
                         items={course.prerequisites ?? []}
@@ -700,6 +716,7 @@ export default function CourseDetailPage() {
 
           {/* Right sidebar */}
           <div className='space-y-5'>
+            {/* Stats */}
             <Card>
               <CardHeader>
                 <CardTitle className='text-base'>Stats</CardTitle>
@@ -710,7 +727,9 @@ export default function CourseDetailPage() {
                     icon: Users,
                     label: 'Enrollments',
                     value:
-                      course.enrollmentCount ?? course._count?.enrollments ?? 0,
+                      course.enrollmentCount ??
+                      course._count?.enrollments ??
+                      0,
                     color: 'text-blue-400',
                   },
                   {
@@ -734,7 +753,8 @@ export default function CourseDetailPage() {
                 ].map(({ icon: Icon, label, value, color: c }) => (
                   <div
                     key={label}
-                    className='flex items-center justify-between py-3'>
+                    className='flex items-center justify-between py-3'
+                  >
                     <span className='flex items-center gap-2 text-sm text-muted-foreground'>
                       <Icon className={cn('h-4 w-4', c)} />
                       {label}
@@ -747,6 +767,7 @@ export default function CourseDetailPage() {
               </CardContent>
             </Card>
 
+            {/* Properties */}
             <Card>
               <CardHeader>
                 <CardTitle className='text-base'>Properties</CardTitle>
@@ -762,7 +783,8 @@ export default function CourseDetailPage() {
                           'gap-1 text-xs font-semibold',
                           DIFFICULTY_BADGE[course.difficulty] ??
                             'border-border/60',
-                        )}>
+                        )}
+                      >
                         <BarChart3 className='h-3 w-3' />
                         {course.difficulty.charAt(0) +
                           course.difficulty.slice(1).toLowerCase()}
@@ -781,7 +803,8 @@ export default function CourseDetailPage() {
                           course.access === 'FREE'
                             ? 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10'
                             : 'border-violet-500/40 text-violet-400 bg-violet-500/10',
-                        )}>
+                        )}
+                      >
                         {course.access === 'FREE' ? (
                           <Unlock className='h-3 w-3' />
                         ) : (
@@ -789,6 +812,16 @@ export default function CourseDetailPage() {
                         )}
                         {course.access}
                       </Badge>
+                    ) : (
+                      <span className='text-xs text-muted-foreground'>—</span>
+                    ),
+                  },
+                  {
+                    label: 'Content Type',
+                    node: course.contentType ? (
+                      <span className='text-sm font-medium'>
+                        {course.contentType}
+                      </span>
                     ) : (
                       <span className='text-xs text-muted-foreground'>—</span>
                     ),
@@ -840,13 +873,15 @@ export default function CourseDetailPage() {
                 ].map(({ label, node }) => (
                   <div
                     key={label}
-                    className='flex items-center justify-between gap-3'>
+                    className='flex items-center justify-between gap-3'
+                  >
                     <span className='text-xs text-muted-foreground'>
                       {label}
                     </span>
                     {node}
                   </div>
                 ))}
+
                 {(course.isFeatured || course.isNew) && (
                   <>
                     <Separator />
@@ -854,17 +889,17 @@ export default function CourseDetailPage() {
                       {course.isFeatured && (
                         <Badge
                           variant='outline'
-                          className='gap-1 border-amber-500/40 bg-amber-500/10 text-amber-400 text-xs'>
-                          <Star className='h-3 w-3' />
-                          Featured
+                          className='gap-1 border-amber-500/40 bg-amber-500/10 text-amber-400 text-xs'
+                        >
+                          <Star className='h-3 w-3' /> Featured
                         </Badge>
                       )}
                       {course.isNew && (
                         <Badge
                           variant='outline'
-                          className='gap-1 border-cyan-500/40 bg-cyan-500/10 text-cyan-400 text-xs'>
-                          <Sparkles className='h-3 w-3' />
-                          New
+                          className='gap-1 border-cyan-500/40 bg-cyan-500/10 text-cyan-400 text-xs'
+                        >
+                          <Sparkles className='h-3 w-3' /> New
                         </Badge>
                       )}
                     </div>
@@ -873,6 +908,7 @@ export default function CourseDetailPage() {
               </CardContent>
             </Card>
 
+            {/* Timeline */}
             <Card>
               <CardHeader>
                 <CardTitle className='text-base'>Timeline</CardTitle>
@@ -914,7 +950,8 @@ export default function CourseDetailPage() {
                 ].map(({ icon: Icon, label, value, sub }) => (
                   <div
                     key={label}
-                    className='flex items-start justify-between gap-3'>
+                    className='flex items-start justify-between gap-3'
+                  >
                     <span className='flex items-center gap-1.5 text-xs text-muted-foreground'>
                       <Icon className='h-3.5 w-3.5' />
                       {label}
@@ -931,6 +968,7 @@ export default function CourseDetailPage() {
         </div>
       )}
 
+      {/* ── Platform Preview Sheet ── */}
       <CoursePreviewSheet
         open={previewOpen}
         onClose={() => setPreviewOpen(false)}

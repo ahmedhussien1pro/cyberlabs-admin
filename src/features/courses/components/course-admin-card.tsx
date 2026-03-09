@@ -105,7 +105,8 @@ export function CourseAdminCard({ course }: CourseAdminCardProps) {
         'hover:shadow-lg hover:shadow-black/20 hover:-translate-y-0.5',
         `bg-gradient-to-br ${colors.gradient}`,
         colors.border,
-      )}>
+      )}
+    >
       {/* ── Thumbnail ── */}
       <div className='relative h-36 overflow-hidden bg-black/20'>
         {course.thumbnail ? (
@@ -121,7 +122,7 @@ export function CourseAdminCard({ course }: CourseAdminCardProps) {
           </div>
         )}
 
-        {/* Badges overlay */}
+        {/* Top-left badges */}
         <div className='absolute left-2 top-2 flex flex-wrap gap-1'>
           {(course as any).isNew && (
             <span className='rounded-full bg-yellow-500/90 px-2 py-0.5 text-[10px] font-bold text-black'>
@@ -135,7 +136,7 @@ export function CourseAdminCard({ course }: CourseAdminCardProps) {
           )}
         </div>
 
-        {/* Access badge */}
+        {/* Access badge — top-right */}
         {course.access && (
           <div className='absolute right-2 top-2'>
             <Badge
@@ -145,7 +146,8 @@ export function CourseAdminCard({ course }: CourseAdminCardProps) {
                 course.access === 'FREE'
                   ? 'border-emerald-500/50 bg-emerald-950/80 text-emerald-300'
                   : 'border-violet-500/50 bg-violet-950/80 text-violet-300',
-              )}>
+              )}
+            >
               {course.access === 'FREE' ? (
                 <Unlock className='h-2.5 w-2.5' />
               ) : (
@@ -156,7 +158,7 @@ export function CourseAdminCard({ course }: CourseAdminCardProps) {
           </div>
         )}
 
-        {/* Difficulty badge bottom-left */}
+        {/* Difficulty — bottom-left */}
         {course.difficulty && (
           <div className='absolute bottom-2 left-2'>
             <Badge
@@ -164,7 +166,8 @@ export function CourseAdminCard({ course }: CourseAdminCardProps) {
               className={cn(
                 'h-4 px-1.5 text-[9px] font-semibold',
                 DIFFICULTY_COLOR[course.difficulty] ?? 'border-border/60',
-              )}>
+              )}
+            >
               {course.difficulty.charAt(0) +
                 course.difficulty.slice(1).toLowerCase()}
             </Badge>
@@ -184,11 +187,11 @@ export function CourseAdminCard({ course }: CourseAdminCardProps) {
           </p>
         </div>
 
-        {/* Stats row */}
+        {/* Stats */}
         <div className='flex items-center gap-3 text-[11px] text-muted-foreground'>
           <span className='flex items-center gap-1'>
             <Users className='h-3 w-3' />
-            {course._count.enrollments}
+            {course._count.enrollments} enrolled
           </span>
           <span className='flex items-center gap-1'>
             <Layers className='h-3 w-3' />
@@ -211,7 +214,8 @@ export function CourseAdminCard({ course }: CourseAdminCardProps) {
             size='sm'
             title='Platform Preview'
             className='h-8 w-full p-0 text-muted-foreground hover:text-primary hover:bg-primary/10'
-            onClick={() => navigate(ROUTES.COURSE_PLATFORM_PREVIEW(course.id))}>
+            onClick={() => navigate(ROUTES.COURSE_PLATFORM_PREVIEW(course.id))}
+          >
             <MonitorPlay className='h-3.5 w-3.5' />
           </Button>
 
@@ -221,7 +225,8 @@ export function CourseAdminCard({ course }: CourseAdminCardProps) {
               variant='ghost'
               size='sm'
               title='Edit Info'
-              className='h-8 w-full p-0 text-muted-foreground hover:text-foreground hover:bg-muted'>
+              className='h-8 w-full p-0 text-muted-foreground hover:text-foreground hover:bg-muted'
+            >
               <Pencil className='h-3.5 w-3.5' />
             </Button>
           </Link>
@@ -232,33 +237,36 @@ export function CourseAdminCard({ course }: CourseAdminCardProps) {
             size='sm'
             title='Edit Curriculum'
             className='h-8 w-full p-0 text-muted-foreground hover:text-primary hover:bg-primary/10'
-            onClick={() => navigate(`/courses/${course.id}/content`)}>
+            onClick={() => navigate(`/courses/${course.id}/content`)}
+          >
             <LayoutTemplate className='h-3.5 w-3.5' />
           </Button>
 
-          {/* Detail / Labs */}
+          {/* View Detail */}
           <Link to={ROUTES.COURSE_DETAIL(course.id)} className='w-full'>
             <Button
               variant='ghost'
               size='sm'
               title='View Detail & Labs'
-              className='h-8 w-full p-0 text-muted-foreground hover:text-foreground hover:bg-muted'>
+              className='h-8 w-full p-0 text-muted-foreground hover:text-foreground hover:bg-muted'
+            >
               <Eye className='h-3.5 w-3.5' />
             </Button>
           </Link>
         </div>
       </div>
 
-      {/* Delete button — top-right corner on hover */}
+      {/* Delete button — appears on hover at top-right of thumbnail */}
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <button
             className={cn(
-              'absolute right-2 top-10 opacity-0 group-hover:opacity-100 transition-opacity',
+              'absolute right-2 top-[4.5rem] opacity-0 group-hover:opacity-100 transition-opacity',
               'flex h-6 w-6 items-center justify-center rounded-full',
-              'bg-destructive/80 text-white hover:bg-destructive',
+              'bg-destructive/80 text-white hover:bg-destructive shadow-md',
             )}
-            title='Delete'>
+            title='Delete'
+          >
             <Trash2 className='h-3 w-3' />
           </button>
         </AlertDialogTrigger>
@@ -266,8 +274,8 @@ export function CourseAdminCard({ course }: CourseAdminCardProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Course</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{course.title}</strong>?
-              This cannot be undone.
+              Are you sure you want to delete{' '}
+              <strong>{course.title}</strong>? This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -275,7 +283,8 @@ export function CourseAdminCard({ course }: CourseAdminCardProps) {
             <AlertDialogAction
               onClick={() => deleteMutation.mutate()}
               disabled={deleteMutation.isPending}
-              className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
+              className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
