@@ -64,3 +64,8 @@ export const PathCreatePage = lazy(
 export const PathEditPage = lazy(
   () => import('@/features/paths/pages/path-edit.page'),
 );
+
+// Content Map
+export const ContentMapPage = lazy(
+  () => import('@/features/map/pages/content-map.page'),
+);

@@ -25,24 +25,23 @@ export const routes: RouteObject[] = [
     path: '/',
     element: <ProtectedRoute />,
     children: [
-      // ════ Fullscreen pages — NO AdminLayout (no sidebar / navbar) ═══════════════════
-      // يظهر بشكل full-page زي المنصة الأصلية بدون أي admin chrome
+      // ╔═══ Fullscreen pages — NO AdminLayout ═════════════════════════════════════════════
       {
         path: 'courses/:id/platform-preview',
         element: <LazyPage Component={Pages.CoursePlatformPreviewPage} />,
       },
 
-      // ════ Admin pages — inside AdminLayout (sidebar + navbar) ═════════════════
+      // ╔═══ Admin pages — inside AdminLayout (sidebar + navbar) ════════════════════
       {
         element: <AdminLayout />,
         children: [
-          // ─── Dashboard ──────────────────────────────────────────────────────
+          // ─── Dashboard ──────────────────────────────────────────────────────────
           {
             index: true,
             element: <LazyPage Component={Pages.DashboardPage} />,
           },
 
-          // ─── Users ─────────────────────────────────────────────────────────
+          // ─── Users ────────────────────────────────────────────────────────────
           {
             path: 'users',
             element: <LazyPage Component={Pages.UsersListPage} />,
@@ -52,7 +51,7 @@ export const routes: RouteObject[] = [
             element: <LazyPage Component={Pages.UserDetailPage} />,
           },
 
-          // ─── Courses ─────────────────────────────────────────────────────
+          // ─── Courses ────────────────────────────────────────────────────────
           {
             path: 'courses',
             element: <LazyPage Component={Pages.CoursesListPage} />,
@@ -74,7 +73,7 @@ export const routes: RouteObject[] = [
             element: <LazyPage Component={Pages.CourseEditPage} />,
           },
 
-          // ─── Labs ──────────────────────────────────────────────────────────
+          // ─── Labs ───────────────────────────────────────────────────────────
           {
             path: 'labs',
             element: <LazyPage Component={Pages.LabsListPage} />,
@@ -92,7 +91,7 @@ export const routes: RouteObject[] = [
             element: <LazyPage Component={Pages.LabEditPage} />,
           },
 
-          // ─── Paths ─────────────────────────────────────────────────────────
+          // ─── Paths ──────────────────────────────────────────────────────────
           {
             path: 'paths',
             element: <LazyPage Component={Pages.PathsListPage} />,
@@ -108,6 +107,12 @@ export const routes: RouteObject[] = [
           {
             path: 'paths/:id/edit',
             element: <LazyPage Component={Pages.PathEditPage} />,
+          },
+
+          // ─── Content Map ────────────────────────────────────────────────────
+          {
+            path: 'map',
+            element: <LazyPage Component={Pages.ContentMapPage} />,
           },
         ],
       },

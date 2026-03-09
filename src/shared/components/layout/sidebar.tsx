@@ -10,6 +10,7 @@ import {
   BookOpen,
   FlaskConical,
   Map,
+  Layers,
   ChevronLeft,
   ChevronRight,
   X,
@@ -32,6 +33,7 @@ export function Sidebar() {
     { icon: BookOpen,        label: t('nav.courses'),   path: ROUTES.COURSES },
     { icon: FlaskConical,    label: t('nav.labs'),      path: ROUTES.LABS },
     { icon: Map,             label: t('nav.paths'),     path: ROUTES.PATHS },
+    { icon: Layers,          label: t('nav.map'),       path: ROUTES.MAP },
   ];
 
   return (
@@ -42,28 +44,26 @@ export function Sidebar() {
         'ltr:left-0 ltr:border-r rtl:right-0 rtl:border-l',
         'transition-all duration-300 ease-in-out',
 
-        // ── Mobile (< lg): off-screen by default, slides in when open ──────
+        // ── Mobile (< lg): off-screen by default, slides in when open ──────────
         'ltr:-translate-x-full rtl:translate-x-full',
         mobileOpen && 'ltr:!translate-x-0 rtl:!translate-x-0',
 
-        // ── Desktop (≥ lg): always visible ──────────────────────────────────
+        // ── Desktop (≥ lg): always visible ──────────────────────────────
         'lg:ltr:translate-x-0 lg:rtl:translate-x-0',
 
-        // ── Width ──────────────────────────────────────────────────────────
-        'w-72',                                    // mobile always full
-        sidebarCollapsed ? 'lg:w-20' : 'lg:w-64', // desktop respects collapse
+        // ── Width ──────────────────────────────────────────────────────
+        'w-72',
+        sidebarCollapsed ? 'lg:w-20' : 'lg:w-64',
       )}
     >
       <div className="flex h-full flex-col">
 
-        {/* ── Logo area ───────────────────────────────────────────────────── */}
+        {/* ── Logo area ──────────────────────────────────────────────── */}
         <div className="flex h-16 items-center justify-between gap-2 border-b px-4">
 
-          {/* Logo: visible on mobile always + desktop when expanded */}
           <div
             className={cn(
               'flex items-center overflow-hidden transition-all duration-300',
-              // Desktop collapsed → hide
               sidebarCollapsed ? 'lg:w-0 lg:opacity-0 lg:pointer-events-none' : 'lg:opacity-100',
             )}
           >
@@ -99,7 +99,7 @@ export function Sidebar() {
           </Button>
         </div>
 
-        {/* ── Navigation ─────────────────────────────────────────────────── */}
+        {/* ── Navigation ───────────────────────────────────────────── */}
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
           {navItems.map((item) => {
             const isActive =
@@ -111,19 +111,17 @@ export function Sidebar() {
               <Link
                 key={item.path}
                 to={item.path}
-                onClick={closeMobileSidebar} // close on mobile nav click
+                onClick={closeMobileSidebar}
                 className={cn(
                   'flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors',
                   isActive
                     ? 'bg-primary text-primary-foreground'
                     : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                  // Desktop collapsed: center icon only
                   sidebarCollapsed && 'lg:justify-center lg:px-2',
                 )}
               >
                 <item.icon className="h-5 w-5 flex-shrink-0" />
 
-                {/* Label: always visible on mobile, depends on collapse on desktop */}
                 <span
                   className={cn(
                     'truncate text-sm font-medium',
