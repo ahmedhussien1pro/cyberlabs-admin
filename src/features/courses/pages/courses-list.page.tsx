@@ -1,8 +1,10 @@
+// src/features/courses/pages/courses-list.page.tsx
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { coursesService } from '@/core/api/services';
 import { CoursesTable } from '../components/courses-table';
+import { CourseAdminCard } from '../components/course-admin-card';
 import { CourseFilters } from '../components/course-filters';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,6 +18,8 @@ import {
   EyeOff,
   Star,
   AlertCircle,
+  LayoutGrid,
+  List,
 } from 'lucide-react';
 import { ROUTES } from '@/shared/constants';
 import { cn } from '@/lib/utils';
@@ -56,8 +60,13 @@ export default function CoursesListPage() {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [difficultyFilter, setDifficultyFilter] = useState<Difficulty | 'ALL'>('ALL');
-  const [publishedFilter, setPublishedFilter] = useState<'all' | 'published' | 'unpublished'>('all');
+  const [difficultyFilter, setDifficultyFilter] = useState<Difficulty | 'ALL'>(
+    'ALL',
+  );
+  const [publishedFilter, setPublishedFilter] = useState<
+    'all' | 'published' | 'unpublished'
+  >('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const limit = 20;
 
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -71,7 +80,14 @@ export default function CoursesListPage() {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['courses', 'list', page, search, difficultyFilter, publishedFilter],
+    queryKey: [
+      'courses',
+      'list',
+      page,
+      search,
+      difficultyFilter,
+      publishedFilter,
+    ],
     queryFn: () =>
       coursesService.getAll({
         page,
@@ -89,12 +105,10 @@ export default function CoursesListPage() {
     setSearch(val);
     setPage(1);
   };
-
   const handleDifficultyChange = (val: Difficulty | 'ALL') => {
     setDifficultyFilter(val);
     setPage(1);
   };
-
   const handlePublishedChange = (val: 'all' | 'published' | 'unpublished') => {
     setPublishedFilter(val);
     setPage(1);
@@ -128,17 +142,14 @@ export default function CoursesListPage() {
             variant='outline'
             size='sm'
             className='h-9 gap-2'
-            onClick={() => navigate(ROUTES.COURSE_IMPORT)}
-          >
+            onClick={() => navigate(ROUTES.COURSE_IMPORT)}>
             <FileJson className='h-4 w-4' />
             <span className='hidden sm:inline'>Import JSON</span>
-            <span className='sm:hidden'>Import</span>
           </Button>
           <Button
             size='sm'
             className='h-9 gap-2'
-            onClick={() => navigate(ROUTES.COURSE_CREATE)}
-          >
+            onClick={() => navigate(ROUTES.COURSE_CREATE)}>
             <Plus className='h-4 w-4' />
             New Course
           </Button>
@@ -154,14 +165,12 @@ export default function CoursesListPage() {
           : STAT_CARDS.map(({ key, label, icon: Icon, color, bg }) => (
               <Card
                 key={key}
-                className='flex items-center gap-4 p-4 transition-colors hover:bg-muted/30'
-              >
+                className='flex items-center gap-4 p-4 transition-colors hover:bg-muted/30'>
                 <div
                   className={cn(
                     'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border',
                     bg,
-                  )}
-                >
+                  )}>
                   <Icon className={cn('h-5 w-5', color)} />
                 </div>
                 <div className='min-w-0'>
@@ -176,25 +185,97 @@ export default function CoursesListPage() {
             ))}
       </div>
 
-      {/* ── Filters ── */}
-      <CourseFilters
-        search={search}
-        onSearchChange={handleSearchChange}
-        difficultyFilter={difficultyFilter}
-        onDifficultyFilterChange={handleDifficultyChange}
-        publishedFilter={publishedFilter}
-        onPublishedFilterChange={handlePublishedChange}
-      />
+      {/* ── Filters + View Toggle ── */}
+      <div className='flex items-start gap-2'>
+        <div className='flex-1'>
+          <CourseFilters
+            search={search}
+            onSearchChange={handleSearchChange}
+            difficultyFilter={difficultyFilter}
+            onDifficultyFilterChange={handleDifficultyChange}
+            publishedFilter={publishedFilter}
+            onPublishedFilterChange={handlePublishedChange}
+          />
+        </div>
+        {/* View toggle */}
+        <div className='flex shrink-0 items-center gap-0.5 rounded-lg border border-border/50 bg-muted/30 p-0.5'>
+          <Button
+            variant={viewMode === 'grid' ? 'default' : 'ghost'}
+            size='sm'
+            className='h-8 w-8 p-0'
+            onClick={() => setViewMode('grid')}
+            title='Grid view'>
+            <LayoutGrid className='h-3.5 w-3.5' />
+          </Button>
+          <Button
+            variant={viewMode === 'table' ? 'default' : 'ghost'}
+            size='sm'
+            className='h-8 w-8 p-0'
+            onClick={() => setViewMode('table')}
+            title='Table view'>
+            <List className='h-3.5 w-3.5' />
+          </Button>
+        </div>
+      </div>
 
-      {/* ── Table ── */}
+      {/* ── Content ── */}
       {isLoading ? (
-        <Card className='p-6'>
-          <div className='space-y-3'>
+        viewMode === 'grid' ? (
+          <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
             {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} className='h-14 rounded-lg' />
+              <Skeleton key={i} className='h-72 rounded-xl' />
             ))}
           </div>
-        </Card>
+        ) : (
+          <Card className='p-6'>
+            <div className='space-y-3'>
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} className='h-14 rounded-lg' />
+              ))}
+            </div>
+          </Card>
+        )
+      ) : viewMode === 'grid' ? (
+        <>
+          <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
+            {(coursesData?.data ?? []).map((course) => (
+              <CourseAdminCard key={course.id} course={course} />
+            ))}
+          </div>
+          {/* Grid pagination */}
+          {coursesData?.meta && coursesData.meta.totalPages > 1 && (
+            <div className='flex items-center justify-between border-t pt-4'>
+              <p className='text-xs text-muted-foreground'>
+                Showing{' '}
+                <span className='font-semibold'>
+                  {(page - 1) * limit + 1}–
+                  {Math.min(page * limit, coursesData.meta.total)}
+                </span>{' '}
+                of{' '}
+                <span className='font-semibold'>{coursesData.meta.total}</span>
+              </p>
+              <div className='flex items-center gap-1'>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => setPage((p) => p - 1)}
+                  disabled={page === 1}>
+                  Prev
+                </Button>
+                <div className='flex h-8 min-w-[2rem] items-center justify-center rounded-md border border-primary/30 bg-primary/10 px-2 text-xs font-semibold text-primary'>
+                  {page}
+                </div>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={page === coursesData.meta.totalPages}>
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       ) : (
         <CoursesTable
           data={coursesData?.data ?? []}

@@ -1,3 +1,4 @@
+// src/core/api/services/courses.service.ts
 import { apiClient } from '../client';
 import { API_ENDPOINTS } from '../endpoints';
 import type {
@@ -7,6 +8,7 @@ import type {
   CourseStats,
   CreateCourseRequest,
   UpdateCourseRequest,
+  CourseState,
 } from '@/core/types';
 
 export interface CourseLabItem {
@@ -25,6 +27,27 @@ export interface CourseLabItem {
     imageUrl?: string;
     executionMode: string;
   };
+}
+
+export interface CurriculumSection {
+  id?: string;
+  title: string;
+  ar_title?: string;
+  description?: string;
+  ar_description?: string;
+  order?: number;
+  lessons?: CurriculumLesson[];
+}
+
+export interface CurriculumLesson {
+  id?: string;
+  title: string;
+  ar_title?: string;
+  type: string;
+  content?: string;
+  videoUrl?: string;
+  duration?: number;
+  order?: number;
 }
 
 export const coursesService = {
@@ -92,9 +115,45 @@ export const coursesService = {
     return data;
   },
 
+  // ✅ NEW — update state to PUBLISHED | DRAFT | COMING_SOON
+  updateState: async (
+    id: string,
+    state: CourseState,
+  ): Promise<CourseListItem> => {
+    const { data } = await apiClient.patch<CourseListItem>(
+      API_ENDPOINTS.ADMIN_COURSES.STATE(id),
+      { state },
+    );
+    return data;
+  },
+
   delete: async (id: string): Promise<{ success: boolean }> => {
     const { data } = await apiClient.delete(
       API_ENDPOINTS.ADMIN_COURSES.DELETE(id),
+    );
+    return data;
+  },
+
+  // ── Curriculum Management ────────────────────────────────────────────
+
+  // ✅ NEW — GET /admin/courses/:id/curriculum
+  getCurriculum: async (
+    id: string,
+  ): Promise<{ sections: CurriculumSection[] }> => {
+    const { data } = await apiClient.get(
+      API_ENDPOINTS.ADMIN_COURSES.CURRICULUM(id),
+    );
+    return data;
+  },
+
+  // ✅ NEW — PUT /admin/courses/:id/curriculum
+  updateCurriculum: async (
+    id: string,
+    topics: object[],
+  ): Promise<{ success: boolean }> => {
+    const { data } = await apiClient.put(
+      API_ENDPOINTS.ADMIN_COURSES.CURRICULUM(id),
+      { topics },
     );
     return data;
   },
@@ -108,7 +167,10 @@ export const coursesService = {
     return data;
   },
 
-  attachLab: async (courseId: string, labId: string): Promise<CourseLabItem> => {
+  attachLab: async (
+    courseId: string,
+    labId: string,
+  ): Promise<CourseLabItem> => {
     const { data } = await apiClient.post<CourseLabItem>(
       API_ENDPOINTS.ADMIN_COURSES.ATTACH_LAB(courseId, labId),
     );
