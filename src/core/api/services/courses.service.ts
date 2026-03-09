@@ -1,196 +1,95 @@
+// src/core/api/services/courses.service.ts
 import { apiClient } from '../client';
-import { API_ENDPOINTS } from '../endpoints';
-import type {
-  PaginatedResponse,
-  CourseListItem,
-  Course,
-  CourseStats,
-  CreateCourseRequest,
-  UpdateCourseRequest,
-  CourseState,
-} from '@/core/types';
+import { ENDPOINTS } from '../endpoints';
 
-export interface CourseLabItem {
-  order: number;
-  lab: {
-    id: string;
-    title: string;
-    ar_title?: string;
-    slug: string;
-    difficulty: string;
-    category: string;
-    duration?: number;
-    xpReward: number;
-    pointsReward: number;
-    isPublished: boolean;
-    imageUrl?: string;
-    executionMode: string;
-  };
+export interface CourseQueryParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  difficulty?: string;
+  category?: string;
+  access?: string;
+  state?: string;
+  isPublished?: boolean;
 }
 
-export interface CurriculumLesson {
-  id?: string;
-  title: string;
-  ar_title?: string;
-  type: string;
-  content?: string;
-  videoUrl?: string;
-  duration?: number;
-  order?: number;
-}
-
-export interface CurriculumSection {
-  id?: string;
-  title: string;
+export interface UpdateCoursePayload {
+  title?: string;
   ar_title?: string;
   description?: string;
   ar_description?: string;
-  order?: number;
-  lessons?: CurriculumLesson[];
+  longDescription?: string;
+  ar_longDescription?: string;
+  slug?: string;
+  difficulty?: string;
+  category?: string;
+  access?: string;
+  state?: string;
+  isPublished?: boolean;
+  isFeatured?: boolean;
+  isNew?: boolean;
+  price?: number;
+  thumbnail?: string;
+  color?: string;
+  tags?: string[];
+  topics?: string[];
+  skills?: string[];
+  prerequisites?: string[];
+  instructorId?: string;
 }
 
 export const coursesService = {
-  getStats: async (): Promise<CourseStats> => {
-    const { data } = await apiClient.get<CourseStats>(
-      API_ENDPOINTS.ADMIN_COURSES.STATS,
-    );
-    return data;
-  },
+  // GET /admin/courses
+  getAll: (params?: CourseQueryParams) =>
+    apiClient.get(ENDPOINTS.COURSES.LIST, { params }).then((r) => r.data),
 
-  getAll: async (params?: {
-    page?: number;
-    limit?: number;
-    search?: string;
-    difficulty?: string;
-    category?: string;
-    access?: string;
-    state?: string;
-    isPublished?: boolean;
-  }): Promise<PaginatedResponse<CourseListItem>> => {
-    const { data } = await apiClient.get<PaginatedResponse<CourseListItem>>(
-      API_ENDPOINTS.ADMIN_COURSES.LIST,
-      { params },
-    );
-    return data;
-  },
+  // GET /admin/courses/stats
+  getStats: () =>
+    apiClient.get(ENDPOINTS.COURSES.STATS).then((r) => r.data),
 
-  getById: async (id: string): Promise<Course> => {
-    const { data } = await apiClient.get<Course>(
-      API_ENDPOINTS.ADMIN_COURSES.DETAIL(id),
-    );
-    return data;
-  },
+  // GET /admin/courses/:id
+  getOne: (id: string) =>
+    apiClient.get(ENDPOINTS.COURSES.DETAIL(id)).then((r) => r.data),
 
-  create: async (payload: CreateCourseRequest): Promise<CourseListItem> => {
-    const { data } = await apiClient.post<CourseListItem>(
-      API_ENDPOINTS.ADMIN_COURSES.CREATE,
-      payload,
-    );
-    return data;
-  },
+  // POST /admin/courses
+  create: (data: Record<string, unknown>) =>
+    apiClient.post(ENDPOINTS.COURSES.LIST, data).then((r) => r.data),
 
-  update: async (
-    id: string,
-    payload: UpdateCourseRequest,
-  ): Promise<CourseListItem> => {
-    const { data } = await apiClient.patch<CourseListItem>(
-      API_ENDPOINTS.ADMIN_COURSES.UPDATE(id),
-      payload,
-    );
-    return data;
-  },
+  // PATCH /admin/courses/:id  ← single endpoint for all field updates incl. state
+  update: (id: string, data: UpdateCoursePayload) =>
+    apiClient.patch(ENDPOINTS.COURSES.DETAIL(id), data).then((r) => r.data),
 
-  publish: async (id: string) => {
-    const { data } = await apiClient.patch(
-      API_ENDPOINTS.ADMIN_COURSES.PUBLISH(id),
-    );
-    return data;
-  },
+  // DELETE /admin/courses/:id
+  remove: (id: string) =>
+    apiClient.delete(ENDPOINTS.COURSES.DETAIL(id)).then((r) => r.data),
 
-  unpublish: async (id: string) => {
-    const { data } = await apiClient.patch(
-      API_ENDPOINTS.ADMIN_COURSES.UNPUBLISH(id),
-    );
-    return data;
-  },
-
-  // ✅ Update state: PUBLISHED | DRAFT | COMING_SOON
-  updateState: async (
-    id: string,
-    state: CourseState,
-  ): Promise<CourseListItem> => {
-    const { data } = await apiClient.patch<CourseListItem>(
-      API_ENDPOINTS.ADMIN_COURSES.STATE(id),
-      { state },
-    );
-    return data;
-  },
-
-  delete: async (id: string): Promise<{ success: boolean }> => {
-    const { data } = await apiClient.delete(
-      API_ENDPOINTS.ADMIN_COURSES.DELETE(id),
-    );
-    return data;
-  },
-
-  // ── Curriculum Management ────────────────────────────────────────────
-
-  // GET /admin/courses/:id/curriculum
-  getCurriculum: async (
-    id: string,
-  ): Promise<{ sections: CurriculumSection[] }> => {
-    const { data } = await apiClient.get(
-      API_ENDPOINTS.ADMIN_COURSES.CURRICULUM(id),
-    );
-    return data;
-  },
+  // GET /admin/courses/:id/curriculum  (PUT returns full course)
+  getCurriculum: (id: string) =>
+    apiClient.get(ENDPOINTS.COURSES.CURRICULUM(id)).then((r) => r.data),
 
   // PUT /admin/courses/:id/curriculum
-  updateCurriculum: async (
-    id: string,
-    topics: object[],
-  ): Promise<{ success: boolean }> => {
-    const { data } = await apiClient.put(
-      API_ENDPOINTS.ADMIN_COURSES.CURRICULUM(id),
-      { topics },
-    );
-    return data;
-  },
+  updateCurriculum: (id: string, data: Record<string, unknown>) =>
+    apiClient.put(ENDPOINTS.COURSES.CURRICULUM(id), data).then((r) => r.data),
 
-  // ── CourseLab Management ──────────────────────────────────────────
+  // GET /admin/courses/:id/labs
+  getCourseLabs: (id: string) =>
+    apiClient.get(ENDPOINTS.COURSES.LABS(id)).then((r) => r.data),
 
-  getCourseLabs: async (courseId: string): Promise<CourseLabItem[]> => {
-    const { data } = await apiClient.get<CourseLabItem[]>(
-      API_ENDPOINTS.ADMIN_COURSES.LABS(courseId),
-    );
-    return data;
-  },
+  // POST /admin/courses/:id/labs/:labId
+  attachLab: (courseId: string, labId: string) =>
+    apiClient
+      .post(ENDPOINTS.COURSES.ATTACH_LAB(courseId, labId))
+      .then((r) => r.data),
 
-  attachLab: async (courseId: string, labId: string): Promise<CourseLabItem> => {
-    const { data } = await apiClient.post<CourseLabItem>(
-      API_ENDPOINTS.ADMIN_COURSES.ATTACH_LAB(courseId, labId),
-    );
-    return data;
-  },
+  // DELETE /admin/courses/:id/labs/:labId
+  detachLab: (courseId: string, labId: string) =>
+    apiClient
+      .delete(ENDPOINTS.COURSES.DETACH_LAB(courseId, labId))
+      .then((r) => r.data),
 
-  detachLab: async (
-    courseId: string,
-    labId: string,
-  ): Promise<{ success: boolean; message: string }> => {
-    const { data } = await apiClient.delete(
-      API_ENDPOINTS.ADMIN_COURSES.DETACH_LAB(courseId, labId),
-    );
-    return data;
-  },
-
-  reorderLabs: async (
-    courseId: string,
-    labIds: string[],
-  ): Promise<{ success: boolean }> => {
-    const { data } = await apiClient.patch(
-      API_ENDPOINTS.ADMIN_COURSES.REORDER_LABS(courseId),
-      { labIds },
-    );
-    return data;
-  },
+  // PATCH /admin/courses/:id/labs/reorder
+  reorderLabs: (courseId: string, order: string[]) =>
+    apiClient
+      .patch(ENDPOINTS.COURSES.REORDER_LABS(courseId), { order })
+      .then((r) => r.data),
 };

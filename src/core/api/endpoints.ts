@@ -1,64 +1,50 @@
-export const API_ENDPOINTS = {
+// src/core/api/endpoints.ts
+const BASE = '/admin';
+
+export const ENDPOINTS = {
+  // ── Auth ──────────────────────────────────────────────────
   AUTH: {
-    LOGIN: '/auth/login',
-    ME: '/auth/me',
-    LOGOUT: '/auth/logout',
+    LOGIN: `${BASE}/auth/login`,
+    ME: `${BASE}/auth/me`,
+    REFRESH: `${BASE}/auth/refresh`,
   },
-  ADMIN: {
-    HEALTH: '/admin/health',
+
+  // ── Users ─────────────────────────────────────────────────
+  USERS: {
+    LIST: `${BASE}/users`,
+    DETAIL: (id: string) => `${BASE}/users/${id}`,
+    SUSPEND: (id: string) => `${BASE}/users/${id}/suspend`,
+    ROLE: (id: string) => `${BASE}/users/${id}/role`,
   },
-  ADMIN_USERS: {
-    LIST: '/admin/users',
-    STATS: '/admin/users/stats',
-    DETAIL: (id: string) => `/admin/users/${id}`,
-    UPDATE_ROLE: (id: string) => `/admin/users/${id}/role`,
-    SUSPEND: (id: string) => `/admin/users/${id}/suspend`,
-    UNSUSPEND: (id: string) => `/admin/users/${id}/unsuspend`,
+
+  // ── Courses ───────────────────────────────────────────────
+  COURSES: {
+    LIST:        `${BASE}/courses`,
+    STATS:       `${BASE}/courses/stats`,
+    DETAIL:      (id: string) => `${BASE}/courses/${id}`,
+    // PATCH /admin/courses/:id handles state + isPublished together
+    CURRICULUM:  (id: string) => `${BASE}/courses/${id}/curriculum`,
+    LABS:        (id: string) => `${BASE}/courses/${id}/labs`,
+    ATTACH_LAB:  (courseId: string, labId: string) => `${BASE}/courses/${courseId}/labs/${labId}`,
+    DETACH_LAB:  (courseId: string, labId: string) => `${BASE}/courses/${courseId}/labs/${labId}`,
+    REORDER_LABS:(courseId: string) => `${BASE}/courses/${courseId}/labs/reorder`,
   },
-  ADMIN_COURSES: {
-    LIST: '/admin/courses',
-    STATS: '/admin/courses/stats',
-    DETAIL: (id: string) => `/admin/courses/${id}`,
-    CREATE: '/admin/courses',
-    UPDATE: (id: string) => `/admin/courses/${id}`,
-    PUBLISH: (id: string) => `/admin/courses/${id}/publish`,
-    UNPUBLISH: (id: string) => `/admin/courses/${id}/unpublish`,
-    DELETE: (id: string) => `/admin/courses/${id}`,
-    STATE: (id: string) => `/admin/courses/${id}/state`,
-    CURRICULUM: (id: string) => `/admin/courses/${id}/curriculum`,
-    LABS: (id: string) => `/admin/courses/${id}/labs`,
-    ATTACH_LAB: (id: string, labId: string) => `/admin/courses/${id}/labs/${labId}`,
-    DETACH_LAB: (id: string, labId: string) => `/admin/courses/${id}/labs/${labId}`,
-    REORDER_LABS: (id: string) => `/admin/courses/${id}/labs/reorder`,
+
+  // ── Labs ──────────────────────────────────────────────────
+  LABS: {
+    LIST:   `${BASE}/labs`,
+    STATS:  `${BASE}/labs/stats`,
+    DETAIL: (id: string) => `${BASE}/labs/${id}`,
   },
-  ADMIN_LABS: {
-    LIST: '/admin/labs',
-    STATS: '/admin/labs/stats',
-    DETAIL: (id: string) => `/admin/labs/${id}`,
-    CREATE: '/admin/labs',
-    UPDATE: (id: string) => `/admin/labs/${id}`,
-    PUBLISH: (id: string) => `/admin/labs/${id}/publish`,
-    UNPUBLISH: (id: string) => `/admin/labs/${id}/unpublish`,
-    DELETE: (id: string) => `/admin/labs/${id}`,
+
+  // ── Paths ─────────────────────────────────────────────────
+  PATHS: {
+    LIST:   `${BASE}/paths`,
+    DETAIL: (id: string) => `${BASE}/paths/${id}`,
   },
-  ADMIN_PATHS: {
-    LIST: '/admin/paths',
-    STATS: '/admin/paths/stats',
-    DETAIL: (id: string) => `/admin/paths/${id}`,
-    CREATE: '/admin/paths',
-    UPDATE: (id: string) => `/admin/paths/${id}`,
-    PUBLISH: (id: string) => `/admin/paths/${id}/publish`,
-    UNPUBLISH: (id: string) => `/admin/paths/${id}/unpublish`,
-    DELETE: (id: string) => `/admin/paths/${id}`,
-  },
-  ADMIN_ANALYTICS: {
-    OVERVIEW: '/admin/analytics/overview',
-    GROWTH: '/admin/analytics/growth',
-    ENGAGEMENT: '/admin/analytics/engagement',
-    TOP_CONTENT: '/admin/analytics/top-content',
-    RECENT_ACTIVITY: '/admin/analytics/recent-activity',
-  },
-  BADGES: {
-    LIST: '/badges',
+
+  // ── Dashboard ─────────────────────────────────────────────
+  DASHBOARD: {
+    STATS: `${BASE}/dashboard/stats`,
   },
 } as const;
