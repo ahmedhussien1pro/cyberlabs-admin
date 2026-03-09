@@ -11,6 +11,7 @@ import { GrowthChart } from '../components/growth-chart';
 import { EngagementMetrics } from '../components/engagement-metrics';
 import { RecentActivityFeed } from '../components/recent-activity-feed';
 import { TopContentTable } from '../components/top-content-table';
+import { QuickActions } from '../components/quick-actions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,7 +28,12 @@ import {
   Trophy,
   RefreshCw,
   ShieldAlert,
+  Clock,
 } from 'lucide-react';
+import { format } from 'date-fns';
+
+// Auto-refresh every 5 minutes
+const REFETCH_INTERVAL = 5 * 60 * 1000;
 
 export default function DashboardPage() {
   const { t } = useTranslation('dashboard');
@@ -37,10 +43,12 @@ export default function DashboardPage() {
     isLoading: overviewLoading,
     error: overviewError,
     refetch: refetchOverview,
+    dataUpdatedAt: overviewUpdatedAt,
   } = useQuery({
     queryKey: ['analytics', 'overview'],
     queryFn: analyticsService.getOverview,
     retry: 1,
+    refetchInterval: REFETCH_INTERVAL,
   });
 
   const {
@@ -52,6 +60,7 @@ export default function DashboardPage() {
     queryKey: ['users', 'stats'],
     queryFn: usersService.getStats,
     retry: 1,
+    refetchInterval: REFETCH_INTERVAL,
   });
 
   const {
@@ -63,6 +72,7 @@ export default function DashboardPage() {
     queryKey: ['courses', 'stats'],
     queryFn: coursesService.getStats,
     retry: 1,
+    refetchInterval: REFETCH_INTERVAL,
   });
 
   const {
@@ -74,60 +84,56 @@ export default function DashboardPage() {
     queryKey: ['labs', 'stats'],
     queryFn: labsService.getStats,
     retry: 1,
+    refetchInterval: REFETCH_INTERVAL,
   });
 
   const { data: growth } = useQuery({
     queryKey: ['analytics', 'growth'],
     queryFn: analyticsService.getGrowth,
     retry: 1,
+    refetchInterval: REFETCH_INTERVAL,
   });
 
   const { data: engagement } = useQuery({
     queryKey: ['analytics', 'engagement'],
     queryFn: analyticsService.getEngagement,
     retry: 1,
+    refetchInterval: REFETCH_INTERVAL,
   });
 
   const { data: topContent } = useQuery({
     queryKey: ['analytics', 'top-content'],
     queryFn: analyticsService.getTopContent,
     retry: 1,
+    refetchInterval: REFETCH_INTERVAL,
   });
 
   const { data: recentActivity } = useQuery({
     queryKey: ['analytics', 'recent-activity'],
     queryFn: analyticsService.getRecentActivity,
     retry: 1,
+    refetchInterval: REFETCH_INTERVAL,
   });
 
   const isStillLoading =
     overviewLoading || usersLoading || coursesLoading || labsLoading;
   const hasAnyData = overview || usersStats || coursesStats || labsStats;
-
-  // Track ALL errors
   const anyError = overviewError || usersError || coursesError || labsError;
   const showErrorAlert = anyError && !isStillLoading;
 
-  // Detect error type for better UX
+  const lastUpdated = overviewUpdatedAt
+    ? format(new Date(overviewUpdatedAt), 'HH:mm:ss')
+    : null;
+
   const getErrorType = () => {
     const error: any = overviewError || usersError || coursesError || labsError;
     if (!error) return null;
-
-    // Check for 403 Forbidden (most common - not admin)
     if (error?.response?.status === 403) return 'forbidden';
-
-    // Check for 401 Unauthorized
     if (error?.response?.status === 401) return 'unauthorized';
-
-    // Check for network errors
-    if (error?.message?.includes('Network') || error?.code === 'ERR_NETWORK') {
+    if (error?.message?.includes('Network') || error?.code === 'ERR_NETWORK')
       return 'network';
-    }
-
-    // Default server error
     return 'server';
   };
-
   const errorType = getErrorType();
 
   const handleRefreshAll = () => {
@@ -137,10 +143,20 @@ export default function DashboardPage() {
     refetchLabs();
   };
 
+  // Estimate monthly change % from newThisMonth / (total - newThisMonth)
+  const userChangePercent =
+    usersStats && usersStats.total > usersStats.newThisMonth
+      ? Math.round(
+          (usersStats.newThisMonth /
+            (usersStats.total - usersStats.newThisMonth)) *
+            100,
+        )
+      : undefined;
+
   return (
     <div className='space-y-6'>
-      {/* Header */}
-      <div className='flex items-center justify-between'>
+      {/* ── Page Header ── */}
+      <div className='flex items-center justify-between flex-wrap gap-3'>
         <div>
           <h1 className='text-3xl font-bold tracking-tight'>
             {t('title') || 'Dashboard'}
@@ -149,35 +165,47 @@ export default function DashboardPage() {
             {t('subtitle') || 'Platform overview and analytics'}
           </p>
         </div>
-        {showErrorAlert && (
+        <div className='flex items-center gap-3'>
+          {lastUpdated && (
+            <span className='flex items-center gap-1.5 text-xs text-muted-foreground'>
+              <Clock className='h-3.5 w-3.5' />
+              Updated at {lastUpdated}
+            </span>
+          )}
           <Button
             variant='outline'
             size='sm'
             onClick={handleRefreshAll}
-            className='gap-2'>
-            <RefreshCw className='h-4 w-4' />
-            Retry
+            disabled={isStillLoading}
+            className='gap-2'
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${isStillLoading ? 'animate-spin' : ''}`}
+            />
+            Refresh
           </Button>
-        )}
+        </div>
       </div>
 
-      {/* Enhanced Error Alerts */}
+      {/* ── Quick Actions ── */}
+      <QuickActions />
+
+      {/* ── Error Alerts ── */}
       {showErrorAlert && (
         <Alert variant='destructive'>
           <AlertCircle className='h-4 w-4' />
           <AlertTitle className='font-semibold'>
-            {errorType === 'forbidden' && 'Access Denied'}
+            {errorType === 'forbidden'    && 'Access Denied'}
             {errorType === 'unauthorized' && 'Authentication Required'}
-            {errorType === 'network' && 'Connection Error'}
-            {errorType === 'server' && 'Server Error'}
+            {errorType === 'network'      && 'Connection Error'}
+            {errorType === 'server'       && 'Server Error'}
           </AlertTitle>
           <AlertDescription className='mt-2'>
             {errorType === 'forbidden' && (
               <div className='space-y-2'>
                 <p>You don't have admin permissions to view this dashboard.</p>
                 <p className='text-xs'>
-                  Contact your system administrator to grant you ADMIN role
-                  access.
+                  Contact your system administrator to grant you ADMIN role access.
                 </p>
               </div>
             )}
@@ -188,48 +216,33 @@ export default function DashboardPage() {
               <div className='space-y-2'>
                 <p>Cannot connect to the backend server.</p>
                 <p className='text-xs'>
-                  Check your internet connection or verify the API URL in your
-                  environment settings.
+                  Check your internet connection or verify the API URL.
                 </p>
               </div>
             )}
             {errorType === 'server' && (
-              <div className='space-y-2'>
-                <p>
-                  {t('warnings.analytics') || 'Failed to load analytics data.'}
-                </p>
-                <p className='text-xs'>
-                  Please try again or contact support if the problem persists.
-                </p>
-              </div>
+              <p>
+                {t('warnings.analytics') || 'Failed to load analytics data.'}
+              </p>
             )}
           </AlertDescription>
         </Alert>
       )}
 
-      {/* Permission Warning for Non-Admins */}
       {errorType === 'forbidden' && (
         <Alert>
           <ShieldAlert className='h-4 w-4' />
           <AlertTitle>Admin Access Required</AlertTitle>
           <AlertDescription className='space-y-2'>
-            <p>This dashboard requires ADMIN role. Your current permissions:</p>
-            <ul className='list-disc list-inside text-xs space-y-1 mt-2'>
-              <li>You are logged in successfully ✓</li>
-              <li>Your role does not have admin privileges ✗</li>
-            </ul>
-            <p className='text-xs mt-2'>
-              To fix this, run the following SQL on your database:
-            </p>
+            <p>This dashboard requires ADMIN role. To fix this, run:</p>
             <pre className='bg-muted p-2 rounded text-xs mt-2 overflow-x-auto'>
-              UPDATE "User" SET role = 'ADMIN'{'\n'}WHERE email =
-              'your-email@domain.com';
+              {"UPDATE \"User\" SET role = 'ADMIN' WHERE email = 'your-email@domain.com';"}
             </pre>
           </AlertDescription>
         </Alert>
       )}
 
-      {/* Primary KPI Cards */}
+      {/* ── Primary KPI Cards ── */}
       <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
         {usersLoading ? (
           <Skeleton className='h-32' />
@@ -237,12 +250,10 @@ export default function DashboardPage() {
           <StatsCard
             title={t('stats.totalUsers') || 'Total Users'}
             value={usersStats?.total ?? overview?.users ?? 0}
-            subtitle={
-              t('stats.newThisMonth', {
-                count: usersStats?.newThisMonth ?? 0,
-              }) || `+${usersStats?.newThisMonth ?? 0} this month`
-            }
+            subtitle={`+${usersStats?.newThisMonth ?? 0} this month`}
+            change={userChangePercent}
             icon={Users}
+            accentColor='blue'
           />
         )}
 
@@ -252,11 +263,9 @@ export default function DashboardPage() {
           <StatsCard
             title={t('stats.courses') || 'Courses'}
             value={coursesStats?.total ?? overview?.courses ?? 0}
-            subtitle={
-              t('stats.published', { count: coursesStats?.published ?? 0 }) ||
-              `${coursesStats?.published ?? 0} published`
-            }
+            subtitle={`${coursesStats?.published ?? 0} published`}
             icon={BookOpen}
+            accentColor='green'
           />
         )}
 
@@ -266,11 +275,9 @@ export default function DashboardPage() {
           <StatsCard
             title={t('stats.labs') || 'Labs'}
             value={labsStats?.total ?? overview?.labs ?? 0}
-            subtitle={
-              t('stats.published', { count: labsStats?.published ?? 0 }) ||
-              `${labsStats?.published ?? 0} published`
-            }
+            subtitle={`${labsStats?.published ?? 0} published`}
             icon={FlaskConical}
+            accentColor='purple'
           />
         )}
 
@@ -280,17 +287,14 @@ export default function DashboardPage() {
           <StatsCard
             title={t('stats.totalEnrollments') || 'Total Enrollments'}
             value={overview?.enrollments ?? 0}
-            subtitle={
-              t('stats.labCompletions', {
-                count: overview?.labCompletions ?? 0,
-              }) || `${overview?.labCompletions ?? 0} lab completions`
-            }
+            subtitle={`${overview?.labCompletions ?? 0} lab completions`}
             icon={GraduationCap}
+            accentColor='orange'
           />
         )}
       </div>
 
-      {/* Secondary Stats Row */}
+      {/* ── Secondary Breakdown Cards ── */}
       <div className='grid gap-4 md:grid-cols-3'>
         {usersStats && (
           <Card>
@@ -302,31 +306,25 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className='space-y-2'>
               <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>
-                  {t('breakdown.total') || 'Total'}
-                </span>
+                <span className='text-sm text-muted-foreground'>Total</span>
                 <span className='font-semibold'>{usersStats.total}</span>
               </div>
               <div className='flex items-center justify-between'>
                 <span className='text-sm text-muted-foreground'>
-                  {t('breakdown.newThisMonth') || 'New This Month'}
+                  New This Month
                 </span>
                 <Badge variant='secondary'>{usersStats.newThisMonth}</Badge>
               </div>
               <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>
-                  {t('breakdown.suspended') || 'Suspended'}
-                </span>
+                <span className='text-sm text-muted-foreground'>Suspended</span>
                 <Badge variant='destructive'>{usersStats.suspended}</Badge>
               </div>
               <div className='pt-2 border-t space-y-1'>
-                <p className='text-xs text-muted-foreground mb-1'>
-                  {t('breakdown.byRole') || 'By Role'}
-                </p>
+                <p className='text-xs text-muted-foreground mb-1'>By Role</p>
                 {Object.entries(usersStats.byRole).map(([role, count]) => (
                   <div key={role} className='flex justify-between text-xs'>
                     <span className='capitalize'>{role.replace('_', ' ')}</span>
-                    <span className='font-medium'>{count}</span>
+                    <span className='font-medium'>{String(count)}</span>
                   </div>
                 ))}
               </div>
@@ -344,41 +342,31 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className='space-y-2'>
               <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>
-                  {t('breakdown.total') || 'Total'}
-                </span>
+                <span className='text-sm text-muted-foreground'>Total</span>
                 <span className='font-semibold'>{coursesStats.total}</span>
               </div>
               <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>
-                  {t('breakdown.published') || 'Published'}
-                </span>
+                <span className='text-sm text-muted-foreground'>Published</span>
                 <Badge className='bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'>
                   {coursesStats.published}
                 </Badge>
               </div>
               <div className='flex items-center justify-between'>
                 <span className='text-sm text-muted-foreground'>
-                  {t('breakdown.unpublished') || 'Unpublished'}
+                  Unpublished
                 </span>
                 <Badge variant='outline'>{coursesStats.unpublished}</Badge>
               </div>
               <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>
-                  {t('breakdown.featured') || 'Featured'}
-                </span>
+                <span className='text-sm text-muted-foreground'>Featured</span>
                 <Badge variant='secondary'>{coursesStats.featured}</Badge>
               </div>
               <div className='pt-2 border-t space-y-1'>
-                <p className='text-xs text-muted-foreground mb-1'>
-                  {t('breakdown.byState') || 'By State'}
-                </p>
+                <p className='text-xs text-muted-foreground mb-1'>By State</p>
                 {Object.entries(coursesStats.byState).map(([state, count]) => (
                   <div key={state} className='flex justify-between text-xs'>
-                    <span className='capitalize'>
-                      {state.replace('_', ' ')}
-                    </span>
-                    <span className='font-medium'>{count}</span>
+                    <span className='capitalize'>{state.replace('_', ' ')}</span>
+                    <span className='font-medium'>{String(count)}</span>
                   </div>
                 ))}
               </div>
@@ -396,39 +384,33 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className='space-y-2'>
               <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>
-                  {t('breakdown.total') || 'Total'}
-                </span>
+                <span className='text-sm text-muted-foreground'>Total</span>
                 <span className='font-semibold'>{labsStats.total}</span>
               </div>
               <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>
-                  {t('breakdown.published') || 'Published'}
-                </span>
+                <span className='text-sm text-muted-foreground'>Published</span>
                 <Badge className='bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'>
                   {labsStats.published}
                 </Badge>
               </div>
               <div className='flex items-center justify-between'>
                 <span className='text-sm text-muted-foreground'>
-                  {t('breakdown.unpublished') || 'Unpublished'}
+                  Unpublished
                 </span>
                 <Badge variant='outline'>{labsStats.unpublished}</Badge>
               </div>
               <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>
-                  {t('breakdown.completions') || 'Completions'}
-                </span>
+                <span className='text-sm text-muted-foreground'>Completions</span>
                 <Badge variant='secondary'>{labsStats.totalCompletions}</Badge>
               </div>
               <div className='pt-2 border-t space-y-1'>
                 <p className='text-xs text-muted-foreground mb-1'>
-                  {t('breakdown.byDifficulty') || 'By Difficulty'}
+                  By Difficulty
                 </p>
                 {Object.entries(labsStats.byDifficulty).map(([diff, count]) => (
                   <div key={diff} className='flex justify-between text-xs'>
                     <span className='capitalize'>{diff}</span>
-                    <span className='font-medium'>{count}</span>
+                    <span className='font-medium'>{String(count)}</span>
                   </div>
                 ))}
               </div>
@@ -437,12 +419,14 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* XP / Points Banner */}
+      {/* ── XP / Points Banner ── */}
       {overview && (
         <div className='grid gap-4 md:grid-cols-2'>
-          <Card>
+          <Card className='border-l-4 border-l-yellow-500'>
             <CardContent className='flex items-center gap-4 pt-6'>
-              <Trophy className='h-8 w-8 text-yellow-500' />
+              <div className='rounded-xl bg-yellow-500/10 p-3'>
+                <Trophy className='h-7 w-7 text-yellow-500' />
+              </div>
               <div>
                 <p className='text-sm text-muted-foreground'>
                   {t('overview.totalXP') || 'Total XP Awarded'}
@@ -453,9 +437,11 @@ export default function DashboardPage() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className='border-l-4 border-l-blue-500'>
             <CardContent className='flex items-center gap-4 pt-6'>
-              <UserPlus className='h-8 w-8 text-blue-500' />
+              <div className='rounded-xl bg-blue-500/10 p-3'>
+                <UserPlus className='h-7 w-7 text-blue-500' />
+              </div>
               <div>
                 <p className='text-sm text-muted-foreground'>
                   {t('overview.totalPoints') || 'Total Points Awarded'}
@@ -469,15 +455,23 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Charts */}
+      {/* ── Charts ── */}
       {(growth || engagement) && (
-        <div className='grid gap-6 md:grid-cols-2'>
-          {growth && <GrowthChart data={growth} />}
-          {engagement && <EngagementMetrics data={engagement} />}
+        <div className='grid gap-6 lg:grid-cols-5'>
+          {growth && (
+            <div className='lg:col-span-3'>
+              <GrowthChart data={growth} />
+            </div>
+          )}
+          {engagement && (
+            <div className='lg:col-span-2'>
+              <EngagementMetrics data={engagement} />
+            </div>
+          )}
         </div>
       )}
 
-      {/* Top Content + Activity */}
+      {/* ── Top Content + Activity Feed ── */}
       {(topContent || recentActivity) && (
         <div className='grid gap-6 lg:grid-cols-2'>
           {topContent && <TopContentTable data={topContent} />}
@@ -485,7 +479,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Empty State */}
+      {/* ── Empty State ── */}
       {!hasAnyData && !isStillLoading && !showErrorAlert && (
         <Card>
           <CardContent className='flex flex-col items-center justify-center py-16'>
