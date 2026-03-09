@@ -36,6 +36,14 @@ export const CourseImportPage = lazy(
 export const CoursePlatformPreviewPage = lazy(
   () => import('@/features/courses/pages/course-platform-preview.page'),
 );
+// ✅ Course Content Editor — fullscreen, no AdminLayout
+// Uses named export → .then() wrapper required by React.lazy
+export const CourseEditorPage = lazy(
+  () =>
+    import('@/features/courses/pages/course-editor.page').then((m) => ({
+      default: m.CourseEditorPage,
+    })),
+);
 
 // Labs
 export const LabsListPage = lazy(

@@ -31,6 +31,7 @@ import {
   Sparkles,
   DollarSign,
   Monitor,
+  LayoutTemplate,
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -252,13 +253,24 @@ export default function CourseDetailPage() {
             Preview
           </Button>
 
-          {/* Edit */}
+          {/* Edit metadata */}
           <Link to={ROUTES.COURSE_EDIT(id!)}>
             <Button variant='outline' size='sm' className='h-9 gap-2'>
               <Pencil className='h-4 w-4' />
               Edit
             </Button>
           </Link>
+
+          {/* ✅ Edit Content — opens Course Content Editor (fullscreen) */}
+          <Button
+            variant='outline'
+            size='sm'
+            className='h-9 gap-2 border-primary/50 text-primary hover:bg-primary/10 hover:text-primary'
+            onClick={() => navigate(`/courses/${id}/content`)}
+          >
+            <LayoutTemplate className='h-4 w-4' />
+            Edit Content
+          </Button>
 
           {/* Publish / Unpublish */}
           {!isComingSoon && (
