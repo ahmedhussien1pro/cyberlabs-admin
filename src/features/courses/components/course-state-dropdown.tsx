@@ -2,6 +2,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { coursesService } from '@/core/api/services';
+import type { CourseState } from '@/core/types';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,8 +12,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Globe, FileEdit, Clock, ChevronDown, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-type CourseState = 'PUBLISHED' | 'DRAFT' | 'COMING_SOON';
 
 interface CourseStateDropdownProps {
   courseId: string;
@@ -59,13 +58,20 @@ export function CourseStateDropdown({
   const config = STATE_CONFIG[effectiveState] ?? STATE_CONFIG['DRAFT'];
   const Icon = config.icon;
 
-  // Uses PATCH /admin/courses/:id — the backend's UpdateCourseDto accepts { state, isPublished }
   const mutation = useMutation({
-    mutationFn: (state: CourseState) => {
-      const { isPublished: newIsPublished } = STATE_CONFIG[state];
+    mutationFn: (newState: CourseState) => {
+      // Use dedicated publish/unpublish endpoints when toggling isPublished
+      // Use PATCH /:id for COMING_SOON (state only, no isPublished change)
+      if (newState === 'PUBLISHED') {
+        return coursesService.publish(courseId);
+      }
+      if (newState === 'DRAFT' && isPublished) {
+        return coursesService.unpublish(courseId);
+      }
+      // COMING_SOON or DRAFT when already unpublished → just update state field
       return coursesService.update(courseId, {
-        state,
-        isPublished: newIsPublished,
+        state: newState,
+        isPublished: STATE_CONFIG[newState].isPublished,
       });
     },
     onSuccess: (_data, state) => {
@@ -73,7 +79,9 @@ export function CourseStateDropdown({
       queryClient.invalidateQueries({ queryKey: ['courses'] });
       queryClient.invalidateQueries({ queryKey: ['course', courseId] });
     },
-    onError: () => toast.error('Failed to update state'),
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Failed to update state');
+    },
   });
 
   return (
@@ -99,7 +107,7 @@ export function CourseStateDropdown({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align='start' className='w-44'>
-        {(Object.entries(STATE_CONFIG) as [CourseState, (typeof STATE_CONFIG)[CourseState]][]).map(
+        {(Object.entries(STATE_CONFIG) as [CourseState, typeof STATE_CONFIG[CourseState]][]).map(
           ([state, cfg]) => {
             const ItemIcon = cfg.icon;
             return (

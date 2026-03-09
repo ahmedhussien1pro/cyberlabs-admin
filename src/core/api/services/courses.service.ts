@@ -1,6 +1,7 @@
 // src/core/api/services/courses.service.ts
 import { apiClient } from '../client';
 import { ENDPOINTS } from '../endpoints';
+import type { CourseState } from '@/core/types';
 
 export interface CourseQueryParams {
   page?: number;
@@ -24,13 +25,17 @@ export interface UpdateCoursePayload {
   difficulty?: string;
   category?: string;
   access?: string;
-  state?: string;
+  contentType?: string;
+  color?: string;
+  state?: CourseState;
   isPublished?: boolean;
   isFeatured?: boolean;
   isNew?: boolean;
   price?: number;
+  duration?: string;
+  estimatedHours?: number;
   thumbnail?: string;
-  color?: string;
+  backgroundImage?: string;
   tags?: string[];
   topics?: string[];
   skills?: string[];
@@ -55,15 +60,23 @@ export const coursesService = {
   create: (data: Record<string, unknown>) =>
     apiClient.post(ENDPOINTS.COURSES.LIST, data).then((r) => r.data),
 
-  // PATCH /admin/courses/:id  ← single endpoint for all field updates incl. state
+  // PATCH /admin/courses/:id  ← general field updates incl. state
   update: (id: string, data: UpdateCoursePayload) =>
     apiClient.patch(ENDPOINTS.COURSES.DETAIL(id), data).then((r) => r.data),
+
+  // PATCH /admin/courses/:id/publish  ← sets isPublished:true + state:PUBLISHED
+  publish: (id: string) =>
+    apiClient.patch(ENDPOINTS.COURSES.PUBLISH(id)).then((r) => r.data),
+
+  // PATCH /admin/courses/:id/unpublish  ← sets isPublished:false + state:DRAFT
+  unpublish: (id: string) =>
+    apiClient.patch(ENDPOINTS.COURSES.UNPUBLISH(id)).then((r) => r.data),
 
   // DELETE /admin/courses/:id
   remove: (id: string) =>
     apiClient.delete(ENDPOINTS.COURSES.DETAIL(id)).then((r) => r.data),
 
-  // GET /admin/courses/:id/curriculum  (PUT returns full course)
+  // GET /admin/courses/:id/curriculum
   getCurriculum: (id: string) =>
     apiClient.get(ENDPOINTS.COURSES.CURRICULUM(id)).then((r) => r.data),
 
@@ -77,19 +90,13 @@ export const coursesService = {
 
   // POST /admin/courses/:id/labs/:labId
   attachLab: (courseId: string, labId: string) =>
-    apiClient
-      .post(ENDPOINTS.COURSES.ATTACH_LAB(courseId, labId))
-      .then((r) => r.data),
+    apiClient.post(ENDPOINTS.COURSES.ATTACH_LAB(courseId, labId)).then((r) => r.data),
 
   // DELETE /admin/courses/:id/labs/:labId
   detachLab: (courseId: string, labId: string) =>
-    apiClient
-      .delete(ENDPOINTS.COURSES.DETACH_LAB(courseId, labId))
-      .then((r) => r.data),
+    apiClient.delete(ENDPOINTS.COURSES.DETACH_LAB(courseId, labId)).then((r) => r.data),
 
   // PATCH /admin/courses/:id/labs/reorder
   reorderLabs: (courseId: string, order: string[]) =>
-    apiClient
-      .patch(ENDPOINTS.COURSES.REORDER_LABS(courseId), { order })
-      .then((r) => r.data),
+    apiClient.patch(ENDPOINTS.COURSES.REORDER_LABS(courseId), { order }).then((r) => r.data),
 };
