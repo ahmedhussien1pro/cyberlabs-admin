@@ -1,0 +1,29 @@
+{
+  "error": { "load": "فشل تحميل بيانات المستخدم", "notFound": "المستخدم غير موجود" },
+  "status": { "active": "نشط", "inactive": "غير نشط", "suspended": "موقوف" },
+  "actions": {
+    "changeRole": "تغيير الدور",
+    "suspend": "إيقاف المستخدم",
+    "unsuspend": "رفع الإيقاف",
+    "viewActivity": "سجل الأنشطة"
+  },
+  "sections": {
+    "info": "معلومات الملف الشخصي",
+    "progress": "التقدم والنقاط",
+    "activity": "إحصائيات النشاط",
+    "suspension": "تفاصيل الإيقاف",
+    "quickLinks": "روابط سريعة"
+  },
+  "fields": {
+    "email": "البريد الإلكتروني", "emailVerified": "التحقق من البريد", "twoFactor": "المصادقة الثنائية",
+    "joined": "تاريخ الانضمام", "lastLogin": "آخر تسجيل دخول", "userId": "معرف المستخدم",
+    "reason": "السبب", "suspendedAt": "تاريخ الإيقاف"
+  },
+  "values": { "verified": "موثق", "notVerified": "غير موثق", "enabled": "مفعل", "disabled": "معطل" },
+  "stats": {
+    "level": "المستوى", "totalXP": "إجمالي XP", "totalPoints": "النقاط",
+    "xpProgress": "XP للمستوى التالي", "toNextLevel": "نحو المستوى {{level}}",
+    "enrollments": "الكورسات المسجلة", "labProgress": "تقدم المعامل", "badges": "الشارات المحققة"
+  },
+  "links": { "activity": "سجل الأنشطة", "referrals": "روابط الإحالة" }
+}

@@ -1,0 +1,29 @@
+{
+  "error": { "load": "Failed to load user details", "notFound": "User not found" },
+  "status": { "active": "Active", "inactive": "Inactive", "suspended": "Suspended" },
+  "actions": {
+    "changeRole": "Change Role",
+    "suspend": "Suspend User",
+    "unsuspend": "Unsuspend User",
+    "viewActivity": "Activity Log"
+  },
+  "sections": {
+    "info": "Profile Information",
+    "progress": "Progress & Points",
+    "activity": "Activity Counts",
+    "suspension": "Suspension Details",
+    "quickLinks": "Quick Links"
+  },
+  "fields": {
+    "email": "Email", "emailVerified": "Email Verified", "twoFactor": "Two-Factor Auth",
+    "joined": "Joined", "lastLogin": "Last Login", "userId": "User ID",
+    "reason": "Reason", "suspendedAt": "Suspended At"
+  },
+  "values": { "verified": "Verified", "notVerified": "Not verified", "enabled": "Enabled", "disabled": "Disabled" },
+  "stats": {
+    "level": "Level", "totalXP": "Total XP", "totalPoints": "Points",
+    "xpProgress": "XP to next level", "toNextLevel": "towards Level {{level}}",
+    "enrollments": "Course Enrollments", "labProgress": "Labs Progress", "badges": "Badges Earned"
+  },
+  "links": { "activity": "Activity Log", "referrals": "Referral Links" }
+}

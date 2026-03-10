@@ -1,0 +1,5 @@
+{
+  "header": { "title": "Referral Links", "subtitle": "Track where your users come from" },
+  "stats": { "totalLinks": "Total Links", "totalClicks": "Total Clicks", "registrations": "Registrations", "conversionRate": "Conversion Rate" },
+  "create": { "title": "Create Referral Link", "label": "Label", "platform": "Platform", "assignUser": "Assign to user", "button": "Create Link" }
+}

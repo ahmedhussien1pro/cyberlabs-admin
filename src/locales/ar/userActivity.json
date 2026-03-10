@@ -1,0 +1,13 @@
+{
+  "header": { "subtitle": "سجل الأنشطة", "events": "حدث", "level": "المستوى", "backToProfile": "العودة للملف الشخصي" },
+  "filter": { "all": "الكل", "login": "تسجيل الدخول", "course_enrolled": "الكورسات", "lab_started": "المعامل", "badge_earned": "الشارات", "xp_gained": "XP" },
+  "events": {
+    "login": "تسجيل دخول", "logout": "تسجيل خروج",
+    "course_enrolled": "تسجيل في كورس", "course_completed": "إتمام كورس",
+    "lab_started": "بدء معمل", "lab_completed": "إتمام معمل",
+    "badge_earned": "حصل على شارة", "xp_gained": "اكتسب XP",
+    "role_changed": "تم تغيير الدور", "suspended": "تم إيقاف الحساب", "unsuspended": "تم رفع الإيقاف"
+  },
+  "empty": { "title": "لا يوجد نشاط بعد", "subtitle": "لم يقم هذا المستخدم بأي إجراءات مسجلة" },
+  "error": { "load": "فشل تحميل الأنشطة" }
+}

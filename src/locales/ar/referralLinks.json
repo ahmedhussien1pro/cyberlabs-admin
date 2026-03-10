@@ -1,0 +1,5 @@
+{
+  "header": { "title": "روابط الإحالة", "subtitle": "اعرف من أين جاء مستخدميك" },
+  "stats": { "totalLinks": "إجمالي الروابط", "totalClicks": "إجمالي النقرات", "registrations": "التسجيلات", "conversionRate": "معدل التحويل" },
+  "create": { "title": "إنشاء رابط إحالة", "label": "التسمية", "platform": "المنصة", "assignUser": "تخصيص لمستخدم", "button": "إنشاء رابط" }
+}

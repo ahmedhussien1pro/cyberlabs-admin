@@ -3,19 +3,19 @@ export const ROUTES = {
   DASHBOARD: '/',
 
   // ── Users ──
-  USERS:       '/users',
-  USER_DETAIL: (id: string) => `/users/${id}`,
+  USERS:         '/users',
+  USER_DETAIL:   (id: string) => `/users/${id}`,
+  USER_ACTIVITY: (id: string) => `/users/${id}/activity`,
 
   // ── Courses CMS ──
   COURSES:       '/courses',
   COURSE_CREATE: '/courses/new',
   COURSE_IMPORT: '/courses/import',
   COURSE_EDIT:   (slug: string) => `/courses/${slug}/edit`,
-  // COURSE_DETAIL was removed — Preview lives inside COURSE_EDIT ?tab=preview
   COURSE_PREVIEW: (slug: string) => `/courses/${slug}/edit?tab=preview`,
 
   // ── Labs ──
-  LABS:      '/labs',
+  LABS:       '/labs',
   LAB_CREATE: '/labs/new',
   LAB_DETAIL: (id: string) => `/labs/${id}`,
   LAB_EDIT:   (id: string) => `/labs/${id}/edit`,
@@ -27,9 +27,10 @@ export const ROUTES = {
   PATH_EDIT:   (id: string) => `/paths/${id}/edit`,
 
   // ── Other ──
-  MAP:           '/map',
-  BADGES:        '/badges',
-  NOTIFICATIONS: '/notifications',
-  SETTINGS:      '/settings',
-  UN_AUTHORIZED: '/401',
+  MAP:            '/map',
+  BADGES:         '/badges',
+  NOTIFICATIONS:  '/notifications',
+  SETTINGS:       '/settings',
+  REFERRAL_LINKS: '/referrals',
+  UN_AUTHORIZED:  '/401',
 } as const;

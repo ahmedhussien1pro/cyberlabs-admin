@@ -1,0 +1,13 @@
+{
+  "header": { "subtitle": "Activity Log", "events": "events", "level": "Level", "backToProfile": "Back to Profile" },
+  "filter": { "all": "All", "login": "Logins", "course_enrolled": "Courses", "lab_started": "Labs", "badge_earned": "Badges", "xp_gained": "XP" },
+  "events": {
+    "login": "Logged in", "logout": "Logged out",
+    "course_enrolled": "Enrolled in course", "course_completed": "Completed course",
+    "lab_started": "Started lab", "lab_completed": "Completed lab",
+    "badge_earned": "Earned badge", "xp_gained": "XP gained",
+    "role_changed": "Role changed", "suspended": "Account suspended", "unsuspended": "Account unsuspended"
+  },
+  "empty": { "title": "No activity yet", "subtitle": "This user hasn't performed any tracked actions" },
+  "error": { "load": "Failed to load activity" }
+}
