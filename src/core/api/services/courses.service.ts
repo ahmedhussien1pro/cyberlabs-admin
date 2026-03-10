@@ -55,6 +55,16 @@ export interface CourseLabItem {
   };
 }
 
+function normalizeArray<T>(res: unknown): T[] {
+  if (Array.isArray(res)) return res as T[];
+  if (res && typeof res === 'object') {
+    const r = res as Record<string, unknown>;
+    if (Array.isArray(r['data'])) return r['data'] as T[];
+    if (Array.isArray(r['items'])) return r['items'] as T[];
+  }
+  return [];
+}
+
 export const coursesService = {
   // GET /admin/courses
   getAll: (params?: CourseQueryParams) =>
@@ -103,9 +113,11 @@ export const coursesService = {
   updateCurriculum: (id: string, data: Record<string, unknown>) =>
     apiClient.put(ENDPOINTS.COURSES.CURRICULUM(id), data).then((r) => r.data),
 
-  // GET /admin/courses/:id/labs
+  // GET /admin/courses/:id/labs — always returns CourseLabItem[]
   getCourseLabs: (id: string): Promise<CourseLabItem[]> =>
-    apiClient.get(ENDPOINTS.COURSES.LABS(id)).then((r) => r.data),
+    apiClient
+      .get(ENDPOINTS.COURSES.LABS(id))
+      .then((r) => normalizeArray<CourseLabItem>(r.data)),
 
   // POST /admin/courses/:id/labs/:labId
   attachLab: (courseId: string, labId: string) =>
