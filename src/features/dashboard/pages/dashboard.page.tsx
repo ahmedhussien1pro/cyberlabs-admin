@@ -321,7 +321,7 @@ export default function DashboardPage() {
               </div>
               <div className='pt-2 border-t space-y-1'>
                 <p className='text-xs text-muted-foreground mb-1'>By Role</p>
-                {Object.entries(usersStats.byRole).map(([role, count]) => (
+                {Object.entries(usersStats.byRole ?? {}).map(([role, count]) => (
                   <div key={role} className='flex justify-between text-xs'>
                     <span className='capitalize'>{role.replace('_', ' ')}</span>
                     <span className='font-medium'>{String(count)}</span>
@@ -363,7 +363,7 @@ export default function DashboardPage() {
               </div>
               <div className='pt-2 border-t space-y-1'>
                 <p className='text-xs text-muted-foreground mb-1'>By State</p>
-                {Object.entries(coursesStats.byState).map(([state, count]) => (
+                {Object.entries(coursesStats.byState ?? {}).map(([state, count]) => (
                   <div key={state} className='flex justify-between text-xs'>
                     <span className='capitalize'>{state.replace('_', ' ')}</span>
                     <span className='font-medium'>{String(count)}</span>
@@ -407,7 +407,7 @@ export default function DashboardPage() {
                 <p className='text-xs text-muted-foreground mb-1'>
                   By Difficulty
                 </p>
-                {Object.entries(labsStats.byDifficulty).map(([diff, count]) => (
+                {Object.entries(labsStats.byDifficulty ?? {}).map(([diff, count]) => (
                   <div key={diff} className='flex justify-between text-xs'>
                     <span className='capitalize'>{diff}</span>
                     <span className='font-medium'>{String(count)}</span>
