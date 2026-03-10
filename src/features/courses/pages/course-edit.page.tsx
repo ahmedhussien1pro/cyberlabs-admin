@@ -1,10 +1,11 @@
 // src/features/courses/pages/course-edit.page.tsx
-// ✅ Fixed: uses getBySlug with robust fallback (slug → list search → getById)
+// ✅ Full rebuild: Metadata | Content Writer | Curriculum JSON | Preview
 import { useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminCoursesApi } from '../services/admin-courses.api';
 import { CourseMetadataForm } from '../components/course-metadata-form';
+import { ContentWriterEditor } from '../components/content-writer-editor';
 import { CourseCurriculumEditor } from '../components/course-curriculum-editor';
 import { CoursePathRelations } from '../components/course-path-relations';
 import { CoursePlatformPreviewTab } from '../components/course-preview-tab';
@@ -13,19 +14,21 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, BookOpen, GitBranch, Eye, Pencil,
-  Globe, FileEdit, Loader2, Clock,
+  ArrowLeft, BookOpen, GitBranch, Eye,
+  Pencil, Globe, FileEdit, Loader2, Clock,
+  PenLine,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { CourseState } from '../types/admin-course.types';
 
-type Tab = 'metadata' | 'curriculum' | 'paths' | 'preview';
+type Tab = 'metadata' | 'content' | 'curriculum' | 'paths' | 'preview';
 
-const TABS: { key: Tab; label: string; icon: any }[] = [
-  { key: 'metadata',   label: 'Edit',          icon: Pencil    },
-  { key: 'curriculum', label: 'Curriculum',     icon: BookOpen  },
-  { key: 'paths',      label: 'Path Relations', icon: GitBranch },
-  { key: 'preview',    label: 'Preview',        icon: Eye       },
+const TABS: { key: Tab; label: string; icon: any; description: string }[] = [
+  { key: 'metadata',   label: 'Info',           icon: Pencil,   description: 'Card metadata & settings' },
+  { key: 'content',    label: 'Content Writer',  icon: PenLine,  description: 'Write & preview topics' },
+  { key: 'curriculum', label: 'Curriculum JSON', icon: BookOpen, description: 'Raw JSON editor' },
+  { key: 'paths',      label: 'Path Relations',  icon: GitBranch,description: 'Link to learning paths' },
+  { key: 'preview',    label: 'Platform Preview',icon: Eye,      description: 'Exact platform view' },
 ];
 
 const STATE_STYLES: Record<
@@ -33,72 +36,51 @@ const STATE_STYLES: Record<
   { label: string; badge: string; next: CourseState; nextLabel: string; nextIcon: any; btnClass: string }
 > = {
   DRAFT: {
-    label:     'Draft',
-    badge:     'bg-zinc-500/15 text-zinc-400 border-zinc-500/30',
-    next:      'PUBLISHED',
-    nextLabel: 'Publish',
-    nextIcon:  Globe,
-    btnClass:  'bg-emerald-600 hover:bg-emerald-700 text-white',
+    label: 'Draft', badge: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30',
+    next: 'PUBLISHED', nextLabel: 'Publish', nextIcon: Globe, btnClass: 'bg-emerald-600 hover:bg-emerald-700 text-white',
   },
   PUBLISHED: {
-    label:     'Published',
-    badge:     'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-    next:      'DRAFT',
-    nextLabel: 'Unpublish',
-    nextIcon:  FileEdit,
-    btnClass:  'bg-zinc-600 hover:bg-zinc-700 text-white',
+    label: 'Published', badge: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+    next: 'DRAFT', nextLabel: 'Unpublish', nextIcon: FileEdit, btnClass: 'bg-zinc-600 hover:bg-zinc-700 text-white',
   },
   COMING_SOON: {
-    label:     'Coming Soon',
-    badge:     'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
-    next:      'PUBLISHED',
-    nextLabel: 'Publish',
-    nextIcon:  Globe,
-    btnClass:  'bg-emerald-600 hover:bg-emerald-700 text-white',
+    label: 'Coming Soon', badge: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
+    next: 'PUBLISHED', nextLabel: 'Publish', nextIcon: Globe, btnClass: 'bg-emerald-600 hover:bg-emerald-700 text-white',
   },
 };
 
 export default function CourseEditPage() {
-  // ✅ param is named :slug but may actually be a UUID — getBySlug handles both
-  const { slug }       = useParams<{ slug: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
-  const navigate       = useNavigate();
-  const queryClient    = useQueryClient();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const initialTab = (searchParams.get('tab') as Tab) ?? 'metadata';
   const [activeTab, setActiveTab] = useState<Tab>(
     TABS.find((t) => t.key === initialTab) ? initialTab : 'metadata',
   );
-
   const [localState, setLocalState] = useState<CourseState | null>(null);
 
-  // ✅ getBySlug: tries direct, falls back to list search, then getById
   const { data: course, isLoading, error } = useQuery({
     queryKey: ['admin', 'courses', 'slug', slug],
-    queryFn:  () => adminCoursesApi.getBySlug(slug!),
-    enabled:  !!slug,
+    queryFn: () => adminCoursesApi.getBySlug(slug!),
+    enabled: !!slug,
     retry: (failCount, err: any) => {
-      // don't retry on 404
       const status = err?.statusCode ?? err?.response?.status;
-      if (status === 404) return false;
-      return failCount < 2;
+      return status !== 404 && failCount < 2;
     },
   });
 
   const { mutate: toggleState, isPending: isToggling } = useMutation({
     mutationFn: (state: CourseState) => adminCoursesApi.setState(course!.id, state),
-    onMutate:  (state) => setLocalState(state),
+    onMutate: (state) => setLocalState(state),
     onSuccess: (_, state) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
       toast.success(`Course is now ${STATE_STYLES[state].label}`);
     },
-    onError: () => {
-      setLocalState(null);
-      toast.error('Failed to update course state');
-    },
+    onError: () => { setLocalState(null); toast.error('Failed to update course state'); },
   });
 
-  // ── Loading ──
   if (isLoading)
     return (
       <div className='space-y-4 p-6'>
@@ -108,12 +90,8 @@ export default function CourseEditPage() {
       </div>
     );
 
-  // ── Error ──
   if (error || !course) {
-    const errMsg =
-      (error as any)?.message ??
-      (error as any)?.response?.data?.message ??
-      'Course not found';
+    const errMsg = (error as any)?.message ?? 'Course not found';
     return (
       <div className='flex flex-col items-center justify-center gap-4 p-12 text-center'>
         <div className='rounded-full bg-destructive/10 p-4'>
@@ -132,12 +110,12 @@ export default function CourseEditPage() {
   }
 
   const displayState = localState ?? course.state;
-  const stateStyle   = STATE_STYLES[displayState];
-  const NextIcon     = stateStyle.nextIcon;
+  const stateStyle = STATE_STYLES[displayState];
+  const NextIcon = stateStyle.nextIcon;
 
   return (
     <div className='flex flex-col gap-6'>
-      {/* ── Header ── */}
+      {/* Header */}
       <div className='flex items-start justify-between gap-4 flex-wrap'>
         <div className='flex items-center gap-3'>
           <Button variant='ghost' size='icon' onClick={() => navigate(-1)}>
@@ -146,72 +124,63 @@ export default function CourseEditPage() {
           <div>
             <div className='flex items-center gap-2'>
               <h1 className='text-xl font-bold'>{course.title}</h1>
-              <Badge
-                variant='outline'
-                className={cn('text-xs font-semibold', stateStyle.badge)}>
+              <Badge variant='outline' className={cn('text-xs font-semibold', stateStyle.badge)}>
                 {stateStyle.label}
               </Badge>
             </div>
-            <p className='text-xs text-muted-foreground font-mono mt-0.5'>
-              /courses/{course.slug}
-            </p>
+            <p className='text-xs text-muted-foreground font-mono mt-0.5'>/courses/{course.slug}</p>
           </div>
         </div>
-
-        {/* ── Publish / Unpublish / Coming Soon Toggles ── */}
         <div className='flex items-center gap-2'>
           {displayState !== 'COMING_SOON' && (
-            <Button
-              variant='outline'
-              size='sm'
+            <Button variant='outline' size='sm'
               className='gap-1.5 text-yellow-400 border-yellow-500/40 hover:bg-yellow-500/10'
-              disabled={isToggling}
-              onClick={() => toggleState('COMING_SOON')}>
-              <Clock className='h-3.5 w-3.5' />
-              Coming Soon
+              disabled={isToggling} onClick={() => toggleState('COMING_SOON')}>
+              <Clock className='h-3.5 w-3.5' /> Coming Soon
             </Button>
           )}
-          <Button
-            size='sm'
-            className={cn('gap-1.5 min-w-[110px]', stateStyle.btnClass)}
-            disabled={isToggling}
-            onClick={() => toggleState(stateStyle.next)}>
-            {isToggling
-              ? <Loader2 className='h-3.5 w-3.5 animate-spin' />
-              : <NextIcon className='h-3.5 w-3.5' />}
+          <Button size='sm' className={cn('gap-1.5 min-w-[110px]', stateStyle.btnClass)}
+            disabled={isToggling} onClick={() => toggleState(stateStyle.next)}>
+            {isToggling ? <Loader2 className='h-3.5 w-3.5 animate-spin' /> : <NextIcon className='h-3.5 w-3.5' />}
             {isToggling ? 'Saving...' : stateStyle.nextLabel}
           </Button>
         </div>
       </div>
 
-      {/* ── Tabs ── */}
+      {/* Tabs */}
       <div className='flex gap-1 border-b border-border/50 overflow-x-auto'>
-        {TABS.map(({ key, label, icon: Icon }) => (
+        {TABS.map(({ key, label, icon: Icon, description }) => (
           <button
             key={key}
             onClick={() => setActiveTab(key)}
+            title={description}
             className={cn(
               'flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors whitespace-nowrap',
               activeTab === key
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground',
             )}>
-            <Icon className='h-3.5 w-3.5' />
-            {label}
+            <Icon className='h-3.5 w-3.5' /> {label}
           </button>
         ))}
       </div>
 
-      {/* ── Tab Content ── */}
+      {/* Tab Content */}
       <div>
-        {activeTab === 'metadata'   && <CourseMetadataForm course={course} />}
+        {activeTab === 'metadata' && <CourseMetadataForm course={course} />}
+
+        {activeTab === 'content' && (
+          <ContentWriterEditor courseId={course.id} courseSlug={course.slug} />
+        )}
+
         {activeTab === 'curriculum' && (
-          // ✅ pass courseId (UUID) — getCurriculum now uses /admin/courses/:id/curriculum
           <CourseCurriculumEditor courseId={course.id} courseSlug={course.slug} />
         )}
+
         {activeTab === 'paths' && (
           <CoursePathRelations courseId={course.id} courseTitle={course.title} />
         )}
+
         {activeTab === 'preview' && <CoursePlatformPreviewTab course={course} />}
       </div>
     </div>
