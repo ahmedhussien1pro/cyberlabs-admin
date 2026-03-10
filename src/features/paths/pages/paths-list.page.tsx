@@ -130,14 +130,13 @@ export default function PathsListPage() {
           ))}
         </div>
       ) : (
-        /* List view */
         <div className='space-y-2'>
           {paths.map((path) => (
             <div
               key={path.id}
               className='group relative flex items-center gap-4 rounded-lg border border-border/50 bg-card px-4 py-3 hover:border-border transition-colors'
             >
-              <PathAdminOverlayPlaceholder path={path} />
+              <PathAdminOverlayPlaceholder />
               <div className='relative w-16 h-10 shrink-0 overflow-hidden rounded bg-muted'>
                 {path.thumbnail ? (
                   <img src={path.thumbnail} alt={path.title} className='w-full h-full object-cover' />
@@ -181,7 +180,6 @@ export default function PathsListPage() {
   );
 }
 
-// Inline list-view mini controls (no overlay needed, just buttons)
-function PathAdminOverlayPlaceholder({ path }: { path: any }) {
-  return null; // List view uses PathAdminCard's overlay separately — covered by the grid card
+function PathAdminOverlayPlaceholder() {
+  return null;
 }

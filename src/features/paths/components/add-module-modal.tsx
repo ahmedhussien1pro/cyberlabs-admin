@@ -81,7 +81,8 @@ function CreateCourseInlineForm({
       .replace(/[^a-z0-9-]/g, '');
 
   const createMutation = useMutation({
-    mutationFn: (data: CreateCourseRequest) => coursesService.create(data),
+    mutationFn: (data: CreateCourseRequest) =>
+      coursesService.create(data as unknown as Record<string, unknown>),
     onSuccess: (course) => {
       qc.invalidateQueries({ queryKey: ['courses', 'list'] });
       toast.success('Course created successfully!');
@@ -320,7 +321,6 @@ export function AddModuleModal({
           <TabsContent
             value='courses'
             className='mt-0 flex-1 space-y-2 overflow-y-auto px-6 py-3'>
-            {/* Create new course button */}
             {!showCreateCourse && (
               <button
                 type='button'
@@ -347,7 +347,6 @@ export function AddModuleModal({
               />
             )}
 
-            {/* Courses list */}
             {coursesLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <Skeleton key={i} className='h-16 rounded-xl' />

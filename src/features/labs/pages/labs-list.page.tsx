@@ -83,7 +83,6 @@ export default function LabsListPage() {
     data: labsData,
     isLoading,
     error,
-    refetch,
   } = useQuery({
     queryKey: [
       'labs',
@@ -289,7 +288,6 @@ export default function LabsListPage() {
           )}
         </>
       ) : (
-        // Table view fallback — import LabsTable lazily when in table mode
         <div className='text-center py-8 text-muted-foreground text-sm'>
           Switch to grid view to use CMS editing, or use the table view for bulk
           operations.
