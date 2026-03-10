@@ -15,6 +15,9 @@ export const UsersListPage = lazy(
 export const UserDetailPage = lazy(
   () => import('@/features/users/pages/user-detail.page'),
 );
+export const UserActivityPage = lazy(
+  () => import('@/features/users/pages/user-activity.page'),
+);
 
 // Courses
 export const CoursesListPage = lazy(
@@ -79,4 +82,9 @@ export const SettingsPage = lazy(
 // Notifications
 export const NotificationsPage = lazy(
   () => import('@/features/notifications/pages/notifications.page'),
+);
+
+// Referral Links
+export const ReferralLinksPage = lazy(
+  () => import('@/features/users/pages/referral-links.page'),
 );

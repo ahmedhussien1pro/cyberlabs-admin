@@ -9,8 +9,6 @@ import type {
   UpdateUserRoleRequest,
 } from '@/core/types';
 
-// Backend returns { data: T } for single items and { data: T[], meta: {...} } for lists.
-// axios wraps the whole response so res.data = the backend payload.
 function unwrapItem<T>(res: any): T {
   const payload = res?.data ?? res;
   return (payload?.data ?? payload) as T;
@@ -21,7 +19,11 @@ function unwrapList<T>(res: any): PaginatedResponse<T> {
   if (payload?.data !== undefined && payload?.meta !== undefined) {
     return payload as PaginatedResponse<T>;
   }
-  const arr = Array.isArray(payload?.data) ? payload.data : Array.isArray(payload) ? payload : [];
+  const arr = Array.isArray(payload?.data)
+    ? payload.data
+    : Array.isArray(payload)
+    ? payload
+    : [];
   return {
     data: arr,
     meta: { total: arr.length, page: 1, limit: arr.length || 20, totalPages: 1 },
@@ -31,7 +33,6 @@ function unwrapList<T>(res: any): PaginatedResponse<T> {
 export const usersService = {
   getStats: async (): Promise<UserStats> => {
     const res = await apiClient.get(API_ENDPOINTS.USERS.STATS);
-    // backend returns stats directly (no nested .data wrapper for stats)
     const payload = res?.data ?? res;
     return (payload?.data ?? payload) as UserStats;
   },
@@ -66,5 +67,19 @@ export const usersService = {
   unsuspend: async (id: string): Promise<User> => {
     const res = await apiClient.patch(`/admin/users/${id}/unsuspend`);
     return unwrapItem<User>(res);
+  },
+
+  /** GET /admin/users/:id/activity */
+  getActivity: async (
+    id: string,
+    params?: { type?: string; limit?: number; page?: number },
+  ): Promise<{ items: any[]; total: number }> => {
+    const res = await apiClient.get(API_ENDPOINTS.USERS.ACTIVITY(id), { params });
+    const payload = res?.data ?? res;
+    // backend may return { data: { items, total } } or { items, total } directly
+    const inner = payload?.data ?? payload;
+    const items = inner?.items ?? inner?.data ?? (Array.isArray(inner) ? inner : []);
+    const total = inner?.total ?? items.length;
+    return { items, total };
   },
 };
