@@ -7,9 +7,6 @@ import {
   Terminal,
   Users,
   BarChart3,
-  Unlock,
-  Crown,
-  Gem,
   Target,
   Clock,
   BookOpen,
@@ -24,46 +21,63 @@ import type { LabListItem } from '@/core/types';
 
 // ── Color maps by difficulty ──────────────────────────────────────────────
 const DIFF_BG: Record<string, string> = {
-  BEGINNER:     'from-emerald-950 to-emerald-900 border-emerald-800/50',
+  BEGINNER: 'from-emerald-950 to-emerald-900 border-emerald-800/50',
   INTERMEDIATE: 'from-blue-950    to-blue-900    border-blue-800/50',
-  ADVANCED:     'from-violet-950  to-violet-900  border-violet-800/50',
-  EXPERT:       'from-rose-950    to-rose-900    border-rose-800/50',
+  ADVANCED: 'from-violet-950  to-violet-900  border-violet-800/50',
+  EXPERT: 'from-rose-950    to-rose-900    border-rose-800/50',
 };
 const DIFF_TEXT: Record<string, string> = {
-  BEGINNER:     'text-emerald-400',
+  BEGINNER: 'text-emerald-400',
   INTERMEDIATE: 'text-blue-400',
-  ADVANCED:     'text-violet-400',
-  EXPERT:       'text-rose-400',
+  ADVANCED: 'text-violet-400',
+  EXPERT: 'text-rose-400',
 };
 const DIFF_RING: Record<string, string> = {
-  BEGINNER:     'hover:ring-emerald-500/30',
+  BEGINNER: 'hover:ring-emerald-500/30',
   INTERMEDIATE: 'hover:ring-blue-500/30',
-  ADVANCED:     'hover:ring-violet-500/30',
-  EXPERT:       'hover:ring-rose-500/30',
+  ADVANCED: 'hover:ring-violet-500/30',
+  EXPERT: 'hover:ring-rose-500/30',
 };
 const DIFF_BADGE: Record<string, string> = {
-  BEGINNER:     'border-emerald-500/40 text-emerald-400 bg-emerald-500/10',
+  BEGINNER: 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10',
   INTERMEDIATE: 'border-blue-500/40    text-blue-400    bg-blue-500/10',
-  ADVANCED:     'border-violet-500/40  text-violet-400  bg-violet-500/10',
-  EXPERT:       'border-rose-500/40    text-rose-400    bg-rose-500/10',
+  ADVANCED: 'border-violet-500/40  text-violet-400  bg-violet-500/10',
+  EXPERT: 'border-rose-500/40    text-rose-400    bg-rose-500/10',
 };
 const EXEC_ICON: Record<string, React.ElementType> = {
   BROWSER: BookOpen,
-  DOCKER:  Terminal,
-  VM:      Terminal,
+  DOCKER: Terminal,
+  VM: Terminal,
 };
 
-function LabThumbnail({ lab, className }: { lab: LabListItem; className?: string }) {
+function LabThumbnail({
+  lab,
+  className,
+}: {
+  lab: LabListItem;
+  className?: string;
+}) {
   const img = (lab as any).thumbnail ?? (lab as any).image;
   const diff = lab.difficulty ?? 'INTERMEDIATE';
   if (img) {
-    return <img src={img} alt={lab.title} loading='lazy' className={cn('w-full h-full object-cover', className)} />;
+    return (
+      <img
+        src={img}
+        alt={lab.title}
+        loading='lazy'
+        className={cn('w-full h-full object-cover', className)}
+      />
+    );
   }
   return (
-    <div className={cn('w-full h-full flex items-center justify-center bg-gradient-to-br border',
-      DIFF_BG[diff] ?? 'from-zinc-900 to-zinc-800 border-zinc-700',
-    )}>
-      <FlaskConical className={cn('h-10 w-10', DIFF_TEXT[diff] ?? 'text-zinc-400')} />
+    <div
+      className={cn(
+        'w-full h-full flex items-center justify-center bg-gradient-to-br border',
+        DIFF_BG[diff] ?? 'from-zinc-900 to-zinc-800 border-zinc-700',
+      )}>
+      <FlaskConical
+        className={cn('h-10 w-10', DIFF_TEXT[diff] ?? 'text-zinc-400')}
+      />
     </div>
   );
 }
@@ -95,23 +109,32 @@ export function LabAdminCard({ lab, index = 0 }: Props) {
         'transition-all duration-300 ring-1 ring-transparent',
         DIFF_RING[diff],
         'hover:shadow-xl hover:-translate-y-0.5',
-      )}
-    >
+      )}>
       {/* Admin Overlay */}
       <LabAdminOverlayControls lab={lab} />
 
       {/* Thumbnail */}
       <div className='relative aspect-video overflow-hidden bg-muted'>
-        <LabThumbnail lab={lab} className='transition-transform duration-500 group-hover:scale-105' />
+        <LabThumbnail
+          lab={lab}
+          className='transition-transform duration-500 group-hover:scale-105'
+        />
 
         {/* Status badge */}
         <div className='absolute top-2 start-2 z-20 pointer-events-none'>
-          <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold border',
-            lab.isPublished
-              ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
-              : 'bg-zinc-500/20 border-zinc-500/40 text-zinc-300',
-          )}>
-            <span className={cn('h-1.5 w-1.5 rounded-full', lab.isPublished ? 'bg-emerald-400' : 'bg-zinc-400')} />
+          <span
+            className={cn(
+              'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold border',
+              lab.isPublished
+                ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
+                : 'bg-zinc-500/20 border-zinc-500/40 text-zinc-300',
+            )}>
+            <span
+              className={cn(
+                'h-1.5 w-1.5 rounded-full',
+                lab.isPublished ? 'bg-emerald-400' : 'bg-zinc-400',
+              )}
+            />
             {lab.isPublished ? 'Published' : 'Draft'}
           </span>
         </div>
@@ -140,7 +163,9 @@ export function LabAdminCard({ lab, index = 0 }: Props) {
             <div className='mt-0.5' dir='rtl'>
               <InlineEditable
                 value={(lab as any).ar_title}
-                onSave={(val) => updateMutation.mutateAsync({ ar_title: val } as any)}
+                onSave={(val) =>
+                  updateMutation.mutateAsync({ ar_title: val } as any)
+                }
                 className='text-xs text-muted-foreground/70'
               />
             </div>
@@ -161,17 +186,27 @@ export function LabAdminCard({ lab, index = 0 }: Props) {
         {/* Badges */}
         <div className='flex flex-wrap items-center gap-1.5'>
           {lab.difficulty && (
-            <Badge variant='outline' className={cn('gap-1 text-[10px] font-semibold', DIFF_BADGE[lab.difficulty])}>
-              <BarChart3 className='h-3 w-3' /> {lab.difficulty.charAt(0) + lab.difficulty.slice(1).toLowerCase()}
+            <Badge
+              variant='outline'
+              className={cn(
+                'gap-1 text-[10px] font-semibold',
+                DIFF_BADGE[lab.difficulty],
+              )}>
+              <BarChart3 className='h-3 w-3' />{' '}
+              {lab.difficulty.charAt(0) + lab.difficulty.slice(1).toLowerCase()}
             </Badge>
           )}
           {lab.category && (
-            <Badge variant='outline' className='gap-1 text-[10px] text-muted-foreground border-border/40'>
+            <Badge
+              variant='outline'
+              className='gap-1 text-[10px] text-muted-foreground border-border/40'>
               <Target className='h-3 w-3' /> {lab.category.replace(/_/g, ' ')}
             </Badge>
           )}
           {(lab as any).estimatedTime && (
-            <Badge variant='outline' className='gap-1 text-[10px] text-primary border-primary/30 bg-primary/5'>
+            <Badge
+              variant='outline'
+              className='gap-1 text-[10px] text-primary border-primary/30 bg-primary/5'>
               <Clock className='h-3 w-3' /> {(lab as any).estimatedTime}m
             </Badge>
           )}
@@ -180,11 +215,13 @@ export function LabAdminCard({ lab, index = 0 }: Props) {
         {/* Stats row */}
         <div className='mt-auto flex items-center gap-3 text-xs text-muted-foreground pt-2 border-t border-border/30'>
           <span className='flex items-center gap-1'>
-            <Users className='h-3 w-3' />{lab._count?.submissions ?? 0} submissions
+            <Users className='h-3 w-3' />
+            {lab._count?.submissions ?? 0} submissions
           </span>
           {(lab._count?.usersProgress ?? 0) > 0 && (
             <span className='flex items-center gap-1 ml-auto'>
-              <FlaskConical className='h-3 w-3' />{lab._count.usersProgress} in progress
+              <FlaskConical className='h-3 w-3' />
+              {lab._count.usersProgress} in progress
             </span>
           )}
         </div>

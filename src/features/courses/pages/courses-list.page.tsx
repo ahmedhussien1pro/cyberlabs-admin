@@ -24,7 +24,6 @@ import {
   FileJson,
   Globe,
   EyeOff,
-  Star,
   Clock,
   AlertCircle,
   LayoutGrid,
@@ -70,13 +69,19 @@ const STAT_CARDS = [
 ];
 
 type StateFilter = CourseState | 'all';
-type DifficultyFilter = 'ALL' | 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT';
+type DifficultyFilter =
+  | 'ALL'
+  | 'BEGINNER'
+  | 'INTERMEDIATE'
+  | 'ADVANCED'
+  | 'EXPERT';
 
 export default function CoursesListPage() {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>('ALL');
+  const [difficultyFilter, setDifficultyFilter] =
+    useState<DifficultyFilter>('ALL');
   const [stateFilter, setStateFilter] = useState<StateFilter>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const limit = 20;
@@ -88,8 +93,21 @@ export default function CoursesListPage() {
   });
 
   // ✅ List عبر adminCoursesApi مع state filter صحيح
-  const { data: coursesData, isLoading, error, refetch } = useQuery({
-    queryKey: ['admin', 'courses', 'list', page, search, difficultyFilter, stateFilter],
+  const {
+    data: coursesData,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: [
+      'admin',
+      'courses',
+      'list',
+      page,
+      search,
+      difficultyFilter,
+      stateFilter,
+    ],
     queryFn: () =>
       adminCoursesApi.list({
         page,
@@ -100,16 +118,27 @@ export default function CoursesListPage() {
       }),
   });
 
-  const handleSearch = (val: string) => { setSearch(val); setPage(1); };
-  const handleDifficulty = (val: DifficultyFilter) => { setDifficultyFilter(val); setPage(1); };
-  const handleState = (val: StateFilter) => { setStateFilter(val); setPage(1); };
+  const handleSearch = (val: string) => {
+    setSearch(val);
+    setPage(1);
+  };
+  const handleDifficulty = (val: DifficultyFilter) => {
+    setDifficultyFilter(val);
+    setPage(1);
+  };
+  const handleState = (val: StateFilter) => {
+    setStateFilter(val);
+    setPage(1);
+  };
 
   if (error) {
     return (
       <div className='flex h-full items-center justify-center p-6'>
         <Alert variant='destructive' className='max-w-md'>
           <AlertCircle className='h-4 w-4' />
-          <AlertDescription>Failed to load courses. Please try again.</AlertDescription>
+          <AlertDescription>
+            Failed to load courses. Please try again.
+          </AlertDescription>
         </Alert>
       </div>
     );
@@ -130,13 +159,15 @@ export default function CoursesListPage() {
             variant='outline'
             size='sm'
             className='h-9 gap-2'
-            onClick={() => navigate(ROUTES.COURSE_IMPORT)}
-          >
+            onClick={() => navigate(ROUTES.COURSE_IMPORT)}>
             <FileJson className='h-4 w-4' />
             <span className='hidden sm:inline'>Import JSON</span>
             <span className='sm:hidden'>Import</span>
           </Button>
-          <Button size='sm' className='h-9 gap-2' onClick={() => navigate(ROUTES.COURSE_CREATE)}>
+          <Button
+            size='sm'
+            className='h-9 gap-2'
+            onClick={() => navigate(ROUTES.COURSE_CREATE)}>
             <Plus className='h-4 w-4' />
             New Course
           </Button>
@@ -146,15 +177,27 @@ export default function CoursesListPage() {
       {/* ── Stats ── */}
       <div className='grid grid-cols-2 gap-3 lg:grid-cols-4'>
         {statsLoading
-          ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className='h-24 rounded-xl' />)
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className='h-24 rounded-xl' />
+            ))
           : STAT_CARDS.map(({ key, label, icon: Icon, color, bg }) => (
-              <Card key={key} className='flex items-center gap-4 p-4 transition-colors hover:bg-muted/30'>
-                <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border', bg)}>
+              <Card
+                key={key}
+                className='flex items-center gap-4 p-4 transition-colors hover:bg-muted/30'>
+                <div
+                  className={cn(
+                    'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border',
+                    bg,
+                  )}>
                   <Icon className={cn('h-5 w-5', color)} />
                 </div>
                 <div className='min-w-0'>
-                  <p className='truncate text-xs text-muted-foreground'>{label}</p>
-                  <p className='mt-0.5 text-2xl font-bold leading-none'>{stats?.[key] ?? 0}</p>
+                  <p className='truncate text-xs text-muted-foreground'>
+                    {label}
+                  </p>
+                  <p className='mt-0.5 text-2xl font-bold leading-none'>
+                    {stats?.[key] ?? 0}
+                  </p>
                 </div>
               </Card>
             ))}
@@ -211,8 +254,7 @@ export default function CoursesListPage() {
             size='sm'
             className='h-8 w-8 p-0'
             onClick={() => setViewMode('grid')}
-            title='Grid view'
-          >
+            title='Grid view'>
             <LayoutGrid className='h-3.5 w-3.5' />
           </Button>
           <Button
@@ -220,8 +262,7 @@ export default function CoursesListPage() {
             size='sm'
             className='h-8 w-8 p-0'
             onClick={() => setViewMode('table')}
-            title='Table view'
-          >
+            title='Table view'>
             <List className='h-3.5 w-3.5' />
           </Button>
         </div>
@@ -231,12 +272,16 @@ export default function CoursesListPage() {
       {isLoading ? (
         viewMode === 'grid' ? (
           <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
-            {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className='h-72 rounded-xl' />)}
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} className='h-72 rounded-xl' />
+            ))}
           </div>
         ) : (
           <Card className='p-6'>
             <div className='space-y-3'>
-              {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className='h-14 rounded-lg' />)}
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} className='h-14 rounded-lg' />
+              ))}
             </div>
           </Card>
         )
@@ -248,7 +293,9 @@ export default function CoursesListPage() {
                 <BookOpen className='h-5 w-5 text-muted-foreground' />
               </div>
               <p className='font-medium'>No courses found</p>
-              <p className='text-sm text-muted-foreground'>Try adjusting your filters or create a new course.</p>
+              <p className='text-sm text-muted-foreground'>
+                Try adjusting your filters or create a new course.
+              </p>
             </Card>
           ) : (
             <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
@@ -264,21 +311,32 @@ export default function CoursesListPage() {
               <p className='text-xs text-muted-foreground'>
                 Showing{' '}
                 <span className='font-semibold text-foreground'>
-                  {(page - 1) * limit + 1}–{Math.min(page * limit, coursesData.meta.total)}
+                  {(page - 1) * limit + 1}–
+                  {Math.min(page * limit, coursesData.meta.total)}
                 </span>{' '}
                 of{' '}
-                <span className='font-semibold text-foreground'>{coursesData.meta.total}</span>
+                <span className='font-semibold text-foreground'>
+                  {coursesData.meta.total}
+                </span>
               </p>
               <div className='flex items-center gap-1'>
-                <Button variant='outline' size='sm' className='h-8 gap-1 px-3 text-xs'
-                  onClick={() => setPage((p) => p - 1)} disabled={page === 1}>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  className='h-8 gap-1 px-3 text-xs'
+                  onClick={() => setPage((p) => p - 1)}
+                  disabled={page === 1}>
                   <ChevronLeft className='h-3.5 w-3.5' /> Prev
                 </Button>
                 <div className='flex h-8 min-w-[2rem] items-center justify-center rounded-md border border-primary/30 bg-primary/10 px-2 text-xs font-semibold text-primary'>
                   {page}
                 </div>
-                <Button variant='outline' size='sm' className='h-8 gap-1 px-3 text-xs'
-                  onClick={() => setPage((p) => p + 1)} disabled={page === coursesData.meta.totalPages}>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  className='h-8 gap-1 px-3 text-xs'
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={page === coursesData.meta.totalPages}>
                   Next <ChevronRight className='h-3.5 w-3.5' />
                 </Button>
               </div>

@@ -27,20 +27,50 @@ import { cn } from '@/lib/utils';
 import type { Difficulty, Category, LabExecutionMode } from '@/core/types';
 
 const STAT_CARDS = [
-  { key: 'total'          as const, label: 'Total Labs',   icon: FlaskConical, color: 'text-primary',      bg: 'bg-primary/10 border-primary/20' },
-  { key: 'published'      as const, label: 'Published',    icon: Globe,        color: 'text-emerald-400',  bg: 'bg-emerald-500/10 border-emerald-500/20' },
-  { key: 'unpublished'    as const, label: 'Unpublished',  icon: EyeOff,       color: 'text-amber-400',    bg: 'bg-amber-500/10 border-amber-500/20' },
-  { key: 'totalCompletions' as const, label: 'Completions', icon: Trophy,      color: 'text-blue-400',     bg: 'bg-blue-500/10 border-blue-500/20' },
+  {
+    key: 'total' as const,
+    label: 'Total Labs',
+    icon: FlaskConical,
+    color: 'text-primary',
+    bg: 'bg-primary/10 border-primary/20',
+  },
+  {
+    key: 'published' as const,
+    label: 'Published',
+    icon: Globe,
+    color: 'text-emerald-400',
+    bg: 'bg-emerald-500/10 border-emerald-500/20',
+  },
+  {
+    key: 'unpublished' as const,
+    label: 'Unpublished',
+    icon: EyeOff,
+    color: 'text-amber-400',
+    bg: 'bg-amber-500/10 border-amber-500/20',
+  },
+  {
+    key: 'totalCompletions' as const,
+    label: 'Completions',
+    icon: Trophy,
+    color: 'text-blue-400',
+    bg: 'bg-blue-500/10 border-blue-500/20',
+  },
 ];
 
 export default function LabsListPage() {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [difficultyFilter, setDifficultyFilter] = useState<Difficulty | 'ALL'>('ALL');
+  const [difficultyFilter, setDifficultyFilter] = useState<Difficulty | 'ALL'>(
+    'ALL',
+  );
   const [categoryFilter, setCategoryFilter] = useState<Category | 'ALL'>('ALL');
-  const [executionModeFilter, setExecutionModeFilter] = useState<LabExecutionMode | 'ALL'>('ALL');
-  const [publishedFilter, setPublishedFilter] = useState<'all' | 'published' | 'unpublished'>('all');
+  const [executionModeFilter, setExecutionModeFilter] = useState<
+    LabExecutionMode | 'ALL'
+  >('ALL');
+  const [publishedFilter, setPublishedFilter] = useState<
+    'all' | 'published' | 'unpublished'
+  >('all');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const limit = 20;
 
@@ -49,8 +79,22 @@ export default function LabsListPage() {
     queryFn: labsService.getStats,
   });
 
-  const { data: labsData, isLoading, error, refetch } = useQuery({
-    queryKey: ['labs', 'list', page, search, difficultyFilter, categoryFilter, executionModeFilter, publishedFilter],
+  const {
+    data: labsData,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: [
+      'labs',
+      'list',
+      page,
+      search,
+      difficultyFilter,
+      categoryFilter,
+      executionModeFilter,
+      publishedFilter,
+    ],
     queryFn: () =>
       labsService.getAll({
         page,
@@ -58,8 +102,12 @@ export default function LabsListPage() {
         search: search || undefined,
         difficulty: difficultyFilter !== 'ALL' ? difficultyFilter : undefined,
         category: categoryFilter !== 'ALL' ? categoryFilter : undefined,
-        executionMode: executionModeFilter !== 'ALL' ? executionModeFilter : undefined,
-        isPublished: publishedFilter === 'all' ? undefined : publishedFilter === 'published',
+        executionMode:
+          executionModeFilter !== 'ALL' ? executionModeFilter : undefined,
+        isPublished:
+          publishedFilter === 'all'
+            ? undefined
+            : publishedFilter === 'published',
       }),
   });
 
@@ -68,7 +116,9 @@ export default function LabsListPage() {
       <div className='flex h-full items-center justify-center p-6'>
         <Alert variant='destructive' className='max-w-md'>
           <AlertCircle className='h-4 w-4' />
-          <AlertDescription>Failed to load labs. Please try again.</AlertDescription>
+          <AlertDescription>
+            Failed to load labs. Please try again.
+          </AlertDescription>
         </Alert>
       </div>
     );
@@ -80,9 +130,14 @@ export default function LabsListPage() {
       <div className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
         <div>
           <h1 className='text-2xl font-bold tracking-tight'>Labs</h1>
-          <p className='mt-1 text-sm text-muted-foreground'>Manage and publish platform labs</p>
+          <p className='mt-1 text-sm text-muted-foreground'>
+            Manage and publish platform labs
+          </p>
         </div>
-        <Button size='sm' className='h-9 gap-2 shrink-0' onClick={() => navigate(ROUTES.LAB_CREATE)}>
+        <Button
+          size='sm'
+          className='h-9 gap-2 shrink-0'
+          onClick={() => navigate(ROUTES.LAB_CREATE)}>
           <Plus className='h-4 w-4' /> New Lab
         </Button>
       </div>
@@ -90,18 +145,30 @@ export default function LabsListPage() {
       {/* Stats */}
       <div className='grid grid-cols-2 gap-3 lg:grid-cols-4'>
         {statsLoading
-          ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className='h-24 rounded-xl' />)
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className='h-24 rounded-xl' />
+            ))
           : STAT_CARDS.map(({ key, label, icon: Icon, color, bg }) => (
-              <Card key={key} className='flex items-center gap-4 p-4 transition-colors hover:bg-muted/30'>
-                <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border', bg)}>
+              <Card
+                key={key}
+                className='flex items-center gap-4 p-4 transition-colors hover:bg-muted/30'>
+                <div
+                  className={cn(
+                    'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border',
+                    bg,
+                  )}>
                   <Icon className={cn('h-5 w-5', color)} />
                 </div>
                 <div className='min-w-0'>
-                  <p className='truncate text-xs text-muted-foreground'>{label}</p>
+                  <p className='truncate text-xs text-muted-foreground'>
+                    {label}
+                  </p>
                   <p className='mt-0.5 text-2xl font-bold leading-none'>
                     {key === 'unpublished'
-                      ? (stats ? (stats.total - stats.published) : 0)
-                      : (stats as any)?.[key] ?? 0}
+                      ? stats
+                        ? stats.total - stats.published
+                        : 0
+                      : ((stats as any)?.[key] ?? 0)}
                   </p>
                 </div>
               </Card>
@@ -113,22 +180,45 @@ export default function LabsListPage() {
         <div className='flex-1'>
           <LabFilters
             search={search}
-            onSearchChange={(v) => { setSearch(v); setPage(1); }}
+            onSearchChange={(v) => {
+              setSearch(v);
+              setPage(1);
+            }}
             difficultyFilter={difficultyFilter}
-            onDifficultyFilterChange={(v) => { setDifficultyFilter(v); setPage(1); }}
+            onDifficultyFilterChange={(v) => {
+              setDifficultyFilter(v);
+              setPage(1);
+            }}
             categoryFilter={categoryFilter}
-            onCategoryFilterChange={(v) => { setCategoryFilter(v); setPage(1); }}
+            onCategoryFilterChange={(v) => {
+              setCategoryFilter(v);
+              setPage(1);
+            }}
             executionModeFilter={executionModeFilter}
-            onExecutionModeFilterChange={(v) => { setExecutionModeFilter(v); setPage(1); }}
+            onExecutionModeFilterChange={(v) => {
+              setExecutionModeFilter(v);
+              setPage(1);
+            }}
             publishedFilter={publishedFilter}
-            onPublishedFilterChange={(v) => { setPublishedFilter(v); setPage(1); }}
+            onPublishedFilterChange={(v) => {
+              setPublishedFilter(v);
+              setPage(1);
+            }}
           />
         </div>
         <div className='flex shrink-0 items-center gap-0.5 rounded-lg border border-border/50 bg-muted/30 p-0.5 self-start mt-0'>
-          <Button variant={viewMode === 'grid' ? 'default' : 'ghost'} size='sm' className='h-8 w-8 p-0' onClick={() => setViewMode('grid')}>
+          <Button
+            variant={viewMode === 'grid' ? 'default' : 'ghost'}
+            size='sm'
+            className='h-8 w-8 p-0'
+            onClick={() => setViewMode('grid')}>
             <LayoutGrid className='h-3.5 w-3.5' />
           </Button>
-          <Button variant={viewMode === 'table' ? 'default' : 'ghost'} size='sm' className='h-8 w-8 p-0' onClick={() => setViewMode('table')}>
+          <Button
+            variant={viewMode === 'table' ? 'default' : 'ghost'}
+            size='sm'
+            className='h-8 w-8 p-0'
+            onClick={() => setViewMode('table')}>
             <List className='h-3.5 w-3.5' />
           </Button>
         </div>
@@ -137,7 +227,9 @@ export default function LabsListPage() {
       {/* Content */}
       {isLoading ? (
         <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
-          {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className='h-72 rounded-xl' />)}
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className='h-72 rounded-xl' />
+          ))}
         </div>
       ) : viewMode === 'grid' ? (
         <>
@@ -147,7 +239,9 @@ export default function LabsListPage() {
                 <FlaskConical className='h-5 w-5 text-muted-foreground' />
               </div>
               <p className='font-medium'>No labs found</p>
-              <p className='text-sm text-muted-foreground'>Try adjusting your filters or create a new lab.</p>
+              <p className='text-sm text-muted-foreground'>
+                Try adjusting your filters or create a new lab.
+              </p>
             </Card>
           ) : (
             <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
@@ -160,14 +254,34 @@ export default function LabsListPage() {
           {labsData?.meta && labsData.meta.totalPages > 1 && (
             <div className='flex items-center justify-between border-t pt-4'>
               <p className='text-xs text-muted-foreground'>
-                Showing <span className='font-semibold text-foreground'>{(page - 1) * limit + 1}–{Math.min(page * limit, labsData.meta.total)}</span> of <span className='font-semibold text-foreground'>{labsData.meta.total}</span>
+                Showing{' '}
+                <span className='font-semibold text-foreground'>
+                  {(page - 1) * limit + 1}–
+                  {Math.min(page * limit, labsData.meta.total)}
+                </span>{' '}
+                of{' '}
+                <span className='font-semibold text-foreground'>
+                  {labsData.meta.total}
+                </span>
               </p>
               <div className='flex items-center gap-1'>
-                <Button variant='outline' size='sm' className='h-8 gap-1 px-3 text-xs' onClick={() => setPage((p) => p - 1)} disabled={page === 1}>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  className='h-8 gap-1 px-3 text-xs'
+                  onClick={() => setPage((p) => p - 1)}
+                  disabled={page === 1}>
                   <ChevronLeft className='h-3.5 w-3.5' /> Prev
                 </Button>
-                <div className='flex h-8 min-w-[2rem] items-center justify-center rounded-md border border-primary/30 bg-primary/10 px-2 text-xs font-semibold text-primary'>{page}</div>
-                <Button variant='outline' size='sm' className='h-8 gap-1 px-3 text-xs' onClick={() => setPage((p) => p + 1)} disabled={page === labsData.meta.totalPages}>
+                <div className='flex h-8 min-w-[2rem] items-center justify-center rounded-md border border-primary/30 bg-primary/10 px-2 text-xs font-semibold text-primary'>
+                  {page}
+                </div>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  className='h-8 gap-1 px-3 text-xs'
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={page === labsData.meta.totalPages}>
                   Next <ChevronRight className='h-3.5 w-3.5' />
                 </Button>
               </div>
@@ -177,7 +291,8 @@ export default function LabsListPage() {
       ) : (
         // Table view fallback — import LabsTable lazily when in table mode
         <div className='text-center py-8 text-muted-foreground text-sm'>
-          Switch to grid view to use CMS editing, or use the table view for bulk operations.
+          Switch to grid view to use CMS editing, or use the table view for bulk
+          operations.
           <div className='mt-4'>
             <Button variant='outline' onClick={() => setViewMode('table')}>
               <List className='h-4 w-4 mr-2' /> Load Table View
