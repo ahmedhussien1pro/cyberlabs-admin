@@ -16,7 +16,7 @@ export const UserDetailPage = lazy(
   () => import('@/features/users/pages/user-detail.page'),
 );
 
-// Courses — CMS نظيف (4 صفحات فقط)
+// Courses
 export const CoursesListPage = lazy(
   () => import('@/features/courses/pages/courses-list.page'),
 );
@@ -28,6 +28,9 @@ export const CourseEditPage = lazy(
 );
 export const CourseImportPage = lazy(
   () => import('@/features/courses/pages/course-import.page'),
+);
+export const CourseDetailPage = lazy(
+  () => import('@/features/courses/pages/course-detail.page'),
 );
 
 // Labs
