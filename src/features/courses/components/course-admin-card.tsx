@@ -27,32 +27,50 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import {
-  BookOpen, Clock, Users, MoreVertical,
-  Pencil, Trash2, Eye, ExternalLink,
-  FlaskConical, Globe, Lock, Zap,
+  BookOpen,
+  Clock,
+  Users,
+  MoreVertical,
+  Pencil,
+  Trash2,
+  Eye,
+  ExternalLink,
+  FlaskConical,
+  Globe,
+  Lock,
+  Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AdminCourse } from '../types/admin-course.types';
 
 const STATE_STYLES = {
-  PUBLISHED:    { label: 'Published',    class: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' },
-  DRAFT:        { label: 'Draft',        class: 'bg-zinc-500/15   text-zinc-400   border-zinc-500/30' },
-  COMING_SOON:  { label: 'Coming Soon',  class: 'bg-yellow-500/15  text-yellow-400  border-yellow-500/30' },
+  PUBLISHED: {
+    label: 'Published',
+    class: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+  },
+  DRAFT: {
+    label: 'Draft',
+    class: 'bg-zinc-500/15   text-zinc-400   border-zinc-500/30',
+  },
+  COMING_SOON: {
+    label: 'Coming Soon',
+    class: 'bg-yellow-500/15  text-yellow-400  border-yellow-500/30',
+  },
 } as const;
 
 const ACCESS_ICON = {
-  FREE:    <Globe    className='h-3 w-3' />,
-  PRO:     <Zap      className='h-3 w-3' />,
-  PREMIUM: <Lock     className='h-3 w-3' />,
+  FREE: <Globe className='h-3 w-3' />,
+  PRO: <Zap className='h-3 w-3' />,
+  PREMIUM: <Lock className='h-3 w-3' />,
 } as const;
 
 const COLOR_BAR: Record<string, string> = {
   emerald: 'bg-emerald-500',
-  blue:    'bg-blue-500',
-  violet:  'bg-violet-500',
-  orange:  'bg-orange-500',
-  rose:    'bg-rose-500',
-  cyan:    'bg-cyan-500',
+  blue: 'bg-blue-500',
+  violet: 'bg-violet-500',
+  orange: 'bg-orange-500',
+  rose: 'bg-rose-500',
+  cyan: 'bg-cyan-500',
 };
 
 interface Props {
@@ -61,12 +79,12 @@ interface Props {
 }
 
 export function CourseAdminCard({ course, view = 'grid' }: Props) {
-  const navigate    = useNavigate();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const stateStyle = STATE_STYLES[course.state] ?? STATE_STYLES.DRAFT;
-  const colorBar   = COLOR_BAR[course.color?.toLowerCase()] ?? 'bg-blue-500';
+  const colorBar = COLOR_BAR[course.color?.toLowerCase()] ?? 'bg-blue-500';
 
   const deleteMutation = useMutation({
     mutationFn: () => adminCoursesApi.delete(course.id),
@@ -75,7 +93,10 @@ export function CourseAdminCard({ course, view = 'grid' }: Props) {
       queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
     },
     onError: (err: any) => {
-      const msg = err?.response?.data?.message ?? err?.message ?? 'Failed to delete course';
+      const msg =
+        err?.response?.data?.message ??
+        err?.message ??
+        'Failed to delete course';
       toast.error(`Cannot delete: ${msg}`);
     },
   });
@@ -90,21 +111,26 @@ export function CourseAdminCard({ course, view = 'grid' }: Props) {
         <div className='min-w-0 flex-1'>
           <p className='truncate font-medium text-sm'>{course.title}</p>
           {course.ar_title && (
-            <p className='truncate text-xs text-muted-foreground' dir='rtl'>{course.ar_title}</p>
+            <p className='truncate text-xs text-muted-foreground' dir='rtl'>
+              {course.ar_title}
+            </p>
           )}
         </div>
 
         {/* Meta */}
         <div className='hidden sm:flex items-center gap-3 text-xs text-muted-foreground'>
           <span className='flex items-center gap-1'>
-            <Users className='h-3 w-3' />{course.enrollmentCount ?? 0}
+            <Users className='h-3 w-3' />
+            {course.enrollmentCount ?? 0}
           </span>
           <span className='flex items-center gap-1'>
-            <BookOpen className='h-3 w-3' />{course.totalTopics ?? 0}
+            <BookOpen className='h-3 w-3' />
+            {course.totalTopics ?? 0}
           </span>
           {(course.labSlugs?.length ?? 0) > 0 && (
             <span className='flex items-center gap-1'>
-              <FlaskConical className='h-3 w-3' />{course.labSlugs.length}
+              <FlaskConical className='h-3 w-3' />
+              {course.labSlugs.length}
             </span>
           )}
         </div>
@@ -112,22 +138,31 @@ export function CourseAdminCard({ course, view = 'grid' }: Props) {
         {/* Badges */}
         <div className='hidden md:flex items-center gap-2'>
           <Badge variant='outline' className='text-[10px] gap-1'>
-            {ACCESS_ICON[course.access as keyof typeof ACCESS_ICON]} {course.access}
+            {ACCESS_ICON[course.access as keyof typeof ACCESS_ICON]}{' '}
+            {course.access}
           </Badge>
-          <Badge variant='outline' className={cn('text-[10px]', stateStyle.class)}>
+          <Badge
+            variant='outline'
+            className={cn('text-[10px]', stateStyle.class)}>
             {stateStyle.label}
           </Badge>
         </div>
 
         {/* Actions */}
         <div className='flex items-center gap-1'>
-          <Button variant='ghost' size='icon' className='h-8 w-8'
+          <Button
+            variant='ghost'
+            size='icon'
+            className='h-8 w-8'
             onClick={() => navigate(ROUTES.COURSE_EDIT(course.slug))}>
             <Pencil className='h-3.5 w-3.5' />
           </Button>
           <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
             <AlertDialogTrigger asChild>
-              <Button variant='ghost' size='icon' className='h-8 w-8 text-destructive hover:text-destructive'>
+              <Button
+                variant='ghost'
+                size='icon'
+                className='h-8 w-8 text-destructive hover:text-destructive'>
                 <Trash2 className='h-3.5 w-3.5' />
               </Button>
             </AlertDialogTrigger>
@@ -135,7 +170,8 @@ export function CourseAdminCard({ course, view = 'grid' }: Props) {
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete "{course.title}"?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This action cannot be undone. The course and all its content will be permanently removed.
+                  This action cannot be undone. The course and all its content
+                  will be permanently removed.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -164,9 +200,13 @@ export function CourseAdminCard({ course, view = 'grid' }: Props) {
         {/* Header row */}
         <div className='flex items-start justify-between gap-2'>
           <div className='min-w-0 flex-1'>
-            <p className='font-semibold text-sm leading-snug line-clamp-2'>{course.title}</p>
+            <p className='font-semibold text-sm leading-snug line-clamp-2'>
+              {course.title}
+            </p>
             {course.ar_title && (
-              <p className='mt-0.5 text-xs text-muted-foreground/70 line-clamp-1' dir='rtl'>
+              <p
+                className='mt-0.5 text-xs text-muted-foreground/70 line-clamp-1'
+                dir='rtl'>
                 {course.ar_title}
               </p>
             )}
@@ -174,21 +214,29 @@ export function CourseAdminCard({ course, view = 'grid' }: Props) {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant='ghost' size='icon' className='h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity'>
+              <Button
+                variant='ghost'
+                size='icon'
+                className='h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity'>
                 <MoreVertical className='h-3.5 w-3.5' />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align='end'>
-              <DropdownMenuItem onClick={() => navigate(ROUTES.COURSE_EDIT(course.slug))}>
+              <DropdownMenuItem
+                onClick={() => navigate(ROUTES.COURSE_EDIT(course.slug))}>
                 <Pencil className='h-3.5 w-3.5 mr-2' /> Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate(`${ROUTES.COURSE_EDIT(course.slug)}?tab=preview`)}>
+              <DropdownMenuItem
+                onClick={() =>
+                  navigate(`${ROUTES.COURSE_EDIT(course.slug)}?tab=preview`)
+                }>
                 <Eye className='h-3.5 w-3.5 mr-2' /> Preview
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <a
-                  href={`${import.meta.env.VITE_PLATFORM_URL ?? 'https://cyber-labs.tech'}/courses/${course.slug}`}
-                  target='_blank' rel='noopener noreferrer'>
+                  href={`${import.meta.env.VITE_PLATFORM_URL ?? 'https://test.cyber-labs.tech'}/courses/${course.slug}`}
+                  target='_blank'
+                  rel='noopener noreferrer'>
                   <ExternalLink className='h-3.5 w-3.5 mr-2' /> View on Platform
                 </a>
               </DropdownMenuItem>
@@ -212,10 +260,15 @@ export function CourseAdminCard({ course, view = 'grid' }: Props) {
         {/* Badges */}
         <div className='flex flex-wrap gap-1.5'>
           <Badge variant='outline' className='text-[10px] gap-1'>
-            {ACCESS_ICON[course.access as keyof typeof ACCESS_ICON]} {course.access}
+            {ACCESS_ICON[course.access as keyof typeof ACCESS_ICON]}{' '}
+            {course.access}
           </Badge>
-          <Badge variant='outline' className='text-[10px]'>{course.difficulty}</Badge>
-          <Badge variant='outline' className={cn('text-[10px]', stateStyle.class)}>
+          <Badge variant='outline' className='text-[10px]'>
+            {course.difficulty}
+          </Badge>
+          <Badge
+            variant='outline'
+            className={cn('text-[10px]', stateStyle.class)}>
             {stateStyle.label}
           </Badge>
         </div>
@@ -223,14 +276,17 @@ export function CourseAdminCard({ course, view = 'grid' }: Props) {
         {/* Stats */}
         <div className='mt-auto flex items-center gap-3 text-xs text-muted-foreground pt-2 border-t border-border/30'>
           <span className='flex items-center gap-1'>
-            <Users className='h-3 w-3' />{course.enrollmentCount ?? 0}
+            <Users className='h-3 w-3' />
+            {course.enrollmentCount ?? 0}
           </span>
           <span className='flex items-center gap-1'>
-            <BookOpen className='h-3 w-3' />{course.totalTopics ?? 0} topics
+            <BookOpen className='h-3 w-3' />
+            {course.totalTopics ?? 0} topics
           </span>
           {course.estimatedHours != null && (
             <span className='flex items-center gap-1 ml-auto'>
-              <Clock className='h-3 w-3' />{course.estimatedHours}h
+              <Clock className='h-3 w-3' />
+              {course.estimatedHours}h
             </span>
           )}
         </div>
@@ -257,7 +313,8 @@ export function CourseAdminCard({ course, view = 'grid' }: Props) {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete "{course.title}"?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will permanently delete the course and all its curriculum data. This action cannot be undone.
+                This will permanently delete the course and all its curriculum
+                data. This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
