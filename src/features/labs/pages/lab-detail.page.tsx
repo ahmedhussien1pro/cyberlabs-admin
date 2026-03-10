@@ -20,6 +20,58 @@ import {
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
+/** Safely render solution which may be a string or a structured object */
+function SolutionCard({ solution, t }: { solution: unknown; t: (k: string) => string }) {
+  if (!solution) return null;
+
+  // Plain string
+  if (typeof solution === 'string') {
+    return (
+      <Card>
+        <CardHeader><CardTitle>{t('solutionLabel')}</CardTitle></CardHeader>
+        <CardContent>
+          <pre className="whitespace-pre-wrap text-sm leading-relaxed font-mono bg-muted/30 p-4 rounded-lg">{solution}</pre>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Structured object: { fix, steps, context, exploitation, vulnerableCode, ... }
+  if (typeof solution === 'object') {
+    const obj = solution as Record<string, unknown>;
+    const sections = Object.entries(obj).filter(([, v]) => v !== null && v !== undefined && v !== '');
+    if (sections.length === 0) return null;
+
+    return (
+      <Card>
+        <CardHeader><CardTitle>{t('solutionLabel')}</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          {sections.map(([key, value]) => (
+            <div key={key}>
+              <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
+                {key.replace(/([A-Z])/g, ' $1').trim()}
+              </div>
+              {Array.isArray(value) ? (
+                <ol className="list-decimal list-inside space-y-1">
+                  {(value as unknown[]).map((item, i) => (
+                    <li key={i} className="text-sm">{String(item)}</li>
+                  ))}
+                </ol>
+              ) : (
+                <pre className="whitespace-pre-wrap text-sm leading-relaxed font-mono bg-muted/30 p-3 rounded-lg">
+                  {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
+                </pre>
+              )}
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return null;
+}
+
 export default function LabDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -246,14 +298,7 @@ export default function LabDetailPage() {
 
       {lab.flagAnswer && <FlagAnswerField flagAnswer={lab.flagAnswer} />}
 
-      {lab.solution && (
-        <Card>
-          <CardHeader><CardTitle>{t('solutionLabel')}</CardTitle></CardHeader>
-          <CardContent>
-            <pre className="whitespace-pre-wrap text-sm leading-relaxed font-mono bg-muted/30 p-4 rounded-lg">{lab.solution}</pre>
-          </CardContent>
-        </Card>
-      )}
+      <SolutionCard solution={(lab as any).solution} t={t} />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
