@@ -29,7 +29,7 @@ apiClient.interceptors.request.use(
 // ── Response interceptor — unwrap data + handle 401 ─────────────────────────
 apiClient.interceptors.response.use(
   // ✅ return response.data so callers receive the payload directly
-  (response) => response.data,
+  (response) => response,
 
   (error: AxiosError) => {
     if (error.response?.status === 401) {
