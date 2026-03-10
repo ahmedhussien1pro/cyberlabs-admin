@@ -1,10 +1,12 @@
 // src/features/courses/components/course-admin-card.tsx
-import { Link, useNavigate } from 'react-router-dom';
+// ✅ Fixed: improved delete error handling with backend message display
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
 import { adminCoursesApi } from '../services/admin-courses.api';
-import { Button } from '@/components/ui/button';
+import { ROUTES } from '@/shared/constants';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,232 +19,258 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import {
-  BookOpen,
-  Pencil,
-  Trash2,
-  Users,
-  Crown,
-  Unlock,
-  Star,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { toast } from 'sonner';
+import {
+  BookOpen, Clock, Users, MoreVertical,
+  Pencil, Trash2, Eye, ExternalLink,
+  FlaskConical, Globe, Lock, Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { ROUTES } from '@/shared/constants';
-import { CourseStateControl } from './course-state-control';
 import type { AdminCourse } from '../types/admin-course.types';
 
-interface CourseAdminCardProps {
+const STATE_STYLES = {
+  PUBLISHED:    { label: 'Published',    class: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' },
+  DRAFT:        { label: 'Draft',        class: 'bg-zinc-500/15   text-zinc-400   border-zinc-500/30' },
+  COMING_SOON:  { label: 'Coming Soon',  class: 'bg-yellow-500/15  text-yellow-400  border-yellow-500/30' },
+} as const;
+
+const ACCESS_ICON = {
+  FREE:    <Globe    className='h-3 w-3' />,
+  PRO:     <Zap      className='h-3 w-3' />,
+  PREMIUM: <Lock     className='h-3 w-3' />,
+} as const;
+
+const COLOR_BAR: Record<string, string> = {
+  emerald: 'bg-emerald-500',
+  blue:    'bg-blue-500',
+  violet:  'bg-violet-500',
+  orange:  'bg-orange-500',
+  rose:    'bg-rose-500',
+  cyan:    'bg-cyan-500',
+};
+
+interface Props {
   course: AdminCourse;
+  view?: 'grid' | 'list';
 }
 
-const COLOR_MAP: Record<string, { gradient: string; border: string; icon: string }> = {
-  emerald: {
-    gradient: 'from-emerald-500/25 via-emerald-900/30 to-emerald-950/60',
-    border: 'border-emerald-500/25',
-    icon: 'text-emerald-400',
-  },
-  blue: {
-    gradient: 'from-blue-500/25 via-blue-900/30 to-blue-950/60',
-    border: 'border-blue-500/25',
-    icon: 'text-blue-400',
-  },
-  violet: {
-    gradient: 'from-violet-500/25 via-violet-900/30 to-violet-950/60',
-    border: 'border-violet-500/25',
-    icon: 'text-violet-400',
-  },
-  orange: {
-    gradient: 'from-orange-500/25 via-orange-900/30 to-orange-950/60',
-    border: 'border-orange-500/25',
-    icon: 'text-orange-400',
-  },
-  rose: {
-    gradient: 'from-rose-500/25 via-rose-900/30 to-rose-950/60',
-    border: 'border-rose-500/25',
-    icon: 'text-rose-400',
-  },
-  cyan: {
-    gradient: 'from-cyan-500/25 via-cyan-900/30 to-cyan-950/60',
-    border: 'border-cyan-500/25',
-    icon: 'text-cyan-400',
-  },
-};
-
-const DIFFICULTY_COLOR: Record<string, string> = {
-  BEGINNER: 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10',
-  INTERMEDIATE: 'border-amber-500/40 text-amber-400 bg-amber-500/10',
-  ADVANCED: 'border-orange-500/40 text-orange-400 bg-orange-500/10',
-  EXPERT: 'border-rose-500/40 text-rose-400 bg-rose-500/10',
-};
-
-export function CourseAdminCard({ course }: CourseAdminCardProps) {
-  const navigate = useNavigate();
+export function CourseAdminCard({ course, view = 'grid' }: Props) {
+  const navigate    = useNavigate();
   const queryClient = useQueryClient();
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
-  const colorKey = (course.color ?? 'blue').toLowerCase();
-  const colors = COLOR_MAP[colorKey] ?? COLOR_MAP['blue'];
+  const stateStyle = STATE_STYLES[course.state] ?? STATE_STYLES.DRAFT;
+  const colorBar   = COLOR_BAR[course.color?.toLowerCase()] ?? 'bg-blue-500';
 
   const deleteMutation = useMutation({
     mutationFn: () => adminCoursesApi.delete(course.id),
     onSuccess: () => {
-      toast.success('Course deleted');
+      toast.success(`"${course.title}" deleted successfully`);
       queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
     },
-    onError: () =>
-      toast.error('Cannot delete — course may have active enrollments'),
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message ?? err?.message ?? 'Failed to delete course';
+      toast.error(`Cannot delete: ${msg}`);
+    },
   });
 
-  return (
-    <div
-      className={cn(
-        'group relative flex flex-col overflow-hidden rounded-xl border transition-all duration-200',
-        'hover:shadow-lg hover:shadow-black/20 hover:-translate-y-0.5',
-        `bg-gradient-to-br ${colors.gradient}`,
-        colors.border,
-      )}
-    >
-      {/* ── Thumbnail ── */}
-      <div className='relative h-36 overflow-hidden bg-black/20'>
-        {course.thumbnail ? (
-          <img
-            src={course.thumbnail}
-            alt={course.title}
-            loading='lazy'
-            className='h-full w-full object-cover opacity-75 transition-transform duration-300 group-hover:scale-105'
-          />
-        ) : (
-          <div className='flex h-full w-full items-center justify-center'>
-            <BookOpen className={cn('h-10 w-10 opacity-20', colors.icon)} />
-          </div>
-        )}
+  if (view === 'list') {
+    return (
+      <div className='flex items-center gap-4 rounded-lg border border-border/50 bg-card px-4 py-3 hover:border-border transition-colors'>
+        {/* Color dot */}
+        <div className={cn('h-2 w-2 shrink-0 rounded-full', colorBar)} />
 
-        {/* Top-left badges */}
-        <div className='absolute left-2 top-2 flex flex-wrap gap-1'>
-          {course.isNew && (
-            <span className='rounded-full bg-yellow-500/90 px-2 py-0.5 text-[10px] font-bold text-black'>
-              NEW
-            </span>
-          )}
-          {course.isFeatured && (
-            <span className='flex items-center gap-0.5 rounded-full bg-purple-500/90 px-2 py-0.5 text-[10px] font-bold text-white'>
-              <Star className='h-2.5 w-2.5' /> Featured
-            </span>
-          )}
-        </div>
-
-        {/* Access badge — top-right */}
-        {course.access && (
-          <div className='absolute right-2 top-2'>
-            <Badge
-              variant='outline'
-              className={cn(
-                'h-5 gap-1 border px-1.5 text-[10px] font-bold',
-                course.access === 'FREE'
-                  ? 'border-emerald-500/50 bg-emerald-950/80 text-emerald-300'
-                  : 'border-violet-500/50 bg-violet-950/80 text-violet-300',
-              )}
-            >
-              {course.access === 'FREE' ? (
-                <Unlock className='h-2.5 w-2.5' />
-              ) : (
-                <Crown className='h-2.5 w-2.5' />
-              )}
-              {course.access}
-            </Badge>
-          </div>
-        )}
-
-        {/* Difficulty — bottom-left */}
-        {course.difficulty && (
-          <div className='absolute bottom-2 left-2'>
-            <Badge
-              variant='outline'
-              className={cn(
-                'h-4 px-1.5 text-[9px] font-semibold',
-                DIFFICULTY_COLOR[course.difficulty] ?? 'border-border/60',
-              )}
-            >
-              {course.difficulty.charAt(0) +
-                course.difficulty.slice(1).toLowerCase()}
-            </Badge>
-          </div>
-        )}
-      </div>
-
-      {/* ── Body ── */}
-      <div className='flex flex-1 flex-col gap-3 p-3'>
         {/* Title */}
-        <div className='min-w-0'>
-          <h3 className='truncate text-sm font-bold leading-snug'>
-            {course.title}
-          </h3>
-          <p className='mt-0.5 truncate font-mono text-[10px] text-muted-foreground'>
-            {course.slug}
-          </p>
+        <div className='min-w-0 flex-1'>
+          <p className='truncate font-medium text-sm'>{course.title}</p>
+          {course.ar_title && (
+            <p className='truncate text-xs text-muted-foreground' dir='rtl'>{course.ar_title}</p>
+          )}
         </div>
 
-        {/* Stats */}
-        <div className='flex items-center gap-3 text-[11px] text-muted-foreground'>
+        {/* Meta */}
+        <div className='hidden sm:flex items-center gap-3 text-xs text-muted-foreground'>
           <span className='flex items-center gap-1'>
-            <Users className='h-3 w-3' />
-            {course.enrollmentCount ?? 0} enrolled
+            <Users className='h-3 w-3' />{course.enrollmentCount ?? 0}
           </span>
-          <span className='text-muted-foreground/50'>·</span>
-          <span>{course.totalTopics ?? 0} topics</span>
+          <span className='flex items-center gap-1'>
+            <BookOpen className='h-3 w-3' />{course.totalTopics ?? 0}
+          </span>
+          {(course.labSlugs?.length ?? 0) > 0 && (
+            <span className='flex items-center gap-1'>
+              <FlaskConical className='h-3 w-3' />{course.labSlugs.length}
+            </span>
+          )}
         </div>
 
-        {/* ✅ State Control — 3 حالات صحيحة (compact badge) */}
-        <CourseStateControl
-          courseId={course.id}
-          currentState={course.state}
-          compact
-        />
+        {/* Badges */}
+        <div className='hidden md:flex items-center gap-2'>
+          <Badge variant='outline' className='text-[10px] gap-1'>
+            {ACCESS_ICON[course.access as keyof typeof ACCESS_ICON]} {course.access}
+          </Badge>
+          <Badge variant='outline' className={cn('text-[10px]', stateStyle.class)}>
+            {stateStyle.label}
+          </Badge>
+        </div>
 
-        {/* Action buttons */}
-        <div className='mt-auto grid grid-cols-2 gap-1.5 border-t border-border/30 pt-3'>
-          <Link to={ROUTES.COURSE_EDIT(course.slug)} className='w-full'>
-            <Button
-              variant='outline'
-              size='sm'
-              className='h-8 w-full gap-1.5 text-xs'
-            >
-              <Pencil className='h-3 w-3' />
-              Edit
-            </Button>
-          </Link>
-
-          <AlertDialog>
+        {/* Actions */}
+        <div className='flex items-center gap-1'>
+          <Button variant='ghost' size='icon' className='h-8 w-8'
+            onClick={() => navigate(ROUTES.COURSE_EDIT(course.slug))}>
+            <Pencil className='h-3.5 w-3.5' />
+          </Button>
+          <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
             <AlertDialogTrigger asChild>
-              <Button
-                variant='outline'
-                size='sm'
-                className='h-8 w-full gap-1.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30'
-                disabled={deleteMutation.isPending}
-              >
-                <Trash2 className='h-3 w-3' />
-                Delete
+              <Button variant='ghost' size='icon' className='h-8 w-8 text-destructive hover:text-destructive'>
+                <Trash2 className='h-3.5 w-3.5' />
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Delete Course</AlertDialogTitle>
+                <AlertDialogTitle>Delete "{course.title}"?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete{' '}
-                  <strong>{course.title}</strong>? This cannot be undone.
+                  This action cannot be undone. The course and all its content will be permanently removed.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={() => deleteMutation.mutate()}
-                  disabled={deleteMutation.isPending}
-                  className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
-                >
+                  className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
                   Delete
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
         </div>
+      </div>
+    );
+  }
+
+  // ── Grid view ──
+  return (
+    <div className='group relative flex flex-col overflow-hidden rounded-xl border border-border/50 bg-card transition-all duration-200 hover:border-border hover:shadow-md'>
+      {/* Color bar */}
+      <div className={cn('h-1 w-full shrink-0', colorBar)} />
+
+      {/* Body */}
+      <div className='flex flex-1 flex-col gap-3 p-4'>
+        {/* Header row */}
+        <div className='flex items-start justify-between gap-2'>
+          <div className='min-w-0 flex-1'>
+            <p className='font-semibold text-sm leading-snug line-clamp-2'>{course.title}</p>
+            {course.ar_title && (
+              <p className='mt-0.5 text-xs text-muted-foreground/70 line-clamp-1' dir='rtl'>
+                {course.ar_title}
+              </p>
+            )}
+          </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant='ghost' size='icon' className='h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity'>
+                <MoreVertical className='h-3.5 w-3.5' />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end'>
+              <DropdownMenuItem onClick={() => navigate(ROUTES.COURSE_EDIT(course.slug))}>
+                <Pencil className='h-3.5 w-3.5 mr-2' /> Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate(`${ROUTES.COURSE_EDIT(course.slug)}?tab=preview`)}>
+                <Eye className='h-3.5 w-3.5 mr-2' /> Preview
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a
+                  href={`${import.meta.env.VITE_PLATFORM_URL ?? 'https://cyber-labs.tech'}/courses/${course.slug}`}
+                  target='_blank' rel='noopener noreferrer'>
+                  <ExternalLink className='h-3.5 w-3.5 mr-2' /> View on Platform
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className='text-destructive focus:text-destructive'
+                onClick={() => setDeleteOpen(true)}>
+                <Trash2 className='h-3.5 w-3.5 mr-2' /> Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Description */}
+        {course.description && (
+          <p className='text-xs text-muted-foreground line-clamp-2 leading-relaxed'>
+            {course.description}
+          </p>
+        )}
+
+        {/* Badges */}
+        <div className='flex flex-wrap gap-1.5'>
+          <Badge variant='outline' className='text-[10px] gap-1'>
+            {ACCESS_ICON[course.access as keyof typeof ACCESS_ICON]} {course.access}
+          </Badge>
+          <Badge variant='outline' className='text-[10px]'>{course.difficulty}</Badge>
+          <Badge variant='outline' className={cn('text-[10px]', stateStyle.class)}>
+            {stateStyle.label}
+          </Badge>
+        </div>
+
+        {/* Stats */}
+        <div className='mt-auto flex items-center gap-3 text-xs text-muted-foreground pt-2 border-t border-border/30'>
+          <span className='flex items-center gap-1'>
+            <Users className='h-3 w-3' />{course.enrollmentCount ?? 0}
+          </span>
+          <span className='flex items-center gap-1'>
+            <BookOpen className='h-3 w-3' />{course.totalTopics ?? 0} topics
+          </span>
+          {course.estimatedHours != null && (
+            <span className='flex items-center gap-1 ml-auto'>
+              <Clock className='h-3 w-3' />{course.estimatedHours}h
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Footer actions */}
+      <div className='flex border-t border-border/30'>
+        <Button
+          variant='ghost'
+          className='flex-1 h-9 rounded-none rounded-bl-xl text-xs gap-1.5'
+          onClick={() => navigate(ROUTES.COURSE_EDIT(course.slug))}>
+          <Pencil className='h-3.5 w-3.5' /> Edit
+        </Button>
+        <div className='w-px bg-border/30' />
+        <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant='ghost'
+              className='flex-1 h-9 rounded-none rounded-br-xl text-xs gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10'>
+              <Trash2 className='h-3.5 w-3.5' /> Delete
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete "{course.title}"?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete the course and all its curriculum data. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deleteMutation.mutate()}
+                disabled={deleteMutation.isPending}
+                className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
+                {deleteMutation.isPending ? 'Deleting...' : 'Delete Course'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
