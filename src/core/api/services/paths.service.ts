@@ -76,6 +76,13 @@ export const pathsService = {
       .then(({ data }) => unwrap<LearningPath>(data));
   },
 
+  // ── NEW: Duplicate ───────────────────────────────────────────────────
+  duplicate(id: string): Promise<LearningPath> {
+    return apiClient
+      .post(`/admin/paths/${id}/duplicate`)
+      .then(({ data }) => unwrap<LearningPath>(data));
+  },
+
   delete(id: string): Promise<void> {
     return apiClient
       .delete(ENDPOINTS.PATHS.DELETE(id))

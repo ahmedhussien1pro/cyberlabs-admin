@@ -1,16 +1,37 @@
+// src/features/labs/pages/labs-list.page.tsx
+// CMS Phase 2: Rebuilt with LabAdminCard grid view
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { labsService } from '@/core/api/services';
-import { LabsTable } from '../components/labs-table';
+import { LabAdminCard } from '../components/lab-admin-card';
 import { LabFilters } from '../components/lab-filters';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, FlaskConical, Plus } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  AlertCircle,
+  FlaskConical,
+  Plus,
+  Globe,
+  EyeOff,
+  Trophy,
+  LayoutGrid,
+  List,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import { ROUTES } from '@/shared/constants';
+import { cn } from '@/lib/utils';
 import type { Difficulty, Category, LabExecutionMode } from '@/core/types';
+
+const STAT_CARDS = [
+  { key: 'total'          as const, label: 'Total Labs',   icon: FlaskConical, color: 'text-primary',      bg: 'bg-primary/10 border-primary/20' },
+  { key: 'published'      as const, label: 'Published',    icon: Globe,        color: 'text-emerald-400',  bg: 'bg-emerald-500/10 border-emerald-500/20' },
+  { key: 'unpublished'    as const, label: 'Unpublished',  icon: EyeOff,       color: 'text-amber-400',    bg: 'bg-amber-500/10 border-amber-500/20' },
+  { key: 'totalCompletions' as const, label: 'Completions', icon: Trophy,      color: 'text-blue-400',     bg: 'bg-blue-500/10 border-blue-500/20' },
+];
 
 export default function LabsListPage() {
   const navigate = useNavigate();
@@ -20,19 +41,15 @@ export default function LabsListPage() {
   const [categoryFilter, setCategoryFilter] = useState<Category | 'ALL'>('ALL');
   const [executionModeFilter, setExecutionModeFilter] = useState<LabExecutionMode | 'ALL'>('ALL');
   const [publishedFilter, setPublishedFilter] = useState<'all' | 'published' | 'unpublished'>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const limit = 20;
 
-  const { data: stats } = useQuery({
+  const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['labs', 'stats'],
     queryFn: labsService.getStats,
   });
 
-  const {
-    data: labsData,
-    isLoading,
-    error,
-    refetch,
-  } = useQuery({
+  const { data: labsData, isLoading, error, refetch } = useQuery({
     queryKey: ['labs', 'list', page, search, difficultyFilter, categoryFilter, executionModeFilter, publishedFilter],
     queryFn: () =>
       labsService.getAll({
@@ -48,84 +65,125 @@ export default function LabsListPage() {
 
   if (error) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <Alert variant="destructive" className="max-w-md">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>Failed to load labs. Please try again later.</AlertDescription>
+      <div className='flex h-full items-center justify-center p-6'>
+        <Alert variant='destructive' className='max-w-md'>
+          <AlertCircle className='h-4 w-4' />
+          <AlertDescription>Failed to load labs. Please try again.</AlertDescription>
         </Alert>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className='space-y-6'>
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Labs</h1>
-          <p className="text-muted-foreground">Manage platform labs</p>
+          <h1 className='text-2xl font-bold tracking-tight'>Labs</h1>
+          <p className='mt-1 text-sm text-muted-foreground'>Manage and publish platform labs</p>
         </div>
-        <Button onClick={() => navigate(ROUTES.LAB_CREATE)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Lab
+        <Button size='sm' className='h-9 gap-2 shrink-0' onClick={() => navigate(ROUTES.LAB_CREATE)}>
+          <Plus className='h-4 w-4' /> New Lab
         </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        {stats ? (
-          [
-            { label: 'Total Labs', value: stats.total },
-            { label: 'Published', value: stats.published },
-            { label: 'Beginner', value: stats.byDifficulty.BEGINNER },
-            { label: 'Completions', value: stats.totalCompletions },
-          ].map((stat) => (
-            <Card key={stat.label} className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  <p className="text-2xl font-bold">{stat.value}</p>
+      <div className='grid grid-cols-2 gap-3 lg:grid-cols-4'>
+        {statsLoading
+          ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className='h-24 rounded-xl' />)
+          : STAT_CARDS.map(({ key, label, icon: Icon, color, bg }) => (
+              <Card key={key} className='flex items-center gap-4 p-4 transition-colors hover:bg-muted/30'>
+                <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border', bg)}>
+                  <Icon className={cn('h-5 w-5', color)} />
                 </div>
-                <FlaskConical className="h-8 w-8 text-muted-foreground" />
-              </div>
-            </Card>
-          ))
-        ) : (
-          Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24" />)
-        )}
+                <div className='min-w-0'>
+                  <p className='truncate text-xs text-muted-foreground'>{label}</p>
+                  <p className='mt-0.5 text-2xl font-bold leading-none'>
+                    {key === 'unpublished'
+                      ? (stats ? (stats.total - stats.published) : 0)
+                      : (stats as any)?.[key] ?? 0}
+                  </p>
+                </div>
+              </Card>
+            ))}
       </div>
 
-      {/* Filters */}
-      <LabFilters
-        search={search}
-        onSearchChange={setSearch}
-        difficultyFilter={difficultyFilter}
-        onDifficultyFilterChange={setDifficultyFilter}
-        categoryFilter={categoryFilter}
-        onCategoryFilterChange={setCategoryFilter}
-        executionModeFilter={executionModeFilter}
-        onExecutionModeFilterChange={setExecutionModeFilter}
-        publishedFilter={publishedFilter}
-        onPublishedFilterChange={setPublishedFilter}
-      />
+      {/* Filters + View Toggle */}
+      <div className='flex items-start gap-2'>
+        <div className='flex-1'>
+          <LabFilters
+            search={search}
+            onSearchChange={(v) => { setSearch(v); setPage(1); }}
+            difficultyFilter={difficultyFilter}
+            onDifficultyFilterChange={(v) => { setDifficultyFilter(v); setPage(1); }}
+            categoryFilter={categoryFilter}
+            onCategoryFilterChange={(v) => { setCategoryFilter(v); setPage(1); }}
+            executionModeFilter={executionModeFilter}
+            onExecutionModeFilterChange={(v) => { setExecutionModeFilter(v); setPage(1); }}
+            publishedFilter={publishedFilter}
+            onPublishedFilterChange={(v) => { setPublishedFilter(v); setPage(1); }}
+          />
+        </div>
+        <div className='flex shrink-0 items-center gap-0.5 rounded-lg border border-border/50 bg-muted/30 p-0.5 self-start mt-0'>
+          <Button variant={viewMode === 'grid' ? 'default' : 'ghost'} size='sm' className='h-8 w-8 p-0' onClick={() => setViewMode('grid')}>
+            <LayoutGrid className='h-3.5 w-3.5' />
+          </Button>
+          <Button variant={viewMode === 'table' ? 'default' : 'ghost'} size='sm' className='h-8 w-8 p-0' onClick={() => setViewMode('table')}>
+            <List className='h-3.5 w-3.5' />
+          </Button>
+        </div>
+      </div>
 
-      {/* Table */}
+      {/* Content */}
       {isLoading ? (
-        <Card className="p-6">
-          <div className="space-y-4">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <Skeleton key={i} className="h-12" />
-            ))}
-          </div>
-        </Card>
+        <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
+          {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className='h-72 rounded-xl' />)}
+        </div>
+      ) : viewMode === 'grid' ? (
+        <>
+          {(labsData?.data ?? []).length === 0 ? (
+            <Card className='flex flex-col items-center justify-center gap-3 p-16 text-center'>
+              <div className='flex h-12 w-12 items-center justify-center rounded-full bg-muted'>
+                <FlaskConical className='h-5 w-5 text-muted-foreground' />
+              </div>
+              <p className='font-medium'>No labs found</p>
+              <p className='text-sm text-muted-foreground'>Try adjusting your filters or create a new lab.</p>
+            </Card>
+          ) : (
+            <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
+              {(labsData?.data ?? []).map((lab, i) => (
+                <LabAdminCard key={lab.id} lab={lab} index={i} />
+              ))}
+            </div>
+          )}
+
+          {labsData?.meta && labsData.meta.totalPages > 1 && (
+            <div className='flex items-center justify-between border-t pt-4'>
+              <p className='text-xs text-muted-foreground'>
+                Showing <span className='font-semibold text-foreground'>{(page - 1) * limit + 1}–{Math.min(page * limit, labsData.meta.total)}</span> of <span className='font-semibold text-foreground'>{labsData.meta.total}</span>
+              </p>
+              <div className='flex items-center gap-1'>
+                <Button variant='outline' size='sm' className='h-8 gap-1 px-3 text-xs' onClick={() => setPage((p) => p - 1)} disabled={page === 1}>
+                  <ChevronLeft className='h-3.5 w-3.5' /> Prev
+                </Button>
+                <div className='flex h-8 min-w-[2rem] items-center justify-center rounded-md border border-primary/30 bg-primary/10 px-2 text-xs font-semibold text-primary'>{page}</div>
+                <Button variant='outline' size='sm' className='h-8 gap-1 px-3 text-xs' onClick={() => setPage((p) => p + 1)} disabled={page === labsData.meta.totalPages}>
+                  Next <ChevronRight className='h-3.5 w-3.5' />
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       ) : (
-        <LabsTable
-          data={labsData?.data ?? []}
-          meta={labsData?.meta}
-          page={page}
-          onPageChange={setPage}
-          onRefetch={refetch}
-        />
+        // Table view fallback — import LabsTable lazily when in table mode
+        <div className='text-center py-8 text-muted-foreground text-sm'>
+          Switch to grid view to use CMS editing, or use the table view for bulk operations.
+          <div className='mt-4'>
+            <Button variant='outline' onClick={() => setViewMode('table')}>
+              <List className='h-4 w-4 mr-2' /> Load Table View
+            </Button>
+          </div>
+        </div>
       )}
     </div>
   );

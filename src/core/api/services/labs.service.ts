@@ -67,6 +67,12 @@ export const labsService = {
     return unwrap(data);
   },
 
+  // ── NEW: Duplicate ───────────────────────────────────────────────────
+  duplicate: async (id: string): Promise<LabListItem> => {
+    const { data } = await apiClient.post(`/admin/labs/${id}/duplicate`);
+    return unwrap<LabListItem>(data);
+  },
+
   delete: async (id: string): Promise<{ success: boolean; message: string }> => {
     const { data } = await apiClient.delete(API_ENDPOINTS.ADMIN_LABS.DELETE(id));
     return unwrap(data);
