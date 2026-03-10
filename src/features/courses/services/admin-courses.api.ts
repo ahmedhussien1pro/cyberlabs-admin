@@ -18,12 +18,21 @@ export interface AdminCourseListParams {
   difficulty?: string;
 }
 
-function unwrap<T>(res: any): T {
-  const raw = (res?.status !== undefined && res?.data !== undefined)
-    ? res.data
-    : res;
-  if (raw?.course) return raw.course as T;
-  return (raw?.data ?? raw) as T;
+// Backend returns { data: T } for single items and { data: T[], meta: {...} } for lists.
+// adminApiClient is axios — res.data = backend payload.
+function unwrapItem<T>(res: any): T {
+  const payload = res?.data ?? res;
+  return (payload?.data ?? payload) as T;
+}
+
+function unwrapList<T>(res: any): T {
+  const payload = res?.data ?? res;
+  // payload should be { data: T[], meta: {...} }
+  if (payload?.data !== undefined && payload?.meta !== undefined) {
+    return payload as T;
+  }
+  const arr = Array.isArray(payload?.data) ? payload.data : Array.isArray(payload) ? payload : [];
+  return { data: arr, meta: { total: arr.length, page: 1, limit: 20, totalPages: 1 } } as T;
 }
 
 function normalizeArrays(course: AdminCourse): AdminCourse {
@@ -40,33 +49,45 @@ function normalizeArrays(course: AdminCourse): AdminCourse {
   };
 }
 
+// Map frontend CourseState ('PUBLISHED' | 'DRAFT' | 'COMING_SOON') to backend isPublished boolean
+function stateToIsPublished(state?: CourseState | 'all'): boolean | undefined {
+  if (!state || state === 'all') return undefined;
+  if (state === 'PUBLISHED') return true;
+  if (state === 'DRAFT' || state === 'COMING_SOON') return false;
+  return undefined;
+}
+
 export const adminCoursesApi = {
   list: async (params: AdminCourseListParams = {}): Promise<AdminCoursesListResponse> => {
     const query: Record<string, any> = {
       page:  params.page  ?? 1,
       limit: params.limit ?? 20,
     };
-    if (params.search)                          query.search     = params.search;
-    if (params.state && params.state !== 'all') query.state      = params.state;
-    if (params.difficulty)                      query.difficulty = params.difficulty;
+    if (params.search)     query.search     = params.search;
+    if (params.difficulty) query.difficulty = params.difficulty;
+
+    // Backend expects isPublished (boolean) not state (string)
+    const isPublished = stateToIsPublished(params.state);
+    if (isPublished !== undefined) query.isPublished = isPublished;
+
     const res = await adminApiClient.get('/admin/courses', { params: query });
-    return unwrap<AdminCoursesListResponse>(res);
+    return unwrapList<AdminCoursesListResponse>(res);
   },
 
   getStats: async (): Promise<AdminCourseStats> => {
     const res = await adminApiClient.get('/admin/courses/stats');
-    return unwrap<AdminCourseStats>(res);
+    return unwrapItem<AdminCourseStats>(res);
   },
 
   getById: async (id: string): Promise<AdminCourse> => {
     const res = await adminApiClient.get(`/admin/courses/${id}`);
-    return normalizeArrays(unwrap<AdminCourse>(res));
+    return normalizeArrays(unwrapItem<AdminCourse>(res));
   },
 
   getBySlug: async (slug: string): Promise<AdminCourse> => {
     try {
       const res = await adminApiClient.get(`/admin/courses/${slug}`);
-      const candidate = unwrap<AdminCourse>(res);
+      const candidate = unwrapItem<AdminCourse>(res);
       if (candidate && typeof candidate === 'object' && 'id' in candidate) {
         return normalizeArrays(candidate);
       }
@@ -86,33 +107,32 @@ export const adminCoursesApi = {
 
   create: async (data: AdminCourseCreateDto): Promise<AdminCourse> => {
     const res = await adminApiClient.post('/admin/courses', data);
-    return normalizeArrays(unwrap<AdminCourse>(res));
+    return normalizeArrays(unwrapItem<AdminCourse>(res));
   },
 
   update: async (id: string, data: AdminCourseUpdateDto): Promise<AdminCourse> => {
     const res = await adminApiClient.patch(`/admin/courses/${id}`, data);
-    return normalizeArrays(unwrap<AdminCourse>(res));
+    return normalizeArrays(unwrapItem<AdminCourse>(res));
   },
 
   setState: async (id: string, state: CourseState): Promise<AdminCourse> => {
     const res = await adminApiClient.patch(`/admin/courses/${id}`, { state });
-    return normalizeArrays(unwrap<AdminCourse>(res));
+    return normalizeArrays(unwrapItem<AdminCourse>(res));
   },
 
-  // Publish / Unpublish using dedicated endpoints
   publish: async (id: string): Promise<AdminCourse> => {
     const res = await adminApiClient.patch(`/admin/courses/${id}/publish`);
-    return normalizeArrays(unwrap<AdminCourse>(res));
+    return normalizeArrays(unwrapItem<AdminCourse>(res));
   },
 
   unpublish: async (id: string): Promise<AdminCourse> => {
     const res = await adminApiClient.patch(`/admin/courses/${id}/unpublish`);
-    return normalizeArrays(unwrap<AdminCourse>(res));
+    return normalizeArrays(unwrapItem<AdminCourse>(res));
   },
 
   duplicate: async (id: string): Promise<AdminCourse> => {
     const res = await adminApiClient.post(`/admin/courses/${id}/duplicate`);
-    return normalizeArrays(unwrap<AdminCourse>(res));
+    return normalizeArrays(unwrapItem<AdminCourse>(res));
   },
 
   delete: async (id: string): Promise<void> => {
@@ -121,7 +141,7 @@ export const adminCoursesApi = {
 
   getCurriculum: async (courseId: string): Promise<CurriculumData> => {
     const res = await adminApiClient.get(`/admin/courses/${courseId}/curriculum`);
-    const payload = unwrap<any>(res);
+    const payload = unwrapItem<any>(res);
     return {
       topics:      Array.isArray(payload?.topics) ? payload.topics : [],
       totalTopics: Number(payload?.totalTopics)   || 0,
@@ -131,12 +151,12 @@ export const adminCoursesApi = {
 
   saveCurriculum: async (courseId: string, topics: object[]): Promise<any> => {
     const res = await adminApiClient.put(`/admin/courses/${courseId}/curriculum`, { topics });
-    return unwrap(res);
+    return unwrapItem(res);
   },
 
   getPathModules: async (courseId: string): Promise<any[]> => {
     const res = await adminApiClient.get(`/admin/courses/${courseId}/path-modules`);
-    const d = unwrap<any>(res);
+    const d = unwrapItem<any>(res);
     return Array.isArray(d) ? d : (d?.data ?? []);
   },
 
@@ -146,7 +166,7 @@ export const adminCoursesApi = {
       courseId,
       order,
     });
-    return unwrap(res);
+    return unwrapItem(res);
   },
 
   removeFromPath: async (moduleId: string): Promise<void> => {
@@ -155,6 +175,6 @@ export const adminCoursesApi = {
 
   reorderPathModule: async (moduleId: string, order: number): Promise<any> => {
     const res = await adminApiClient.patch(`/admin/path-modules/${moduleId}`, { order });
-    return unwrap(res);
+    return unwrapItem(res);
   },
 };
