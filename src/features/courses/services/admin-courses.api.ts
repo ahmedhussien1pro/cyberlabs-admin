@@ -18,15 +18,7 @@ export interface AdminCourseListParams {
   difficulty?: string;
 }
 
-/**
- * Safely unwrap backend responses.
- * Handles shapes:
- *   - AxiosResponse: { data: { ... } }  → uses res.data
- *   - Already unwrapped payload: { accessToken, ... } or { data: [...] }
- *   - Nested course: { data: { course: { ... } } }
- */
 function unwrap<T>(res: any): T {
-  // If it looks like a full AxiosResponse (has .status + .data), unwrap .data
   const raw = (res?.status !== undefined && res?.data !== undefined)
     ? res.data
     : res;
@@ -49,7 +41,6 @@ function normalizeArrays(course: AdminCourse): AdminCourse {
 }
 
 export const adminCoursesApi = {
-  // ── List ────────────────────────────────────────────────────────────────────
   list: async (params: AdminCourseListParams = {}): Promise<AdminCoursesListResponse> => {
     const query: Record<string, any> = {
       page:  params.page  ?? 1,
@@ -58,26 +49,20 @@ export const adminCoursesApi = {
     if (params.search)                          query.search     = params.search;
     if (params.state && params.state !== 'all') query.state      = params.state;
     if (params.difficulty)                      query.difficulty = params.difficulty;
-
     const res = await adminApiClient.get('/admin/courses', { params: query });
     return unwrap<AdminCoursesListResponse>(res);
   },
 
-  // ── Stats ────────────────────────────────────────────────────────────────
   getStats: async (): Promise<AdminCourseStats> => {
     const res = await adminApiClient.get('/admin/courses/stats');
     return unwrap<AdminCourseStats>(res);
   },
 
-  // ── Get by ID ────────────────────────────────────────────────────────────
   getById: async (id: string): Promise<AdminCourse> => {
     const res = await adminApiClient.get(`/admin/courses/${id}`);
     return normalizeArrays(unwrap<AdminCourse>(res));
   },
 
-  // ── Get by Slug ──────────────────────────────────────────────────────────
-  // 1. Try direct GET /admin/courses/:slug
-  // 2. Fallback: search list, find exact slug match, then getById
   getBySlug: async (slug: string): Promise<AdminCourse> => {
     try {
       const res = await adminApiClient.get(`/admin/courses/${slug}`);
@@ -89,12 +74,8 @@ export const adminCoursesApi = {
       const status = err?.response?.status ?? err?.status;
       if (status !== 404 && status !== 400) throw err;
     }
-
-    // Fallback: search by slug in list
     const listRes = await adminCoursesApi.list({ search: slug, limit: 50 });
-    const match = (listRes.data ?? []).find(
-      (c) => c.slug === slug || c.id === slug,
-    );
+    const match = (listRes.data ?? []).find((c) => c.slug === slug || c.id === slug);
     if (!match) {
       const err: any = new Error(`Course not found: ${slug}`);
       err.statusCode = 404;
@@ -103,30 +84,31 @@ export const adminCoursesApi = {
     return adminCoursesApi.getById(match.id);
   },
 
-  // ── Create ───────────────────────────────────────────────────────────────
   create: async (data: AdminCourseCreateDto): Promise<AdminCourse> => {
     const res = await adminApiClient.post('/admin/courses', data);
     return normalizeArrays(unwrap<AdminCourse>(res));
   },
 
-  // ── Update ───────────────────────────────────────────────────────────────
   update: async (id: string, data: AdminCourseUpdateDto): Promise<AdminCourse> => {
     const res = await adminApiClient.patch(`/admin/courses/${id}`, data);
     return normalizeArrays(unwrap<AdminCourse>(res));
   },
 
-  // ── State Management ─────────────────────────────────────────────────────
   setState: async (id: string, state: CourseState): Promise<AdminCourse> => {
     const res = await adminApiClient.patch(`/admin/courses/${id}`, { state });
     return normalizeArrays(unwrap<AdminCourse>(res));
   },
 
-  // ── Delete ───────────────────────────────────────────────────────────────
+  // ── NEW: Duplicate ───────────────────────────────────────────────────
+  duplicate: async (id: string): Promise<AdminCourse> => {
+    const res = await adminApiClient.post(`/admin/courses/${id}/duplicate`);
+    return normalizeArrays(unwrap<AdminCourse>(res));
+  },
+
   delete: async (id: string): Promise<void> => {
     await adminApiClient.delete(`/admin/courses/${id}`);
   },
 
-  // ── Curriculum ───────────────────────────────────────────────────────────
   getCurriculum: async (courseId: string): Promise<CurriculumData> => {
     const res = await adminApiClient.get(`/admin/courses/${courseId}/curriculum`);
     const payload = unwrap<any>(res);
@@ -138,14 +120,10 @@ export const adminCoursesApi = {
   },
 
   saveCurriculum: async (courseId: string, topics: object[]): Promise<any> => {
-    const res = await adminApiClient.put(
-      `/admin/courses/${courseId}/curriculum`,
-      { topics },
-    );
+    const res = await adminApiClient.put(`/admin/courses/${courseId}/curriculum`, { topics });
     return unwrap(res);
   },
 
-  // ── Path Relations ─────────────────────────────────────────────────────
   getPathModules: async (courseId: string): Promise<any[]> => {
     const res = await adminApiClient.get(`/admin/courses/${courseId}/path-modules`);
     const d = unwrap<any>(res);
