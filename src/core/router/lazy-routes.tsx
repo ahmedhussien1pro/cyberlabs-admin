@@ -72,3 +72,8 @@ export const BadgesListPage = lazy(
 export const SettingsPage = lazy(
   () => import('@/features/settings/pages/settings.page'),
 );
+
+// Notifications
+export const NotificationsPage = lazy(
+  () => import('@/features/notifications/pages/notifications.page'),
+);

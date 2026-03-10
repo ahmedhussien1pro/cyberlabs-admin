@@ -29,6 +29,7 @@ export const ROUTES = {
   // ── Other ──
   MAP:           '/map',
   BADGES:        '/badges',
+  NOTIFICATIONS: '/notifications',
   SETTINGS:      '/settings',
   UN_AUTHORIZED: '/401',
 } as const;

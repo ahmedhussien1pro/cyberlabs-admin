@@ -66,6 +66,9 @@ export const routes: RouteObject[] = [
           // ── Badges ──
           { path: 'badges', element: <LazyPage Component={Pages.BadgesListPage} /> },
 
+          // ── Notifications ──
+          { path: 'notifications', element: <LazyPage Component={Pages.NotificationsPage} /> },
+
           // ── Settings ──
           { path: 'settings', element: <LazyPage Component={Pages.SettingsPage} /> },
         ],
