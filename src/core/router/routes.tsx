@@ -25,117 +25,46 @@ export const routes: RouteObject[] = [
     path: '/',
     element: <ProtectedRoute />,
     children: [
-      // ════ Fullscreen pages — NO AdminLayout (no sidebar / navbar) ═════════════════════════════════
-      {
-        path: 'courses/:id/platform-preview',
-        element: <LazyPage Component={Pages.CoursePlatformPreviewPage} />,
-      },
-      // ✅ Course Content Editor — new course (blank canvas)
-      {
-        path: 'courses/editor',
-        element: <LazyPage Component={Pages.CourseEditorPage} />,
-      },
-      // ✅ Course Content Editor — edit existing course curriculum
-      {
-        path: 'courses/:id/content',
-        element: <LazyPage Component={Pages.CourseEditorPage} />,
-      },
-
-      // ════ Admin pages — inside AdminLayout (sidebar + navbar) ═══════════════════════
       {
         element: <AdminLayout />,
         children: [
-          // ─── Dashboard ────────────────────────────────────────────────────
+          // ── Dashboard ──
           {
             index: true,
             element: <LazyPage Component={Pages.DashboardPage} />,
           },
 
-          // ─── Users ─────────────────────────────────────────────────────
-          {
-            path: 'users',
-            element: <LazyPage Component={Pages.UsersListPage} />,
-          },
-          {
-            path: 'users/:id',
-            element: <LazyPage Component={Pages.UserDetailPage} />,
-          },
+          // ── Users ──
+          { path: 'users', element: <LazyPage Component={Pages.UsersListPage} /> },
+          { path: 'users/:id', element: <LazyPage Component={Pages.UserDetailPage} /> },
 
-          // ─── Courses ──────────────────────────────────────────────────
-          {
-            path: 'courses',
-            element: <LazyPage Component={Pages.CoursesListPage} />,
-          },
-          {
-            path: 'courses/new',
-            element: <LazyPage Component={Pages.CourseCreatePage} />,
-          },
-          {
-            path: 'courses/import',
-            element: <LazyPage Component={Pages.CourseImportPage} />,
-          },
-          {
-            path: 'courses/:id',
-            element: <LazyPage Component={Pages.CourseDetailPage} />,
-          },
-          {
-            path: 'courses/:id/edit',
-            element: <LazyPage Component={Pages.CourseEditPage} />,
-          },
+          // ── Courses (CMS) ──
+          { path: 'courses', element: <LazyPage Component={Pages.CoursesListPage} /> },
+          { path: 'courses/new', element: <LazyPage Component={Pages.CourseCreatePage} /> },
+          { path: 'courses/import', element: <LazyPage Component={Pages.CourseImportPage} /> },
+          // ✅ صفحة واحدة شاملة: Edit | Curriculum | Path Relations | Preview
+          { path: 'courses/:slug/edit', element: <LazyPage Component={Pages.CourseEditPage} /> },
 
-          // ─── Labs ──────────────────────────────────────────────────────
-          {
-            path: 'labs',
-            element: <LazyPage Component={Pages.LabsListPage} />,
-          },
-          {
-            path: 'labs/new',
-            element: <LazyPage Component={Pages.LabCreatePage} />,
-          },
-          {
-            path: 'labs/:id',
-            element: <LazyPage Component={Pages.LabDetailPage} />,
-          },
-          {
-            path: 'labs/:id/edit',
-            element: <LazyPage Component={Pages.LabEditPage} />,
-          },
+          // ── Labs ──
+          { path: 'labs', element: <LazyPage Component={Pages.LabsListPage} /> },
+          { path: 'labs/new', element: <LazyPage Component={Pages.LabCreatePage} /> },
+          { path: 'labs/:id', element: <LazyPage Component={Pages.LabDetailPage} /> },
+          { path: 'labs/:id/edit', element: <LazyPage Component={Pages.LabEditPage} /> },
 
-          // ─── Paths ──────────────────────────────────────────────────────
-          {
-            path: 'paths',
-            element: <LazyPage Component={Pages.PathsListPage} />,
-          },
-          {
-            path: 'paths/create',
-            element: <LazyPage Component={Pages.PathCreatePage} />,
-          },
-          {
-            path: 'paths/:id',
-            element: <LazyPage Component={Pages.PathDetailPage} />,
-          },
-          {
-            path: 'paths/:id/edit',
-            element: <LazyPage Component={Pages.PathEditPage} />,
-          },
+          // ── Paths ──
+          { path: 'paths', element: <LazyPage Component={Pages.PathsListPage} /> },
+          { path: 'paths/create', element: <LazyPage Component={Pages.PathCreatePage} /> },
+          { path: 'paths/:id', element: <LazyPage Component={Pages.PathDetailPage} /> },
+          { path: 'paths/:id/edit', element: <LazyPage Component={Pages.PathEditPage} /> },
 
-          // ─── Content Map ─────────────────────────────────────────────────
-          {
-            path: 'map',
-            element: <LazyPage Component={Pages.ContentMapPage} />,
-          },
+          // ── Map ──
+          { path: 'map', element: <LazyPage Component={Pages.ContentMapPage} /> },
 
-          // ─── Badges ──────────────────────────────────────────────────────
-          {
-            path: 'badges',
-            element: <LazyPage Component={Pages.BadgesListPage} />,
-          },
+          // ── Badges ──
+          { path: 'badges', element: <LazyPage Component={Pages.BadgesListPage} /> },
 
-          // ─── Settings ────────────────────────────────────────────────────
-          {
-            path: 'settings',
-            element: <LazyPage Component={Pages.SettingsPage} />,
-          },
+          // ── Settings ──
+          { path: 'settings', element: <LazyPage Component={Pages.SettingsPage} /> },
         ],
       },
     ],
