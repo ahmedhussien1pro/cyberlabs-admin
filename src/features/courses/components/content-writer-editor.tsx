@@ -1,6 +1,6 @@
 // src/features/courses/components/content-writer-editor.tsx
 // ✅ Content Writer: rendered preview (frontend-accurate) + inline edit mode
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminCoursesApi } from '../services/admin-courses.api';
 import CourseElementRenderer, { type CourseElement } from './CourseElementRenderer';
@@ -173,7 +173,6 @@ function ElementEditor({ el, onChange }: { el: CourseElement; onChange: (updated
     );
   }
 
-  // text, title, subtitle, orderedList (simplified), default
   return <BiField field='value' label='Content' multiline={['text', 'orderedList'].includes(el.type)} />;
 }
 
@@ -240,7 +239,6 @@ function TopicContentRow({
       {open && (
         <div className='px-5 py-4 space-y-4'>
           {editMode ? (
-            // ── Edit mode: each element has edit / delete controls
             <div className='space-y-3'>
               {topic.elements.length === 0 && (
                 <p className='text-sm text-muted-foreground italic text-center py-4'>No elements yet. Add one below.</p>
@@ -266,7 +264,6 @@ function TopicContentRow({
                     </div>
                   )}
                   {editingEl !== el.id && (
-                    // mini preview inside edit mode
                     <div className='px-3 py-2 opacity-70 pointer-events-none text-xs'>
                       <CourseElementRenderer elements={[el]} lang='en' />
                     </div>
@@ -286,7 +283,6 @@ function TopicContentRow({
               </div>
             </div>
           ) : (
-            // ── Preview mode: exact frontend render
             topic.elements.length === 0
               ? <p className='text-sm text-muted-foreground italic'>No content yet.</p>
               : <CourseElementRenderer elements={topic.elements} lang='en' />
@@ -307,15 +303,18 @@ export function ContentWriterEditor({ courseId, courseSlug }: Props) {
   const queryClient = useQueryClient();
   const [editMode, setEditMode] = useState(false);
   const [localTopics, setLocalTopics] = useState<Topic[] | null>(null);
-  const [lang] = useState<'en' | 'ar'>('en');
 
   const { data, isLoading } = useQuery<{ topics: Topic[] }>({
     queryKey: ['admin', 'curriculum', courseSlug],
-    queryFn: () => adminCoursesApi.getCurriculum(courseSlug),
-    onSuccess: (d: { topics: Topic[] }) => {
-      if (localTopics === null) setLocalTopics(d.topics);
-    },
-  } as any);
+    queryFn: () => adminCoursesApi.getCurriculum(courseSlug) as any,
+  });
+
+  // Sync localTopics when data loads (only if not yet set)
+  useEffect(() => {
+    if (data?.topics && localTopics === null) {
+      setLocalTopics(data.topics);
+    }
+  }, [data]);
 
   const topics: Topic[] = localTopics ?? data?.topics ?? [];
 
