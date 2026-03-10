@@ -8,7 +8,7 @@ export const ROUTES = {
   COURSES: '/courses',
   COURSE_CREATE: '/courses/new',
   COURSE_IMPORT: '/courses/import',
-  // ✅ صفحة واحدة شاملة: Edit | Curriculum | Path Relations | Preview
+
   COURSE_EDIT: (slug: string) => `/courses/${slug}/edit`,
 
   // ── Labs ──
