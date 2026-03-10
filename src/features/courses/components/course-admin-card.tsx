@@ -2,7 +2,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { coursesService } from '@/core/api/services';
+import { adminCoursesApi } from '../services/admin-courses.api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -19,55 +19,48 @@ import {
 import {
   BookOpen,
   Pencil,
-  Eye,
   Trash2,
   Users,
-  Layers,
   Crown,
   Unlock,
-  LayoutTemplate,
-  MonitorPlay,
   Star,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/shared/constants';
-import { CourseStateDropdown } from './course-state-dropdown';
-import type { CourseListItem } from '@/core/types';
+import { CourseStateControl } from './course-state-control';
+import type { AdminCourse } from '../types/admin-course.types';
 
 interface CourseAdminCardProps {
-  course: CourseListItem;
+  course: AdminCourse;
 }
 
-const COLOR_MAP: Record<
-  string,
-  { gradient: string; border: string; icon: string }
-> = {
-  EMERALD: {
+const COLOR_MAP: Record<string, { gradient: string; border: string; icon: string }> = {
+  emerald: {
     gradient: 'from-emerald-500/25 via-emerald-900/30 to-emerald-950/60',
     border: 'border-emerald-500/25',
     icon: 'text-emerald-400',
   },
-  BLUE: {
+  blue: {
     gradient: 'from-blue-500/25 via-blue-900/30 to-blue-950/60',
     border: 'border-blue-500/25',
     icon: 'text-blue-400',
   },
-  VIOLET: {
+  violet: {
     gradient: 'from-violet-500/25 via-violet-900/30 to-violet-950/60',
     border: 'border-violet-500/25',
     icon: 'text-violet-400',
   },
-  ORANGE: {
+  orange: {
     gradient: 'from-orange-500/25 via-orange-900/30 to-orange-950/60',
     border: 'border-orange-500/25',
     icon: 'text-orange-400',
   },
-  ROSE: {
+  rose: {
     gradient: 'from-rose-500/25 via-rose-900/30 to-rose-950/60',
     border: 'border-rose-500/25',
     icon: 'text-rose-400',
   },
-  CYAN: {
+  cyan: {
     gradient: 'from-cyan-500/25 via-cyan-900/30 to-cyan-950/60',
     border: 'border-cyan-500/25',
     icon: 'text-cyan-400',
@@ -85,14 +78,14 @@ export function CourseAdminCard({ course }: CourseAdminCardProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const colorKey = ((course as any).color ?? 'BLUE').toUpperCase();
-  const colors = COLOR_MAP[colorKey] ?? COLOR_MAP['BLUE'];
+  const colorKey = (course.color ?? 'blue').toLowerCase();
+  const colors = COLOR_MAP[colorKey] ?? COLOR_MAP['blue'];
 
   const deleteMutation = useMutation({
-    mutationFn: () => coursesService.delete(course.id),
+    mutationFn: () => adminCoursesApi.delete(course.id),
     onSuccess: () => {
       toast.success('Course deleted');
-      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
     },
     onError: () =>
       toast.error('Cannot delete — course may have active enrollments'),
@@ -124,12 +117,12 @@ export function CourseAdminCard({ course }: CourseAdminCardProps) {
 
         {/* Top-left badges */}
         <div className='absolute left-2 top-2 flex flex-wrap gap-1'>
-          {(course as any).isNew && (
+          {course.isNew && (
             <span className='rounded-full bg-yellow-500/90 px-2 py-0.5 text-[10px] font-bold text-black'>
               NEW
             </span>
           )}
-          {(course as any).isFeatured && (
+          {course.isFeatured && (
             <span className='flex items-center gap-0.5 rounded-full bg-purple-500/90 px-2 py-0.5 text-[10px] font-bold text-white'>
               <Star className='h-2.5 w-2.5' /> Featured
             </span>
@@ -191,105 +184,66 @@ export function CourseAdminCard({ course }: CourseAdminCardProps) {
         <div className='flex items-center gap-3 text-[11px] text-muted-foreground'>
           <span className='flex items-center gap-1'>
             <Users className='h-3 w-3' />
-            {course._count.enrollments} enrolled
+            {course.enrollmentCount ?? 0} enrolled
           </span>
-          <span className='flex items-center gap-1'>
-            <Layers className='h-3 w-3' />
-            {course._count.sections}s / {course._count.lessons}l
-          </span>
+          <span className='text-muted-foreground/50'>·</span>
+          <span>{course.totalTopics ?? 0} topics</span>
         </div>
 
-        {/* State dropdown */}
-        <CourseStateDropdown
+        {/* ✅ State Control — 3 حالات صحيحة (compact badge) */}
+        <CourseStateControl
           courseId={course.id}
-          currentState={(course as any).state}
-          isPublished={course.isPublished}
+          currentState={course.state}
+          compact
         />
 
         {/* Action buttons */}
-        <div className='mt-auto grid grid-cols-4 gap-1 border-t border-border/30 pt-3'>
-          {/* Platform Preview */}
-          <Button
-            variant='ghost'
-            size='sm'
-            title='Platform Preview'
-            className='h-8 w-full p-0 text-muted-foreground hover:text-primary hover:bg-primary/10'
-            onClick={() => navigate(ROUTES.COURSE_PLATFORM_PREVIEW(course.id))}
-          >
-            <MonitorPlay className='h-3.5 w-3.5' />
-          </Button>
-
-          {/* Edit Info */}
-          <Link to={ROUTES.COURSE_EDIT(course.id)} className='w-full'>
+        <div className='mt-auto grid grid-cols-2 gap-1.5 border-t border-border/30 pt-3'>
+          <Link to={ROUTES.COURSE_EDIT(course.slug)} className='w-full'>
             <Button
-              variant='ghost'
+              variant='outline'
               size='sm'
-              title='Edit Info'
-              className='h-8 w-full p-0 text-muted-foreground hover:text-foreground hover:bg-muted'
+              className='h-8 w-full gap-1.5 text-xs'
             >
-              <Pencil className='h-3.5 w-3.5' />
+              <Pencil className='h-3 w-3' />
+              Edit
             </Button>
           </Link>
 
-          {/* Edit Curriculum */}
-          <Button
-            variant='ghost'
-            size='sm'
-            title='Edit Curriculum'
-            className='h-8 w-full p-0 text-muted-foreground hover:text-primary hover:bg-primary/10'
-            onClick={() => navigate(`/courses/${course.id}/content`)}
-          >
-            <LayoutTemplate className='h-3.5 w-3.5' />
-          </Button>
-
-          {/* View Detail */}
-          <Link to={ROUTES.COURSE_DETAIL(course.id)} className='w-full'>
-            <Button
-              variant='ghost'
-              size='sm'
-              title='View Detail & Labs'
-              className='h-8 w-full p-0 text-muted-foreground hover:text-foreground hover:bg-muted'
-            >
-              <Eye className='h-3.5 w-3.5' />
-            </Button>
-          </Link>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant='outline'
+                size='sm'
+                className='h-8 w-full gap-1.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30'
+                disabled={deleteMutation.isPending}
+              >
+                <Trash2 className='h-3 w-3' />
+                Delete
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Course</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete{' '}
+                  <strong>{course.title}</strong>? This cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => deleteMutation.mutate()}
+                  disabled={deleteMutation.isPending}
+                  className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
-
-      {/* Delete button — appears on hover at top-right of thumbnail */}
-      <AlertDialog>
-        <AlertDialogTrigger asChild>
-          <button
-            className={cn(
-              'absolute right-2 top-[4.5rem] opacity-0 group-hover:opacity-100 transition-opacity',
-              'flex h-6 w-6 items-center justify-center rounded-full',
-              'bg-destructive/80 text-white hover:bg-destructive shadow-md',
-            )}
-            title='Delete'
-          >
-            <Trash2 className='h-3 w-3' />
-          </button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Course</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete{' '}
-              <strong>{course.title}</strong>? This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteMutation.mutate()}
-              disabled={deleteMutation.isPending}
-              className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
