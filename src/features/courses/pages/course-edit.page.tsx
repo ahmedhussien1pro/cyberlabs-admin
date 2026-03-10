@@ -1,5 +1,5 @@
 // src/features/courses/pages/course-edit.page.tsx
-// ✅ Added: prominent Draft ⇄ Published quick-toggle button in header
+// ✅ Fixed: uses getBySlug with robust fallback (slug → list search → getById)
 import { useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -28,7 +28,10 @@ const TABS: { key: Tab; label: string; icon: any }[] = [
   { key: 'preview',    label: 'Preview',        icon: Eye       },
 ];
 
-const STATE_STYLES: Record<CourseState, { label: string; badge: string; next: CourseState; nextLabel: string; nextIcon: any; btnClass: string }> = {
+const STATE_STYLES: Record<
+  CourseState,
+  { label: string; badge: string; next: CourseState; nextLabel: string; nextIcon: any; btnClass: string }
+> = {
   DRAFT: {
     label:     'Draft',
     badge:     'bg-zinc-500/15 text-zinc-400 border-zinc-500/30',
@@ -56,29 +59,35 @@ const STATE_STYLES: Record<CourseState, { label: string; badge: string; next: Co
 };
 
 export default function CourseEditPage() {
-  const { slug }          = useParams<{ slug: string }>();
-  const [searchParams]    = useSearchParams();
-  const navigate          = useNavigate();
-  const queryClient       = useQueryClient();
+  // ✅ param is named :slug but may actually be a UUID — getBySlug handles both
+  const { slug }       = useParams<{ slug: string }>();
+  const [searchParams] = useSearchParams();
+  const navigate       = useNavigate();
+  const queryClient    = useQueryClient();
 
-  // Support ?tab=preview from URL
   const initialTab = (searchParams.get('tab') as Tab) ?? 'metadata';
   const [activeTab, setActiveTab] = useState<Tab>(
     TABS.find((t) => t.key === initialTab) ? initialTab : 'metadata',
   );
 
-  // Optimistic state for publish toggle
   const [localState, setLocalState] = useState<CourseState | null>(null);
 
+  // ✅ getBySlug: tries direct, falls back to list search, then getById
   const { data: course, isLoading, error } = useQuery({
     queryKey: ['admin', 'courses', 'slug', slug],
     queryFn:  () => adminCoursesApi.getBySlug(slug!),
     enabled:  !!slug,
+    retry: (failCount, err: any) => {
+      // don't retry on 404
+      const status = err?.statusCode ?? err?.response?.status;
+      if (status === 404) return false;
+      return failCount < 2;
+    },
   });
 
   const { mutate: toggleState, isPending: isToggling } = useMutation({
     mutationFn: (state: CourseState) => adminCoursesApi.setState(course!.id, state),
-    onMutate: (state) => setLocalState(state),
+    onMutate:  (state) => setLocalState(state),
     onSuccess: (_, state) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
       toast.success(`Course is now ${STATE_STYLES[state].label}`);
@@ -89,7 +98,7 @@ export default function CourseEditPage() {
     },
   });
 
-  // ── Loading / Error states ──
+  // ── Loading ──
   if (isLoading)
     return (
       <div className='space-y-4 p-6'>
@@ -99,8 +108,12 @@ export default function CourseEditPage() {
       </div>
     );
 
+  // ── Error ──
   if (error || !course) {
-    const errMsg = (error as any)?.response?.data?.message ?? (error as any)?.message ?? 'Unknown error';
+    const errMsg =
+      (error as any)?.message ??
+      (error as any)?.response?.data?.message ??
+      'Course not found';
     return (
       <div className='flex flex-col items-center justify-center gap-4 p-12 text-center'>
         <div className='rounded-full bg-destructive/10 p-4'>
@@ -109,7 +122,7 @@ export default function CourseEditPage() {
         <div>
           <p className='text-lg font-semibold'>Failed to load course</p>
           <p className='text-sm text-muted-foreground mt-1'>{errMsg}</p>
-          <p className='text-xs text-muted-foreground/60 mt-1 font-mono'>slug: {slug}</p>
+          <p className='text-xs text-muted-foreground/60 mt-1 font-mono'>identifier: {slug}</p>
         </div>
         <Button variant='outline' onClick={() => navigate(-1)} className='gap-2'>
           <ArrowLeft className='h-4 w-4' /> Go Back
@@ -145,9 +158,8 @@ export default function CourseEditPage() {
           </div>
         </div>
 
-        {/* ✅ Prominent Publish / Unpublish Toggle */}
+        {/* ── Publish / Unpublish / Coming Soon Toggles ── */}
         <div className='flex items-center gap-2'>
-          {/* Also show COMING_SOON option */}
           {displayState !== 'COMING_SOON' && (
             <Button
               variant='outline'
@@ -164,11 +176,9 @@ export default function CourseEditPage() {
             className={cn('gap-1.5 min-w-[110px]', stateStyle.btnClass)}
             disabled={isToggling}
             onClick={() => toggleState(stateStyle.next)}>
-            {isToggling ? (
-              <Loader2 className='h-3.5 w-3.5 animate-spin' />
-            ) : (
-              <NextIcon className='h-3.5 w-3.5' />
-            )}
+            {isToggling
+              ? <Loader2 className='h-3.5 w-3.5 animate-spin' />
+              : <NextIcon className='h-3.5 w-3.5' />}
             {isToggling ? 'Saving...' : stateStyle.nextLabel}
           </Button>
         </div>
@@ -196,12 +206,13 @@ export default function CourseEditPage() {
       <div>
         {activeTab === 'metadata'   && <CourseMetadataForm course={course} />}
         {activeTab === 'curriculum' && (
+          // ✅ pass courseId (UUID) — getCurriculum now uses /admin/courses/:id/curriculum
           <CourseCurriculumEditor courseId={course.id} courseSlug={course.slug} />
         )}
-        {activeTab === 'paths'      && (
+        {activeTab === 'paths' && (
           <CoursePathRelations courseId={course.id} courseTitle={course.title} />
         )}
-        {activeTab === 'preview'    && <CoursePlatformPreviewTab course={course} />}
+        {activeTab === 'preview' && <CoursePlatformPreviewTab course={course} />}
       </div>
     </div>
   );

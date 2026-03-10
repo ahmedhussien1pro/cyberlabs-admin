@@ -1,4 +1,5 @@
 // src/features/courses/pages/course-create.page.tsx
+// ✅ Fixed: instructor fetch uses /admin/users?role=INSTRUCTOR (not /admin/instructors)
 // ✅ Fixed: color UPPERCASE + instructorId field + defensive error display
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -19,14 +20,14 @@ import { ROUTES } from '@/shared/constants';
 import { ArrowLeft, ChevronRight, Loader2, Plus, RefreshCw } from 'lucide-react';
 import type { AdminCourseCreateDto, CourseColor } from '../types/admin-course.types';
 
-// ── Color map — UPPERCASE values matching backend enum ──
+// ── Color options — UPPERCASE values matching backend enum ──
 const COLOR_OPTIONS: { value: CourseColor; label: string; dot: string }[] = [
   { value: 'EMERALD', label: 'Emerald', dot: 'bg-emerald-500' },
-  { value: 'BLUE',    label: 'Blue',    dot: 'bg-blue-500' },
-  { value: 'VIOLET',  label: 'Violet',  dot: 'bg-violet-500' },
-  { value: 'ORANGE',  label: 'Orange',  dot: 'bg-orange-500' },
-  { value: 'ROSE',    label: 'Rose',    dot: 'bg-rose-500' },
-  { value: 'CYAN',    label: 'Cyan',    dot: 'bg-cyan-500' },
+  { value: 'BLUE',    label: 'Blue',    dot: 'bg-blue-500'    },
+  { value: 'VIOLET',  label: 'Violet',  dot: 'bg-violet-500'  },
+  { value: 'ORANGE',  label: 'Orange',  dot: 'bg-orange-500'  },
+  { value: 'ROSE',    label: 'Rose',    dot: 'bg-rose-500'    },
+  { value: 'CYAN',    label: 'Cyan',    dot: 'bg-cyan-500'    },
 ];
 
 function toSlug(title: string): string {
@@ -38,22 +39,36 @@ function toSlug(title: string): string {
     .replace(/-+/g, '-');
 }
 
+// Shape returned by /admin/users list
+interface AdminUserBasic {
+  id: string;
+  name?: string;
+  username?: string;
+  email?: string;
+  role?: string;
+}
+
 export default function CourseCreatePage() {
   const navigate = useNavigate();
 
-  // ── Fetch instructors list ──
-  const { data: instructors = [] } = useQuery({
+  // ── Fetch instructors ──────────────────────────────────────────────────────
+  // FIX: /admin/instructors doesn't exist — use /admin/users?role=INSTRUCTOR
+  const { data: instructors = [] } = useQuery<AdminUserBasic[]>({
     queryKey: ['admin', 'instructors'],
     queryFn: async () => {
       try {
-        const res = await adminApiClient.get('/admin/instructors');
-        const d = res?.data ?? res;
-        return Array.isArray(d) ? d : (d?.data ?? []);
+        // Try role-filtered users endpoint first
+        const res = await adminApiClient.get('/admin/users', {
+          params: { role: 'INSTRUCTOR', limit: 100 },
+        });
+        const raw = res?.data ?? res;
+        const arr = raw?.data ?? raw;
+        return Array.isArray(arr) ? arr : [];
       } catch {
-        // fallback — if endpoint doesn't exist, return empty
         return [];
       }
     },
+    staleTime: 5 * 60 * 1000,
   });
 
   const {
@@ -81,22 +96,20 @@ export default function CourseCreatePage() {
       navigate(ROUTES.COURSE_EDIT(created.slug));
     },
     onError: (err: any) => {
-      const msg = err?.response?.data?.message ?? err?.message ?? 'Failed to create course';
+      const msg    = err?.response?.data?.message ?? err?.message ?? 'Failed to create course';
       const msgStr = Array.isArray(msg) ? msg.join(' \u2022 ') : String(msg);
       toast.error(msgStr, { duration: 6000 });
     },
   });
 
   const onSubmit = (data: AdminCourseCreateDto) => {
-    // Don't send empty instructorId — backend may reject empty string
-    if (!data.instructorId) {
-      delete (data as any).instructorId;
-    }
+    // Don't send empty instructorId — backend rejects empty string
+    if (!data.instructorId) delete (data as any).instructorId;
     mutate(data);
   };
 
   const handleTitleBlur = () => {
-    const title = getValues('title');
+    const title       = getValues('title');
     const currentSlug = getValues('slug');
     if (title && !currentSlug) setValue('slug', toSlug(title), { shouldValidate: true });
   };
@@ -115,11 +128,16 @@ export default function CourseCreatePage() {
     </div>
   );
 
+  const instructorLabel = (inst: AdminUserBasic) =>
+    inst.name ?? inst.username ?? inst.email ?? inst.id;
+
   return (
     <div className='space-y-6 max-w-2xl'>
       {/* Breadcrumb */}
       <nav className='flex items-center gap-1.5 text-sm text-muted-foreground'>
-        <Link to={ROUTES.COURSES} className='transition-colors hover:text-foreground'>Courses</Link>
+        <Link to={ROUTES.COURSES} className='transition-colors hover:text-foreground'>
+          Courses
+        </Link>
         <ChevronRight className='h-3.5 w-3.5' />
         <span className='font-medium text-foreground'>New Course</span>
       </nav>
@@ -132,7 +150,9 @@ export default function CourseCreatePage() {
             Fill the basics — complete all details after creation.
           </p>
         </div>
-        <Button variant='ghost' size='sm' className='h-9 gap-2' onClick={() => navigate(ROUTES.COURSES)}>
+        <Button
+          variant='ghost' size='sm' className='h-9 gap-2'
+          onClick={() => navigate(ROUTES.COURSES)}>
           <ArrowLeft className='h-4 w-4' /> Back
         </Button>
       </div>
@@ -150,14 +170,17 @@ export default function CourseCreatePage() {
               />
             </Field>
             <Field id='ar_title' label='Title (AR)'>
-              <Input id='ar_title' dir='rtl' placeholder='عنوان الكورس بالعربي' {...register('ar_title')} />
+              <Input
+                id='ar_title' dir='rtl'
+                placeholder='عنوان الكورس بالعربي'
+                {...register('ar_title')}
+              />
             </Field>
           </div>
 
           {/* Slug */}
           <Field
-            id='slug'
-            label='Slug *'
+            id='slug' label='Slug *'
             error={errors.slug?.message}
             hint='URL-friendly identifier — auto-generated from title on blur.'>
             <div className='flex gap-2'>
@@ -168,12 +191,14 @@ export default function CourseCreatePage() {
                 {...register('slug', {
                   required: 'Slug is required',
                   pattern: {
-                    value: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+                    value:   /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
                     message: 'Lowercase letters, numbers and hyphens only',
                   },
                 })}
               />
-              <Button type='button' variant='outline' size='icon' className='shrink-0' onClick={regenerateSlug} title='Auto-generate from title'>
+              <Button
+                type='button' variant='outline' size='icon' className='shrink-0'
+                onClick={regenerateSlug} title='Auto-generate from title'>
                 <RefreshCw className='h-4 w-4' />
               </Button>
             </div>
@@ -181,13 +206,19 @@ export default function CourseCreatePage() {
 
           {/* Description */}
           <Field id='description' label='Short Description'>
-            <Textarea id='description' rows={3} placeholder='Brief overview...' {...register('description')} />
+            <Textarea
+              id='description' rows={3}
+              placeholder='Brief overview...'
+              {...register('description')}
+            />
           </Field>
 
           {/* Row: Difficulty + Access + Color */}
           <div className='grid gap-4 sm:grid-cols-3'>
             <Field id='difficulty' label='Difficulty'>
-              <Select value={watch('difficulty')} onValueChange={(v) => setValue('difficulty', v as any)}>
+              <Select
+                value={watch('difficulty')}
+                onValueChange={(v) => setValue('difficulty', v as any)}>
                 <SelectTrigger id='difficulty'><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value='BEGINNER'>Beginner</SelectItem>
@@ -197,8 +228,11 @@ export default function CourseCreatePage() {
                 </SelectContent>
               </Select>
             </Field>
+
             <Field id='access' label='Access'>
-              <Select value={watch('access')} onValueChange={(v) => setValue('access', v as any)}>
+              <Select
+                value={watch('access')}
+                onValueChange={(v) => setValue('access', v as any)}>
                 <SelectTrigger id='access'><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value='FREE'>Free</SelectItem>
@@ -207,8 +241,11 @@ export default function CourseCreatePage() {
                 </SelectContent>
               </Select>
             </Field>
+
             <Field id='color' label='Color Theme'>
-              <Select value={watch('color')} onValueChange={(v) => setValue('color', v as CourseColor)}>
+              <Select
+                value={watch('color')}
+                onValueChange={(v) => setValue('color', v as CourseColor)}>
                 <SelectTrigger id='color'><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {COLOR_OPTIONS.map(({ value, label, dot }) => (
@@ -227,7 +264,9 @@ export default function CourseCreatePage() {
           {/* Row: Category + ContentType */}
           <div className='grid gap-4 sm:grid-cols-2'>
             <Field id='category' label='Category'>
-              <Select value={watch('category')} onValueChange={(v) => setValue('category', v as any)}>
+              <Select
+                value={watch('category')}
+                onValueChange={(v) => setValue('category', v as any)}>
                 <SelectTrigger id='category'><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value='FUNDAMENTALS'>Fundamentals</SelectItem>
@@ -242,8 +281,11 @@ export default function CourseCreatePage() {
                 </SelectContent>
               </Select>
             </Field>
+
             <Field id='contentType' label='Content Type'>
-              <Select value={watch('contentType')} onValueChange={(v) => setValue('contentType', v as any)}>
+              <Select
+                value={watch('contentType')}
+                onValueChange={(v) => setValue('contentType', v as any)}>
                 <SelectTrigger id='contentType'><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value='PRACTICAL'>Practical</SelectItem>
@@ -257,16 +299,24 @@ export default function CourseCreatePage() {
           {/* Instructor */}
           <Field
             id='instructorId'
-            label='Instructor ID *'
+            label='Instructor *'
             error={errors.instructorId?.message}
-            hint={instructors.length > 0 ? undefined : 'Enter instructor UUID manually (e.g. from backend user list).'}>
+            hint={
+              instructors.length === 0
+                ? 'No instructors found. Enter a UUID manually or assign later.'
+                : undefined
+            }>
             {instructors.length > 0 ? (
-              <Select value={watch('instructorId') ?? ''} onValueChange={(v) => setValue('instructorId', v)}>
-                <SelectTrigger id='instructorId'><SelectValue placeholder='Select instructor' /></SelectTrigger>
+              <Select
+                value={watch('instructorId') ?? ''}
+                onValueChange={(v) => setValue('instructorId', v)}>
+                <SelectTrigger id='instructorId'>
+                  <SelectValue placeholder='Select instructor' />
+                </SelectTrigger>
                 <SelectContent>
-                  {instructors.map((inst: any) => (
+                  {instructors.map((inst) => (
                     <SelectItem key={inst.id} value={inst.id}>
-                      {inst.name ?? inst.email ?? inst.id}
+                      {instructorLabel(inst)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -276,7 +326,7 @@ export default function CourseCreatePage() {
                 id='instructorId'
                 placeholder='xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
                 className='font-mono text-sm'
-                {...register('instructorId', { required: 'Instructor ID is required' })}
+                {...register('instructorId')}
               />
             )}
           </Field>
@@ -284,7 +334,9 @@ export default function CourseCreatePage() {
           {/* Submit */}
           <div className='flex justify-end pt-2'>
             <Button type='submit' disabled={isPending} className='gap-2 min-w-[140px]'>
-              {isPending ? <Loader2 className='h-4 w-4 animate-spin' /> : <Plus className='h-4 w-4' />}
+              {isPending
+                ? <Loader2 className='h-4 w-4 animate-spin' />
+                : <Plus className='h-4 w-4' />}
               Create Course
             </Button>
           </div>

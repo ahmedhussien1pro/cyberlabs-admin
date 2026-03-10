@@ -20,87 +20,121 @@ export interface AdminCourseListParams {
 
 /** Safely unwrap nested { data: ... } or { course: ... } responses */
 function unwrap<T>(res: any): T {
-  const payload = res?.data ?? res;
-  // handle { data: { course: ... } } shape
-  if (payload?.course) return payload.course as T;
-  // handle { data: { data: [...] } } shape for lists
-  return payload as T;
+  // axios interceptor may or may not strip .data — handle both
+  const raw = res?.data !== undefined ? res.data : res;
+  if (raw?.course) return raw.course as T;
+  return raw as T;
+}
+
+function normalizeArrays(course: AdminCourse): AdminCourse {
+  return {
+    ...course,
+    tags:             Array.isArray(course.tags)             ? course.tags             : [],
+    skills:           Array.isArray(course.skills)           ? course.skills           : [],
+    ar_skills:        Array.isArray(course.ar_skills)        ? course.ar_skills        : [],
+    topics:           Array.isArray(course.topics)           ? course.topics           : [],
+    ar_topics:        Array.isArray(course.ar_topics)        ? course.ar_topics        : [],
+    prerequisites:    Array.isArray(course.prerequisites)    ? course.prerequisites    : [],
+    ar_prerequisites: Array.isArray(course.ar_prerequisites) ? course.ar_prerequisites : [],
+    labSlugs:         Array.isArray(course.labSlugs)         ? course.labSlugs         : [],
+  };
 }
 
 export const adminCoursesApi = {
-  // ── List ───────────────────────────────────────────────────────────────
+  // ── List ────────────────────────────────────────────────────────────────────
   list: async (params: AdminCourseListParams = {}): Promise<AdminCoursesListResponse> => {
     const query: Record<string, any> = {
       page:  params.page  ?? 1,
       limit: params.limit ?? 20,
     };
-    if (params.search)     query.search     = params.search;
-    if (params.state && params.state !== 'all') query.state = params.state;
-    if (params.difficulty) query.difficulty = params.difficulty;
+    if (params.search)                          query.search     = params.search;
+    if (params.state && params.state !== 'all') query.state      = params.state;
+    if (params.difficulty)                      query.difficulty = params.difficulty;
+
     const res = await adminApiClient.get('/admin/courses', { params: query });
     return unwrap<AdminCoursesListResponse>(res);
   },
 
-  // ── Stats ────────────────────────────────────────────────────────────
+  // ── Stats ────────────────────────────────────────────────────────────────
   getStats: async (): Promise<AdminCourseStats> => {
     const res = await adminApiClient.get('/admin/courses/stats');
     return unwrap<AdminCourseStats>(res);
   },
 
-  // ── Get Single ────────────────────────────────────────────────────────
-  getBySlug: async (slug: string): Promise<AdminCourse> => {
-    const res = await adminApiClient.get(`/admin/courses/${slug}`);
-    const course = unwrap<AdminCourse>(res);
-    // Defensive: ensure arrays are always arrays
-    return {
-      ...course,
-      tags:            Array.isArray(course.tags)            ? course.tags            : [],
-      skills:          Array.isArray(course.skills)          ? course.skills          : [],
-      ar_skills:       Array.isArray(course.ar_skills)       ? course.ar_skills       : [],
-      topics:          Array.isArray(course.topics)          ? course.topics          : [],
-      ar_topics:       Array.isArray(course.ar_topics)       ? course.ar_topics       : [],
-      prerequisites:   Array.isArray(course.prerequisites)   ? course.prerequisites   : [],
-      ar_prerequisites:Array.isArray(course.ar_prerequisites)? course.ar_prerequisites: [],
-      labSlugs:        Array.isArray(course.labSlugs)        ? course.labSlugs        : [],
-    };
-  },
-
+  // ── Get by ID (primary — backend always accepts UUID) ────────────────────
   getById: async (id: string): Promise<AdminCourse> => {
-    const res = await adminApiClient.get(`/admin/courses/by-id/${id}`);
-    return unwrap<AdminCourse>(res);
+    const res = await adminApiClient.get(`/admin/courses/${id}`);
+    return normalizeArrays(unwrap<AdminCourse>(res));
   },
 
-  // ── Create ────────────────────────────────────────────────────────────
+  // ── Get by Slug ──────────────────────────────────────────────────────────
+  // Strategy:
+  //   1. Try direct GET /admin/courses/:slug — some backends support it.
+  //   2. If that returns a 404 / non-object, fall back to searching the list
+  //      with search=slug and finding the exact match.
+  getBySlug: async (slug: string): Promise<AdminCourse> => {
+    // Attempt 1 — direct endpoint (works if backend resolves slug OR id)
+    try {
+      const res = await adminApiClient.get(`/admin/courses/${slug}`);
+      const candidate = unwrap<AdminCourse>(res);
+      // Make sure we actually got a course object (not a list accidentally)
+      if (candidate && typeof candidate === 'object' && 'id' in candidate) {
+        return normalizeArrays(candidate);
+      }
+    } catch (err: any) {
+      // 404 expected when backend only accepts UUID — fall through to list search
+      const status = err?.response?.status ?? err?.status;
+      if (status !== 404 && status !== 400) throw err;
+    }
+
+    // Attempt 2 — search by slug in the list
+    const listRes = await adminCoursesApi.list({ search: slug, limit: 50 });
+    const match = (listRes.data ?? []).find(
+      (c) => c.slug === slug || c.id === slug,
+    );
+    if (!match) {
+      const err: any = new Error(`Course not found: ${slug}`);
+      err.statusCode = 404;
+      throw err;
+    }
+
+    // Fetch full detail by id for complete data
+    return adminCoursesApi.getById(match.id);
+  },
+
+  // ── Create ───────────────────────────────────────────────────────────────
   create: async (data: AdminCourseCreateDto): Promise<AdminCourse> => {
     const res = await adminApiClient.post('/admin/courses', data);
-    return unwrap<AdminCourse>(res);
+    return normalizeArrays(unwrap<AdminCourse>(res));
   },
 
-  // ── Update Metadata ───────────────────────────────────────────────
+  // ── Update Metadata ──────────────────────────────────────────────────────
   update: async (id: string, data: AdminCourseUpdateDto): Promise<AdminCourse> => {
     const res = await adminApiClient.patch(`/admin/courses/${id}`, data);
-    return unwrap<AdminCourse>(res);
+    return normalizeArrays(unwrap<AdminCourse>(res));
   },
 
-  // ── State Management ──────────────────────────────────────────────
+  // ── State Management ─────────────────────────────────────────────────────
   setState: async (id: string, state: CourseState): Promise<AdminCourse> => {
     const res = await adminApiClient.patch(`/admin/courses/${id}`, { state });
-    return unwrap<AdminCourse>(res);
+    return normalizeArrays(unwrap<AdminCourse>(res));
   },
 
-  // ── Delete ────────────────────────────────────────────────────────────
+  // ── Delete ───────────────────────────────────────────────────────────────
   delete: async (id: string): Promise<void> => {
     await adminApiClient.delete(`/admin/courses/${id}`);
   },
 
-  // ── Curriculum ─────────────────────────────────────────────────────
-  getCurriculum: async (slug: string): Promise<CurriculumData> => {
-    const res = await adminApiClient.get(`/courses/${slug}/curriculum`);
-    const payload = res?.data ?? res;
+  // ── Curriculum ───────────────────────────────────────────────────────────
+  // FIX: was calling public /courses/:slug/curriculum — now calls admin endpoint
+  getCurriculum: async (courseId: string): Promise<CurriculumData> => {
+    const res = await adminApiClient.get(`/admin/courses/${courseId}/curriculum`);
+    const raw = res?.data ?? res;
+    const payload = raw?.data ?? raw;
     return {
-      topics:      Array.isArray(payload?.topics)      ? payload.topics      : [],
-      totalTopics: Number(payload?.totalTopics)        || 0,
-      landingData: payload?.landingData                ?? null,
+      topics:      Array.isArray(payload?.topics) ? payload.topics : [],
+      totalTopics: Number(payload?.totalTopics)   || 0,
+      landingData: payload?.landingData            ?? null,
     };
   },
 
@@ -112,7 +146,7 @@ export const adminCoursesApi = {
     return unwrap(res);
   },
 
-  // ── Path Relations ───────────────────────────────────────────────
+  // ── Path Relations ───────────────────────────────────────────────────────
   getPathModules: async (courseId: string): Promise<any[]> => {
     const res = await adminApiClient.get(`/admin/courses/${courseId}/path-modules`);
     const d = unwrap<any>(res);
