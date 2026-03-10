@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminCoursesApi } from '../services/admin-courses.api';
-import { CourseSectionsEditor } from '../components/course-sections-editor';
+import { ContentWriterEditor } from '../components/content-writer-editor';
 import { CourseLabsPanel } from '../components/course-labs-panel';
 import { CoursePlatformPreviewTab } from '../components/course-preview-tab';
 import { CourseMetadataForm } from '../components/course-metadata-form';
@@ -28,10 +28,10 @@ import { cn } from '@/lib/utils';
 type Tab = 'overview' | 'curriculum' | 'labs' | 'preview';
 
 const TABS: { key: Tab; label: string; icon: any }[] = [
-  { key: 'overview', label: 'Overview', icon: Pencil },
-  { key: 'curriculum', label: 'Curriculum', icon: BookOpen },
-  { key: 'labs', label: 'Labs', icon: FlaskConical },
-  { key: 'preview', label: 'Preview', icon: Eye },
+  { key: 'overview',    label: 'Overview',    icon: Pencil     },
+  { key: 'curriculum',  label: 'Curriculum',  icon: BookOpen   },
+  { key: 'labs',        label: 'Labs',        icon: FlaskConical },
+  { key: 'preview',     label: 'Preview',     icon: Eye        },
 ];
 
 export default function CourseDetailPage() {
@@ -76,10 +76,7 @@ export default function CourseDetailPage() {
           <FileEdit className='h-8 w-8 text-destructive' />
         </div>
         <p className='text-lg font-semibold'>Course not found</p>
-        <Button
-          variant='outline'
-          onClick={() => navigate(-1)}
-          className='gap-2'>
+        <Button variant='outline' onClick={() => navigate(-1)} className='gap-2'>
           <ArrowLeft className='h-4 w-4' /> Go Back
         </Button>
       </div>
@@ -132,11 +129,7 @@ export default function CourseDetailPage() {
               className='gap-1.5 text-zinc-400 border-zinc-500/40'
               disabled={isToggling}
               onClick={() => togglePublish('unpublish')}>
-              {isToggling ? (
-                <Loader2 className='h-3.5 w-3.5 animate-spin' />
-              ) : (
-                <FileEdit className='h-3.5 w-3.5' />
-              )}
+              {isToggling ? <Loader2 className='h-3.5 w-3.5 animate-spin' /> : <FileEdit className='h-3.5 w-3.5' />}
               Unpublish
             </Button>
           ) : (
@@ -145,11 +138,7 @@ export default function CourseDetailPage() {
               className='gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white'
               disabled={isToggling}
               onClick={() => togglePublish('publish')}>
-              {isToggling ? (
-                <Loader2 className='h-3.5 w-3.5 animate-spin' />
-              ) : (
-                <Globe className='h-3.5 w-3.5' />
-              )}
+              {isToggling ? <Loader2 className='h-3.5 w-3.5 animate-spin' /> : <Globe className='h-3.5 w-3.5' />}
               Publish
             </Button>
           )}
@@ -159,14 +148,12 @@ export default function CourseDetailPage() {
       {/* Stats Row */}
       <div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
         {[
-          { label: 'Enrollments', value: enrollments, icon: Users },
-          { label: 'Sections', value: sectionsCount, icon: Layers },
-          { label: 'Level', value: course.level ?? '—', icon: BookOpen },
-          { label: 'Access', value: course.access ?? '—', icon: Globe },
+          { label: 'Enrollments', value: enrollments,   icon: Users    },
+          { label: 'Topics',      value: sectionsCount, icon: Layers   },
+          { label: 'Level',       value: course.difficulty ?? course.level ?? '—', icon: BookOpen },
+          { label: 'Access',      value: course.access ?? '—',  icon: Globe    },
         ].map(({ label, value, icon: Icon }) => (
-          <div
-            key={label}
-            className='rounded-lg border bg-card px-4 py-3 flex items-center gap-3'>
+          <div key={label} className='rounded-lg border bg-card px-4 py-3 flex items-center gap-3'>
             <div className='rounded-md bg-primary/10 p-2'>
               <Icon className='h-4 w-4 text-primary' />
             </div>
@@ -198,12 +185,12 @@ export default function CourseDetailPage() {
 
       {/* Tab Content */}
       <div>
-        {activeTab === 'overview' && <CourseMetadataForm course={course} />}
-        {activeTab === 'curriculum' && <CourseSectionsEditor courseId={id!} />}
-        {activeTab === 'labs' && <CourseLabsPanel courseId={id!} />}
-        {activeTab === 'preview' && (
-          <CoursePlatformPreviewTab course={course} />
+        {activeTab === 'overview'   && <CourseMetadataForm course={course} />}
+        {activeTab === 'curriculum' && (
+          <ContentWriterEditor courseId={course.id} courseSlug={course.slug} />
         )}
+        {activeTab === 'labs'    && <CourseLabsPanel courseId={course.id} />}
+        {activeTab === 'preview' && <CoursePlatformPreviewTab course={course} />}
       </div>
     </div>
   );
