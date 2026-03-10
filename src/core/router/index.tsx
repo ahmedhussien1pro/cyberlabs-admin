@@ -1,82 +1,30 @@
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import { Suspense, lazy } from 'react';
+import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
+import { Suspense } from 'react';
 import { ROUTES } from '@/shared/constants';
 import ProtectedRoute from './protected-route';
 import PublicRoute from './public-route';
 import { AdminGate } from './AdminGate';
 import AdminLayout from '@/shared/components/layout/admin-layout';
 import { Preloader } from '@/shared/components/common/preloader';
+import * as Pages from './lazy-routes';
 
-// Lazy pages
-const LoginPage = lazy(() => import('@/features/auth/pages/login.page'));
-const DashboardPage = lazy(
-  () => import('@/features/dashboard/pages/dashboard.page'),
-);
-const UsersListPage = lazy(
-  () => import('@/features/users/pages/users-list.page'),
-);
-const UserDetailPage = lazy(
-  () => import('@/features/users/pages/user-detail.page'),
-);
-const CoursesListPage = lazy(
-  () => import('@/features/courses/pages/courses-list.page'),
-);
-
-const CourseCreatePage = lazy(
-  () => import('@/features/courses/pages/course-create.page'),
-);
-const CourseEditPage = lazy(
-  () => import('@/features/courses/pages/course-edit.page'),
-);
-const CourseImportPage = lazy(
-  () => import('@/features/courses/pages/course-import.page'),
-);
-
-const LabsListPage = lazy(() => import('@/features/labs/pages/labs-list.page'));
-const LabDetailPage = lazy(
-  () => import('@/features/labs/pages/lab-detail.page'),
-);
-const LabCreatePage = lazy(
-  () => import('@/features/labs/pages/lab-create.page'),
-);
-const LabEditPage = lazy(() => import('@/features/labs/pages/lab-edit.page'));
-const PathsListPage = lazy(
-  () => import('@/features/paths/pages/paths-list.page'),
-);
-const PathDetailPage = lazy(
-  () => import('@/features/paths/pages/path-detail.page'),
-);
-const PathCreatePage = lazy(
-  () => import('@/features/paths/pages/path-create.page'),
-);
-const PathEditPage = lazy(
-  () => import('@/features/paths/pages/path-edit.page'),
-);
-const CourseEditorPage = lazy(
-  () => import('@/features/courses/pages/course-edit.page'),
-);
-const ContentMapPage = lazy(
-  () => import('@/features/map/pages/content-map.page'),
-);
-// Suspense wrapper
+// ── Suspense wrapper ──────────────────────────────────────────────────
 const S = ({ children }: { children: React.ReactNode }) => (
   <Suspense fallback={<Preloader />}>{children}</Suspense>
 );
 
 const router = createBrowserRouter([
-  // ─── Public ───────────────────────────────────────────────────────────────
+  // ─── Public ───────────────────────────────────────────────────────────
   {
     path: ROUTES.LOGIN,
     element: (
       <PublicRoute>
-        <S>
-          <LoginPage />
-        </S>
+        <S><Pages.LoginPage /></S>
       </PublicRoute>
     ),
   },
 
-  // ─── Protected Admin Area ─────────────────────────────────────────────────
+  // ─── Protected Admin Area ─────────────────────────────────────────────
   {
     path: '/',
     element: (
@@ -87,137 +35,47 @@ const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
+      // ── Dashboard ──
       {
         index: true,
-        element: (
-          <S>
-            <DashboardPage />
-          </S>
-        ),
+        element: <S><Pages.DashboardPage /></S>,
       },
 
-      // ─── Users
-      {
-        path: 'users',
-        element: (
-          <S>
-            <UsersListPage />
-          </S>
-        ),
-      },
-      {
-        path: 'users/:id',
-        element: (
-          <S>
-            <UserDetailPage />
-          </S>
-        ),
-      },
+      // ── Users ──
+      { path: 'users',     element: <S><Pages.UsersListPage /></S> },
+      { path: 'users/:id', element: <S><Pages.UserDetailPage /></S> },
 
-      // ─── Courses
-      {
-        path: 'courses',
-        element: (
-          <S>
-            <CoursesListPage />
-          </S>
-        ),
-      },
-      {
-        path: 'courses/new',
-        element: (
-          <S>
-            <CourseCreatePage />
-          </S>
-        ),
-      },
-      {
-        path: 'courses/import',
-        element: (
-          <S>
-            <CourseImportPage />
-          </S>
-        ),
-      },
-      {
-        path: 'courses/:id/edit',
-        element: (
-          <S>
-            <CourseEditPage />
-          </S>
-        ),
-      },
+      // ── Courses ──
+      { path: 'courses',              element: <S><Pages.CoursesListPage /></S> },
+      { path: 'courses/new',          element: <S><Pages.CourseCreatePage /></S> },
+      { path: 'courses/import',       element: <S><Pages.CourseImportPage /></S> },
+      { path: 'courses/:id/edit',     element: <S><Pages.CourseEditPage /></S> },
+      // Redirect /courses/:slug/detail → edit?tab=preview
+      { path: 'courses/:slug/detail', element: <Navigate to='../edit?tab=preview' replace /> },
 
-      { path: '/courses/editor', element: <CourseEditorPage /> },
-      { path: '/courses/:id/content', element: <CourseEditorPage /> },
-      // ─── Labs
-      {
-        path: 'labs',
-        element: (
-          <S>
-            <LabsListPage />
-          </S>
-        ),
-      },
-      {
-        path: 'labs/new',
-        element: (
-          <S>
-            <LabCreatePage />
-          </S>
-        ),
-      },
-      {
-        path: 'labs/:id',
-        element: (
-          <S>
-            <LabDetailPage />
-          </S>
-        ),
-      },
-      {
-        path: 'labs/:id/edit',
-        element: (
-          <S>
-            <LabEditPage />
-          </S>
-        ),
-      },
+      // ── Labs ──
+      { path: 'labs',          element: <S><Pages.LabsListPage /></S> },
+      { path: 'labs/new',      element: <S><Pages.LabCreatePage /></S> },
+      { path: 'labs/:id',      element: <S><Pages.LabDetailPage /></S> },
+      { path: 'labs/:id/edit', element: <S><Pages.LabEditPage /></S> },
 
-      // ─── Paths
-      {
-        path: 'paths',
-        element: (
-          <S>
-            <PathsListPage />
-          </S>
-        ),
-      },
-      {
-        path: 'paths/create',
-        element: (
-          <S>
-            <PathCreatePage />
-          </S>
-        ),
-      },
-      {
-        path: 'paths/:id',
-        element: (
-          <S>
-            <PathDetailPage />
-          </S>
-        ),
-      },
-      {
-        path: 'paths/:id/edit',
-        element: (
-          <S>
-            <PathEditPage />
-          </S>
-        ),
-      },
-      { path: ROUTES.MAP, element: <ContentMapPage /> },
+      // ── Paths ──
+      { path: 'paths',          element: <S><Pages.PathsListPage /></S> },
+      { path: 'paths/create',   element: <S><Pages.PathCreatePage /></S> },
+      { path: 'paths/:id',      element: <S><Pages.PathDetailPage /></S> },
+      { path: 'paths/:id/edit', element: <S><Pages.PathEditPage /></S> },
+
+      // ── Content Map ──
+      { path: 'map', element: <S><Pages.ContentMapPage /></S> },
+
+      // ── Badges ──
+      { path: 'badges', element: <S><Pages.BadgesListPage /></S> },
+
+      // ── Notifications ──
+      { path: 'notifications', element: <S><Pages.NotificationsPage /></S> },
+
+      // ── Settings ──
+      { path: 'settings', element: <S><Pages.SettingsPage /></S> },
     ],
   },
 ]);
