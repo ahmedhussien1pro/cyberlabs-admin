@@ -21,6 +21,9 @@ i18n
       'paths',
       'analytics',
       'errors',
+      'notifications',
+      'contentMap',
+      'settings',
     ],
     defaultNS: 'common',
 
@@ -40,7 +43,6 @@ i18n
     },
 
     react: {
-      // useSuspense: true,
       useSuspense: false,
     },
   });

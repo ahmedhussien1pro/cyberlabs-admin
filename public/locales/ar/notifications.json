@@ -1,0 +1,57 @@
+{
+  "page": {
+    "title": "إرسال الإشعارات",
+    "subtitle": "أرسل إشعارات لجميع مستخدمي المنصة أو لمستخدم محدد"
+  },
+  "form": {
+    "cardTitle": "إنشاء إشعار",
+    "cardDescription": "اختر إرسال الإشعار لجميع المستخدمين أو لمستخدم محدد.",
+    "typeLabel": "نوع الإشعار",
+    "targetLabel": "الإرسال إلى",
+    "targetAll": "جميع المستخدمين",
+    "targetUser": "مستخدم محدد",
+    "userSearchPlaceholder": "ابحث بالاسم أو البريد الإلكتروني...",
+    "userSearchNoResults": "لا يوجد مستخدمون",
+    "userSearchLoading": "جاري البحث...",
+    "selectedUser": "المستخدم المحدد",
+    "titleLabel": "العنوان",
+    "titlePlaceholder": "عنوان الإشعار...",
+    "messageLabel": "الرسالة",
+    "messagePlaceholder": "اكتب رسالتك هنا...",
+    "previewLabel": "معاينة",
+    "previewTitleFallback": "عنوان الإشعار",
+    "previewMessageFallback": "نص الرسالة...",
+    "warningAll": "سيتم إرسال هذا الإشعار لـ <strong>جميع المستخدمين المسجلين</strong>. يرجى مراجعة رسالتك قبل الإرسال.",
+    "warningUser": "سيتم إرسال هذا الإشعار للمستخدم المحدد فقط.",
+    "sendButtonAll": "إرسال لجميع المستخدمين",
+    "sendButtonUser": "إرسال للمستخدم",
+    "sending": "جاري الإرسال...",
+    "validationError": "يرجى ملء العنوان والرسالة",
+    "validationUserError": "يرجى اختيار مستخدم للإرسال إليه"
+  },
+  "types": {
+    "INFO": "معلومات",
+    "SUCCESS": "نجاح",
+    "WARNING": "تحذير",
+    "ALERT": "تنبيه"
+  },
+  "confirm": {
+    "title": "تأكيد الإرسال",
+    "bodyAll": "أنت على وشك إرسال الإشعار التالي لـ <strong>جميع المستخدمين</strong>:",
+    "bodyUser": "أنت على وشك إرسال الإشعار التالي لـ <strong>{{name}}</strong>:",
+    "undone": "لا يمكن التراجع عن هذا الإجراء. هل تريد المتابعة؟",
+    "cancel": "إلغاء",
+    "send": "إرسال الآن"
+  },
+  "history": {
+    "title": "سجل الإشعارات",
+    "refresh": "تحديث",
+    "empty": "لم يتم إرسال أي إشعارات بعد",
+    "recipients": "مستقبل",
+    "sentBy": "أرسل بواسطة"
+  },
+  "toast": {
+    "success": "تم إرسال الإشعار لـ {{count}} مستخدم!",
+    "error": "فشل إرسال الإشعار"
+  }
+}

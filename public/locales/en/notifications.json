@@ -1,0 +1,57 @@
+{
+  "page": {
+    "title": "Broadcast Notifications",
+    "subtitle": "Send announcements to all platform users or a specific user"
+  },
+  "form": {
+    "cardTitle": "Compose Notification",
+    "cardDescription": "Choose to send to all users or target a specific user.",
+    "typeLabel": "Notification Type",
+    "targetLabel": "Send To",
+    "targetAll": "All Users",
+    "targetUser": "Specific User",
+    "userSearchPlaceholder": "Search by name or email...",
+    "userSearchNoResults": "No users found",
+    "userSearchLoading": "Searching...",
+    "selectedUser": "Selected user",
+    "titleLabel": "Title",
+    "titlePlaceholder": "Notification title...",
+    "messageLabel": "Message",
+    "messagePlaceholder": "Write your message here...",
+    "previewLabel": "Preview",
+    "previewTitleFallback": "Notification Title",
+    "previewMessageFallback": "Message body...",
+    "warningAll": "This will send a notification to <strong>all registered users</strong>. Please review your message before sending.",
+    "warningUser": "This will send a notification to the selected user only.",
+    "sendButtonAll": "Send to All Users",
+    "sendButtonUser": "Send to User",
+    "sending": "Sending...",
+    "validationError": "Please fill in both title and message",
+    "validationUserError": "Please select a user to send to"
+  },
+  "types": {
+    "INFO": "Info",
+    "SUCCESS": "Success",
+    "WARNING": "Warning",
+    "ALERT": "Alert"
+  },
+  "confirm": {
+    "title": "Confirm Broadcast",
+    "bodyAll": "You are about to send the following notification to <strong>all users</strong>:",
+    "bodyUser": "You are about to send the following notification to <strong>{{name}}</strong>:",
+    "undone": "This action cannot be undone. Continue?",
+    "cancel": "Cancel",
+    "send": "Send Now"
+  },
+  "history": {
+    "title": "Broadcast History",
+    "refresh": "Refresh",
+    "empty": "No notifications sent yet",
+    "recipients": "recipients",
+    "sentBy": "Sent by"
+  },
+  "toast": {
+    "success": "Notification sent to {{count}} users!",
+    "error": "Failed to send notification"
+  }
+}
