@@ -53,6 +53,8 @@ export const ENDPOINTS = {
     ATTACH_LAB: (pathId: string, labId: string) => `${BASE}/paths/${pathId}/labs/${labId}`,
     DETACH_LAB: (pathId: string, labId: string) => `${BASE}/paths/${pathId}/labs/${labId}`,
     LABS: (pathId: string) => `${BASE}/paths/${pathId}/labs`,
+    ATTACH_COURSE: (pathId: string, courseId: string) => `${BASE}/paths/${pathId}/courses/${courseId}`,
+    DETACH_COURSE: (pathId: string, courseId: string) => `${BASE}/paths/${pathId}/courses/${courseId}`,
   },
   BADGES: {
     LIST: `${BASE}/badges`,
@@ -77,7 +79,7 @@ export const ENDPOINTS = {
   },
 } as const;
 
-// ── Aliases for legacy service imports ─────────────────────────────────────
+// ── Aliases for legacy service imports ───────────────────────────────────────────
 export const API_ENDPOINTS = {
   ADMIN_LABS: ENDPOINTS.LABS,
   ADMIN_ANALYTICS: ENDPOINTS.ANALYTICS,

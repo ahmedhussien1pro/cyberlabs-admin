@@ -17,8 +17,6 @@ export interface PathsQueryParams {
   isPublished?: boolean;
 }
 
-// Backend returns { data: T } for single items and { data: T[], meta: {...} } for lists.
-// axios wraps the whole response so res.data = the backend payload.
 function unwrapItem<T>(res: any): T {
   const payload = res?.data ?? res;
   return (payload?.data ?? payload) as T;
@@ -76,6 +74,18 @@ export const pathsService = {
   reorderModules(id: string, orders: { id: string; order: number }[]): Promise<any> {
     return apiClient
       .patch(ENDPOINTS.PATHS.REORDER_MODULES(id), { orders })
+      .then((res) => unwrapItem(res));
+  },
+
+  attachCourse(pathId: string, courseId: string): Promise<any> {
+    return apiClient
+      .post(ENDPOINTS.PATHS.ATTACH_COURSE(pathId, courseId))
+      .then((res) => unwrapItem(res));
+  },
+
+  detachCourse(pathId: string, courseId: string): Promise<any> {
+    return apiClient
+      .delete(ENDPOINTS.PATHS.DETACH_COURSE(pathId, courseId))
       .then((res) => unwrapItem(res));
   },
 
