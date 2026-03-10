@@ -1,0 +1,66 @@
+{
+  "header": {
+    "title": "Content Map",
+    "subtitle": "Paths → Courses → Labs — drag to reorder",
+    "legendCourse": "Course Module",
+    "legendLab": "Lab",
+    "legendDrag": "Drag to reorder"
+  },
+  "sidebar": {
+    "searchPlaceholder": "Search paths...",
+    "noPathsFound": "No paths found",
+    "managePaths": "Manage Paths",
+    "courses": "courses",
+    "labs": "labs"
+  },
+  "detail": {
+    "courseModules": "course module",
+    "courseModulesPlural": "course modules",
+    "expandAll": "Expand All",
+    "collapseAll": "Collapse All",
+    "viewPath": "View Path",
+    "noModulesTitle": "No course modules in this path yet",
+    "noModulesHint": "Go to the path detail page to add modules.",
+    "addModules": "Add Modules"
+  },
+  "empty": {
+    "title": "Select a Learning Path",
+    "subtitle": "Choose a path from the left to view and manage its courses and labs"
+  },
+  "courseCard": {
+    "live": "Live",
+    "draft": "Draft",
+    "lessons": "lessons",
+    "viewCourse": "View Course",
+    "editCourse": "Edit Course",
+    "linkedLabs": "Linked Labs"
+  },
+  "labsSection": {
+    "noLabsLinked": "No labs linked yet",
+    "linkLab": "Link Lab",
+    "viewLab": "View Lab",
+    "editLab": "Edit Lab",
+    "unlinkLab": "Unlink Lab",
+    "unlinkSuccess": "Lab unlinked",
+    "unlinkError": "Failed to unlink lab",
+    "reorderError": "Failed to save lab order"
+  },
+  "linkModal": {
+    "title": "Link Lab to Course",
+    "description": "Pick a lab to attach. Already-linked labs are shown in green.",
+    "searchPlaceholder": "Search labs...",
+    "noLabsFound": "No labs found",
+    "linked": "Linked",
+    "linkSuccess": "Lab linked successfully",
+    "linkError": "Failed to link lab"
+  },
+  "difficulty": {
+    "BEGINNER": "Beginner",
+    "INTERMEDIATE": "Intermediate",
+    "ADVANCED": "Advanced",
+    "EXPERT": "Expert"
+  },
+  "reorder": {
+    "moduleError": "Failed to save module order"
+  }
+}

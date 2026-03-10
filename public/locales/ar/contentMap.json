@@ -1,0 +1,66 @@
+{
+  "header": {
+    "title": "خريطة المحتوى",
+    "subtitle": "المسارات ← الكورسات ← المعامل — اسحب لإعادة الترتيب",
+    "legendCourse": "وحدة كورس",
+    "legendLab": "معمل",
+    "legendDrag": "اسحب لإعادة الترتيب"
+  },
+  "sidebar": {
+    "searchPlaceholder": "ابحث في المسارات...",
+    "noPathsFound": "لا توجد مسارات",
+    "managePaths": "إدارة المسارات",
+    "courses": "كورسات",
+    "labs": "معامل"
+  },
+  "detail": {
+    "courseModules": "وحدة كورس",
+    "courseModulesPlural": "وحدات كورس",
+    "expandAll": "توسيع الكل",
+    "collapseAll": "طي الكل",
+    "viewPath": "عرض المسار",
+    "noModulesTitle": "لا توجد وحدات كورس في هذا المسار بعد",
+    "noModulesHint": "اذهب إلى صفحة تفاصيل المسار لإضافة وحدات.",
+    "addModules": "إضافة وحدات"
+  },
+  "empty": {
+    "title": "اختر مسار تعليمي",
+    "subtitle": "اختر مساراً من القائمة اليسرى لعرض وإدارة كورساته ومعاملاته"
+  },
+  "courseCard": {
+    "live": "منشور",
+    "draft": "مسودة",
+    "lessons": "درس",
+    "viewCourse": "عرض الكورس",
+    "editCourse": "تعديل الكورس",
+    "linkedLabs": "المعامل المرتبطة"
+  },
+  "labsSection": {
+    "noLabsLinked": "لا توجد معامل مرتبطة بعد",
+    "linkLab": "ربط معمل",
+    "viewLab": "عرض المعمل",
+    "editLab": "تعديل المعمل",
+    "unlinkLab": "إلغاء ربط المعمل",
+    "unlinkSuccess": "تم إلغاء ربط المعمل",
+    "unlinkError": "فشل إلغاء ربط المعمل",
+    "reorderError": "فشل حفظ ترتيب المعامل"
+  },
+  "linkModal": {
+    "title": "ربط معمل بالكورس",
+    "description": "اختر معملاً للإرفاق. المعامل المرتبطة بالفعل تظهر باللون الأخضر.",
+    "searchPlaceholder": "ابحث في المعامل...",
+    "noLabsFound": "لا توجد معامل",
+    "linked": "مرتبط",
+    "linkSuccess": "تم ربط المعمل بنجاح",
+    "linkError": "فشل ربط المعمل"
+  },
+  "difficulty": {
+    "BEGINNER": "مبتدئ",
+    "INTERMEDIATE": "متوسط",
+    "ADVANCED": "متقدم",
+    "EXPERT": "خبير"
+  },
+  "reorder": {
+    "moduleError": "فشل حفظ ترتيب الوحدات"
+  }
+}

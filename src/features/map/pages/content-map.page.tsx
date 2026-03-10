@@ -1,9 +1,10 @@
 // src/features/map/pages/content-map.page.tsx
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import {
   GripVertical, BookOpen, FlaskConical, ChevronDown, Pencil, X,
   Plus, Search, Map, Globe, EyeOff, Layers, ArrowRight,
@@ -56,11 +57,12 @@ const DIFFICULTY_COLOR: Record<string, string> = {
 };
 
 function DiffBadge({ d }: { d?: string }) {
+  const { t } = useTranslation('contentMap');
   if (!d) return <span className='text-xs text-muted-foreground'>—</span>;
   return (
     <Badge variant='outline' className={cn('text-[10px] font-semibold py-0 h-4', DIFFICULTY_COLOR[d])}>
       <BarChart3 className='mr-1 h-2.5 w-2.5' />
-      {d.charAt(0) + d.slice(1).toLowerCase()}
+      {t(`difficulty.${d}`, d.charAt(0) + d.slice(1).toLowerCase())}
     </Badge>
   );
 }
@@ -74,6 +76,7 @@ function reorder<T>(list: T[], from: number, to: number): T[] {
 
 // ── CourseLabsSection ──────────────────────────────────────────────────────
 function CourseLabsSection({ courseId, onLinkLab }: { courseId: string; onLinkLab: (id: string) => void }) {
+  const { t } = useTranslation('contentMap');
   const queryClient  = useQueryClient();
   const draggedLabId = useRef<string | null>(null);
   const [labOrder,  setLabOrder]  = useState<CourseLabItem[] | null>(null);
@@ -88,13 +91,21 @@ function CourseLabsSection({ courseId, onLinkLab }: { courseId: string; onLinkLa
 
   const detachMutation = useMutation({
     mutationFn: (labId: string) => coursesService.detachLab(courseId, labId),
-    onSuccess: () => { setLabOrder(null); queryClient.invalidateQueries({ queryKey: ['course-labs', courseId] }); toast.success('Lab unlinked'); },
-    onError:   (e: any) => toast.error(e.response?.data?.message ?? 'Failed to unlink lab'),
+    onSuccess: () => {
+      setLabOrder(null);
+      queryClient.invalidateQueries({ queryKey: ['course-labs', courseId] });
+      toast.success(t('labsSection.unlinkSuccess'));
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message ?? t('labsSection.unlinkError')),
   });
 
   const reorderMutation = useMutation({
     mutationFn: (labIds: string[]) => coursesService.reorderLabs(courseId, labIds),
-    onError: () => { setLabOrder(null); queryClient.invalidateQueries({ queryKey: ['course-labs', courseId] }); toast.error('Failed to save lab order'); },
+    onError: () => {
+      setLabOrder(null);
+      queryClient.invalidateQueries({ queryKey: ['course-labs', courseId] });
+      toast.error(t('labsSection.reorderError'));
+    },
   });
 
   const handleDragStart = (e: React.DragEvent, labId: string) => {
@@ -154,27 +165,29 @@ function CourseLabsSection({ courseId, onLinkLab }: { courseId: string; onLinkLa
               <TooltipProvider delayDuration={300}>
                 <Tooltip><TooltipTrigger asChild>
                   <Link to={ROUTES.LAB_DETAIL(lab.id)}><Button variant='ghost' size='icon' className='h-6 w-6'><ExternalLink className='h-3 w-3' /></Button></Link>
-                </TooltipTrigger><TooltipContent side='top'>View Lab</TooltipContent></Tooltip>
+                </TooltipTrigger><TooltipContent side='top'>{t('labsSection.viewLab')}</TooltipContent></Tooltip>
                 <Tooltip><TooltipTrigger asChild>
                   <Link to={ROUTES.LAB_EDIT(lab.id)}><Button variant='ghost' size='icon' className='h-6 w-6'><Pencil className='h-3 w-3' /></Button></Link>
-                </TooltipTrigger><TooltipContent side='top'>Edit Lab</TooltipContent></Tooltip>
+                </TooltipTrigger><TooltipContent side='top'>{t('labsSection.editLab')}</TooltipContent></Tooltip>
                 <Tooltip><TooltipTrigger asChild>
                   <Button variant='ghost' size='icon' className='h-6 w-6 text-destructive hover:bg-destructive/10'
                     onClick={(e) => { e.stopPropagation(); detachMutation.mutate(lab.id); }}
                     disabled={detachMutation.isPending}>
                     <X className='h-3 w-3' />
                   </Button>
-                </TooltipTrigger><TooltipContent side='top'>Unlink Lab</TooltipContent></Tooltip>
+                </TooltipTrigger><TooltipContent side='top'>{t('labsSection.unlinkLab')}</TooltipContent></Tooltip>
               </TooltipProvider>
             </div>
           </div>
         ))}
       </AnimatePresence>
-      {displayLabs.length === 0 && <p className='py-1 text-xs text-muted-foreground/60'>No labs linked yet</p>}
+      {displayLabs.length === 0 && (
+        <p className='py-1 text-xs text-muted-foreground/60'>{t('labsSection.noLabsLinked')}</p>
+      )}
       <Button variant='ghost' size='sm'
         className='mt-1 h-7 w-full justify-start gap-1.5 rounded-lg border border-dashed border-violet-500/25 text-xs text-muted-foreground hover:border-violet-500/50 hover:bg-violet-500/5 hover:text-violet-400'
         onClick={() => onLinkLab(courseId)}>
-        <Plus className='h-3 w-3' /> Link Lab
+        <Plus className='h-3 w-3' /> {t('labsSection.linkLab')}
       </Button>
     </div>
   );
@@ -192,6 +205,7 @@ function CourseModuleCard({
   onDrop:      (e: React.DragEvent) => void;
   onDragLeave: () => void;
 }) {
+  const { t } = useTranslation('contentMap');
   const course = module.course;
   if (!course) return null;
 
@@ -223,8 +237,8 @@ function CourseModuleCard({
           <div className='flex flex-wrap items-center gap-1.5'>
             <p className='truncate text-sm font-semibold leading-snug'>{course.title}</p>
             {course.isPublished
-              ? <span className='flex items-center gap-1 text-[10px] font-medium text-emerald-400'><span className='h-1.5 w-1.5 rounded-full bg-emerald-500' /> Live</span>
-              : <span className='flex items-center gap-1 text-[10px] font-medium text-amber-500/80'><span className='h-1.5 w-1.5 rounded-full bg-amber-500/60' /> Draft</span>}
+              ? <span className='flex items-center gap-1 text-[10px] font-medium text-emerald-400'><span className='h-1.5 w-1.5 rounded-full bg-emerald-500' /> {t('courseCard.live')}</span>
+              : <span className='flex items-center gap-1 text-[10px] font-medium text-amber-500/80'><span className='h-1.5 w-1.5 rounded-full bg-amber-500/60' /> {t('courseCard.draft')}</span>}
           </div>
           <div className='mt-1 flex flex-wrap items-center gap-2'>
             <DiffBadge d={course.difficulty} />
@@ -232,23 +246,22 @@ function CourseModuleCard({
               <span className='flex items-center gap-1 text-[10px] text-muted-foreground'><Clock className='h-2.5 w-2.5' />{course.estimatedHours ?? course.duration}h</span>
             ) : null}
             {(course._count?.lessons ?? 0) > 0 && (
-              <span className='flex items-center gap-1 text-[10px] text-muted-foreground'><Layers className='h-2.5 w-2.5' />{course._count?.lessons} lessons</span>
+              <span className='flex items-center gap-1 text-[10px] text-muted-foreground'><Layers className='h-2.5 w-2.5' />{course._count?.lessons} {t('courseCard.lessons')}</span>
             )}
           </div>
         </div>
         <div className='flex shrink-0 items-center gap-0.5'>
           <TooltipProvider delayDuration={300}>
             <Tooltip><TooltipTrigger asChild>
-              {/* Use COURSE_EDIT instead of removed COURSE_DETAIL */}
               <Link to={ROUTES.COURSE_EDIT(course.id)}>
                 <Button variant='ghost' size='icon' className='h-7 w-7'><ExternalLink className='h-3.5 w-3.5' /></Button>
               </Link>
-            </TooltipTrigger><TooltipContent>View Course</TooltipContent></Tooltip>
+            </TooltipTrigger><TooltipContent>{t('courseCard.viewCourse')}</TooltipContent></Tooltip>
             <Tooltip><TooltipTrigger asChild>
               <Link to={ROUTES.COURSE_EDIT(course.id)}>
                 <Button variant='ghost' size='icon' className='h-7 w-7'><Pencil className='h-3.5 w-3.5' /></Button>
               </Link>
-            </TooltipTrigger><TooltipContent>Edit Course</TooltipContent></Tooltip>
+            </TooltipTrigger><TooltipContent>{t('courseCard.editCourse')}</TooltipContent></Tooltip>
           </TooltipProvider>
           <Button variant='ghost' size='icon' className='h-7 w-7'
             onClick={(e) => { e.stopPropagation(); onToggle(); }}>
@@ -270,7 +283,7 @@ function CourseModuleCard({
           >
             <div className='border-t border-border/40 bg-muted/20 px-4 pb-3 pt-2.5'>
               <p className='mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground'>
-                <FlaskConical className='h-3 w-3 text-violet-400' /> Linked Labs
+                <FlaskConical className='h-3 w-3 text-violet-400' /> {t('courseCard.linkedLabs')}
               </p>
               <CourseLabsSection courseId={course.id} onLinkLab={onLinkLab} />
             </div>
@@ -283,6 +296,7 @@ function CourseModuleCard({
 
 // ── LinkLabModal ───────────────────────────────────────────────────────────
 function LinkLabModal({ open, courseId, onClose }: { open: boolean; courseId: string | null; onClose: () => void }) {
+  const { t } = useTranslation('contentMap');
   const [search, setSearch] = useState('');
   const queryClient = useQueryClient();
 
@@ -301,8 +315,11 @@ function LinkLabModal({ open, courseId, onClose }: { open: boolean; courseId: st
 
   const attachMutation = useMutation({
     mutationFn: (labId: string) => coursesService.attachLab(courseId!, labId),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['course-labs', courseId] }); toast.success('Lab linked successfully'); },
-    onError:   (e: any) => toast.error(e.response?.data?.message ?? 'Failed to link lab'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['course-labs', courseId] });
+      toast.success(t('linkModal.linkSuccess'));
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message ?? t('linkModal.linkError')),
   });
 
   const labs: any[] = Array.isArray(labsData) ? labsData : (labsData as any)?.data ?? (labsData as any)?.items ?? [];
@@ -311,17 +328,28 @@ function LinkLabModal({ open, courseId, onClose }: { open: boolean; courseId: st
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className='max-w-lg'>
         <DialogHeader>
-          <DialogTitle className='flex items-center gap-2'><FlaskConical className='h-5 w-5 text-violet-400' />Link Lab to Course</DialogTitle>
-          <DialogDescription>Pick a lab to attach. Already-linked labs are shown as green.</DialogDescription>
+          <DialogTitle className='flex items-center gap-2'>
+            <FlaskConical className='h-5 w-5 text-violet-400' />
+            {t('linkModal.title')}
+          </DialogTitle>
+          <DialogDescription>{t('linkModal.description')}</DialogDescription>
         </DialogHeader>
         <div className='relative'>
           <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-          <Input placeholder='Search labs...' value={search} onChange={(e) => setSearch(e.target.value)} className='pl-9' autoFocus />
+          <Input
+            placeholder={t('linkModal.searchPlaceholder')}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className='pl-9'
+            autoFocus
+          />
         </div>
         <ScrollArea className='h-80'>
           <div className='space-y-1.5 pr-2'>
             {labsLoading && [1,2,3,4].map((i) => <Skeleton key={i} className='h-14 rounded-lg' />)}
-            {!labsLoading && labs.length === 0 && <p className='py-10 text-center text-sm text-muted-foreground'>No labs found</p>}
+            {!labsLoading && labs.length === 0 && (
+              <p className='py-10 text-center text-sm text-muted-foreground'>{t('linkModal.noLabsFound')}</p>
+            )}
             {labs.map((lab) => {
               const isLinked = linkedIds.has(lab.id);
               return (
@@ -346,8 +374,9 @@ function LinkLabModal({ open, courseId, onClose }: { open: boolean; courseId: st
                       )}
                     </div>
                   </div>
-                  {isLinked ? <span className='shrink-0 text-xs font-semibold text-emerald-400'>✓ Linked</span>
-                            : <Plus className='h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100' />}
+                  {isLinked
+                    ? <span className='shrink-0 text-xs font-semibold text-emerald-400'>✓ {t('linkModal.linked')}</span>
+                    : <Plus className='h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100' />}
                 </button>
               );
             })}
@@ -360,6 +389,7 @@ function LinkLabModal({ open, courseId, onClose }: { open: boolean; courseId: st
 
 // ── ContentMapPage ─────────────────────────────────────────────────────────
 export default function ContentMapPage() {
+  const { t } = useTranslation('contentMap');
   const queryClient = useQueryClient();
   const [selectedPathId,    setSelectedPathId]    = useState<string | null>(null);
   const [expandedCourseIds, setExpandedCourseIds] = useState<Set<string>>(new Set());
@@ -380,8 +410,8 @@ export default function ContentMapPage() {
     enabled:  !!selectedPathId,
   } as any);
 
-  // Sync modules when path detail loads
-  useCallback(() => {
+  // ✅ Fixed: was useCallback (never executed). Now useEffect syncs modules when pathDetail changes.
+  useEffect(() => {
     if (pathDetail) {
       const mods = ((pathDetail as any).modules ?? [])
         .filter((m: PathModule) => m.type === 'COURSE' && !!m.course)
@@ -396,7 +426,7 @@ export default function ContentMapPage() {
     onError: () => {
       setLocalModules(null);
       queryClient.invalidateQueries({ queryKey: ['path-map-detail', selectedPathId] });
-      toast.error('Failed to save module order');
+      toast.error(t('reorder.moduleError'));
     },
   });
 
@@ -445,36 +475,45 @@ export default function ContentMapPage() {
 
   return (
     <div className='flex h-[calc(100vh-4rem)] flex-col overflow-hidden'>
+      {/* ── Header ── */}
       <div className='flex items-center justify-between border-b border-border/60 bg-background px-5 py-3'>
         <div className='flex items-center gap-3'>
           <div className='flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/20 to-violet-500/20 ring-1 ring-border/60'>
             <Map className='h-4.5 w-4.5 text-blue-400' />
           </div>
           <div>
-            <h1 className='text-base font-bold leading-none tracking-tight'>Content Map</h1>
-            <p className='mt-0.5 text-xs text-muted-foreground'>Paths → Courses → Labs — drag to reorder</p>
+            <h1 className='text-base font-bold leading-none tracking-tight'>{t('header.title')}</h1>
+            <p className='mt-0.5 text-xs text-muted-foreground'>{t('header.subtitle')}</p>
           </div>
         </div>
         <div className='hidden items-center gap-4 text-[11px] text-muted-foreground md:flex'>
-          <span className='flex items-center gap-1.5'><span className='h-2 w-2 rounded-full bg-blue-500' /> Course Module</span>
-          <span className='flex items-center gap-1.5'><span className='h-2 w-2 rounded-full bg-violet-500' /> Lab</span>
-          <span className='flex items-center gap-1.5'><GripVertical className='h-3 w-3' /> Drag to reorder</span>
+          <span className='flex items-center gap-1.5'><span className='h-2 w-2 rounded-full bg-blue-500' /> {t('header.legendCourse')}</span>
+          <span className='flex items-center gap-1.5'><span className='h-2 w-2 rounded-full bg-violet-500' /> {t('header.legendLab')}</span>
+          <span className='flex items-center gap-1.5'><GripVertical className='h-3 w-3' /> {t('header.legendDrag')}</span>
         </div>
       </div>
 
       <div className='flex flex-1 overflow-hidden'>
+        {/* ── Sidebar ── */}
         <aside className='flex w-60 shrink-0 flex-col border-r border-border/60 bg-muted/10 xl:w-68'>
           <div className='p-2.5'>
             <div className='relative'>
               <Search className='absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground' />
-              <Input placeholder='Search paths...' value={pathSearch} onChange={(e) => setPathSearch(e.target.value)} className='h-8 pl-8 text-xs' />
+              <Input
+                placeholder={t('sidebar.searchPlaceholder')}
+                value={pathSearch}
+                onChange={(e) => setPathSearch(e.target.value)}
+                className='h-8 pl-8 text-xs'
+              />
             </div>
           </div>
           <Separator />
           <ScrollArea className='flex-1'>
             <div className='space-y-0.5 p-2'>
               {pathsLoading && [1,2,3,4,5].map((i) => <Skeleton key={i} className='h-14 rounded-lg' />)}
-              {!pathsLoading && filteredPaths.length === 0 && <p className='py-6 text-center text-xs text-muted-foreground'>No paths found</p>}
+              {!pathsLoading && filteredPaths.length === 0 && (
+                <p className='py-6 text-center text-xs text-muted-foreground'>{t('sidebar.noPathsFound')}</p>
+              )}
               {filteredPaths.map((path: any) => (
                 <button key={path.id}
                   onClick={() => { setSelectedPathId(path.id); setLocalModules(null); setExpandedCourseIds(new Set()); }}
@@ -488,8 +527,8 @@ export default function ContentMapPage() {
                     {path.isPublished ? <Globe className='mt-0.5 h-3 w-3 shrink-0 text-emerald-400' /> : <EyeOff className='mt-0.5 h-3 w-3 shrink-0 text-muted-foreground/40' />}
                   </div>
                   <div className='mt-1 flex items-center gap-2 text-[10px] text-muted-foreground'>
-                    <span className='flex items-center gap-1'><BookOpen className='h-2.5 w-2.5' />{path.totalCourses ?? 0}</span>
-                    <span className='flex items-center gap-1'><FlaskConical className='h-2.5 w-2.5' />{path.totalLabs ?? 0}</span>
+                    <span className='flex items-center gap-1'><BookOpen className='h-2.5 w-2.5' />{path.totalCourses ?? 0} {t('sidebar.courses')}</span>
+                    <span className='flex items-center gap-1'><FlaskConical className='h-2.5 w-2.5' />{path.totalLabs ?? 0} {t('sidebar.labs')}</span>
                     {path.estimatedHours > 0 && <span className='flex items-center gap-1'><Clock className='h-2.5 w-2.5' />{path.estimatedHours}h</span>}
                   </div>
                 </button>
@@ -500,45 +539,50 @@ export default function ContentMapPage() {
           <div className='p-2.5'>
             <Link to={ROUTES.PATHS}>
               <Button variant='outline' size='sm' className='h-8 w-full gap-1.5 text-xs'>
-                <Sparkles className='h-3.5 w-3.5' /> Manage Paths <ArrowRight className='ml-auto h-3.5 w-3.5' />
+                <Sparkles className='h-3.5 w-3.5' /> {t('sidebar.managePaths')} <ArrowRight className='ml-auto h-3.5 w-3.5' />
               </Button>
             </Link>
           </div>
         </aside>
 
+        {/* ── Main ── */}
         <main className='flex flex-1 flex-col overflow-hidden'>
+          {/* Empty state */}
           {!selectedPathId && (
             <div className='flex flex-1 flex-col items-center justify-center gap-4'>
               <div className='flex h-20 w-20 items-center justify-center rounded-2xl border border-border/50 bg-muted/30'>
                 <Map className='h-10 w-10 text-muted-foreground/30' />
               </div>
               <div className='text-center'>
-                <p className='text-base font-semibold'>Select a Learning Path</p>
-                <p className='mt-1 text-sm text-muted-foreground'>Choose a path from the left to view and manage its courses and labs</p>
+                <p className='text-base font-semibold'>{t('empty.title')}</p>
+                <p className='mt-1 text-sm text-muted-foreground'>{t('empty.subtitle')}</p>
               </div>
             </div>
           )}
 
           {selectedPathId && (
             <>
+              {/* Path detail header */}
               <div className='flex items-center justify-between border-b border-border/40 bg-muted/20 px-5 py-2.5'>
                 <div className='flex items-center gap-3'>
                   {pathFetching && <RefreshCw className='h-3.5 w-3.5 animate-spin text-muted-foreground' />}
                   <div>
                     <p className='text-sm font-semibold'>{selectedPath?.title}</p>
-                    <p className='text-[11px] text-muted-foreground'>{courseModules.length} course module{courseModules.length !== 1 ? 's' : ''}</p>
+                    <p className='text-[11px] text-muted-foreground'>
+                      {courseModules.length} {courseModules.length !== 1 ? t('detail.courseModulesPlural') : t('detail.courseModules')}
+                    </p>
                   </div>
                 </div>
                 <div className='flex items-center gap-1.5'>
                   <Button variant='ghost' size='sm' className='h-7 gap-1.5 text-xs' onClick={expandAll} disabled={courseModules.length === 0}>
-                    <ChevronDown className='h-3.5 w-3.5' /> Expand All
+                    <ChevronDown className='h-3.5 w-3.5' /> {t('detail.expandAll')}
                   </Button>
                   <Button variant='ghost' size='sm' className='h-7 gap-1.5 text-xs' onClick={collapseAll} disabled={expandedCourseIds.size === 0}>
-                    Collapse All
+                    {t('detail.collapseAll')}
                   </Button>
                   <Link to={ROUTES.PATH_DETAIL(selectedPathId)}>
                     <Button variant='outline' size='sm' className='h-7 gap-1.5 text-xs'>
-                      <ExternalLink className='h-3.5 w-3.5' /> View Path
+                      <ExternalLink className='h-3.5 w-3.5' /> {t('detail.viewPath')}
                     </Button>
                   </Link>
                 </div>
@@ -552,9 +596,11 @@ export default function ContentMapPage() {
                       <div className='flex h-14 w-14 items-center justify-center rounded-2xl border border-dashed border-border/60 bg-muted/30'>
                         <BookOpen className='h-7 w-7 text-muted-foreground/30' />
                       </div>
-                      <p className='text-sm font-medium text-muted-foreground'>No course modules in this path yet</p>
+                      <p className='text-sm font-medium text-muted-foreground'>{t('detail.noModulesTitle')}</p>
                       <Link to={ROUTES.PATH_DETAIL(selectedPathId)}>
-                        <Button variant='outline' size='sm' className='gap-1.5 text-xs'><Plus className='h-3.5 w-3.5' /> Add Modules</Button>
+                        <Button variant='outline' size='sm' className='gap-1.5 text-xs'>
+                          <Plus className='h-3.5 w-3.5' /> {t('detail.addModules')}
+                        </Button>
                       </Link>
                     </div>
                   )}
