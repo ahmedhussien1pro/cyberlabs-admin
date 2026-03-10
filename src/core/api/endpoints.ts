@@ -50,6 +50,9 @@ export const ENDPOINTS = {
     UNPUBLISH: (id: string) => `${BASE}/paths/${id}/unpublish`,
     DELETE: (id: string) => `${BASE}/paths/${id}`,
     REORDER_MODULES: (id: string) => `${BASE}/paths/${id}/modules/reorder`,
+    ATTACH_LAB: (pathId: string, labId: string) => `${BASE}/paths/${pathId}/labs/${labId}`,
+    DETACH_LAB: (pathId: string, labId: string) => `${BASE}/paths/${pathId}/labs/${labId}`,
+    LABS: (pathId: string) => `${BASE}/paths/${pathId}/labs`,
   },
   BADGES: {
     LIST: `${BASE}/badges`,
@@ -63,6 +66,14 @@ export const ENDPOINTS = {
     ENGAGEMENT: `${BASE}/analytics/engagement`,
     TOP_CONTENT: `${BASE}/analytics/top-content`,
     RECENT_ACTIVITY: `${BASE}/analytics/recent-activity`,
+  },
+  NOTIFICATIONS: {
+    BROADCAST: `${BASE}/notifications/broadcast`,
+    HISTORY: `${BASE}/notifications/history`,
+  },
+  SETTINGS: {
+    PLATFORM: `${BASE}/settings/platform`,
+    ACCOUNT: `${BASE}/settings/account`,
   },
 } as const;
 
