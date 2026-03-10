@@ -1,3 +1,4 @@
+// src/core/api/services/users.service.ts
 import { apiClient } from '../client';
 import { API_ENDPOINTS } from '../endpoints';
 import type {
@@ -8,10 +9,14 @@ import type {
   UpdateUserRoleRequest,
 } from '@/core/types';
 
+function unwrap<T>(data: any): T {
+  return (data as any)?.data ?? data;
+}
+
 export const usersService = {
   getStats: async (): Promise<UserStats> => {
     const { data } = await apiClient.get<UserStats>(API_ENDPOINTS.USERS.STATS);
-    return data;
+    return unwrap<UserStats>(data);
   },
 
   getAll: async (params?: {
@@ -25,23 +30,20 @@ export const usersService = {
       API_ENDPOINTS.USERS.LIST,
       { params },
     );
-    return data;
+    return unwrap<PaginatedResponse<UserListItem>>(data);
   },
 
   getById: async (id: string): Promise<User> => {
     const { data } = await apiClient.get<User>(API_ENDPOINTS.USERS.DETAIL(id));
-    return data;
+    return unwrap<User>(data);
   },
 
-  updateRole: async (
-    id: string,
-    payload: UpdateUserRoleRequest,
-  ): Promise<User> => {
+  updateRole: async (id: string, payload: UpdateUserRoleRequest): Promise<User> => {
     const { data } = await apiClient.patch<User>(
-      API_ENDPOINTS.USERS.UPDATE_ROLE(id),
+      API_ENDPOINTS.USERS.ROLE(id),
       payload,
     );
-    return data;
+    return unwrap<User>(data);
   },
 
   suspend: async (id: string, reason?: string): Promise<User> => {
@@ -50,13 +52,11 @@ export const usersService = {
       API_ENDPOINTS.USERS.SUSPEND(id),
       body,
     );
-    return data;
+    return unwrap<User>(data);
   },
 
   unsuspend: async (id: string): Promise<User> => {
-    const { data } = await apiClient.patch<User>(
-      API_ENDPOINTS.USERS.UNSUSPEND(id),
-    );
-    return data;
+    const { data } = await apiClient.patch<User>(API_ENDPOINTS.USERS.SUSPEND(id));
+    return unwrap<User>(data);
   },
 };

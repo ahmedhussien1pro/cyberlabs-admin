@@ -1,3 +1,4 @@
+// src/core/api/services/analytics.service.ts
 import { apiClient } from '../client';
 import { API_ENDPOINTS } from '../endpoints';
 import type {
@@ -8,35 +9,39 @@ import type {
   ActivityEvent,
 } from '@/core/types';
 
+function unwrap<T>(data: any): T {
+  return (data as any)?.data ?? data;
+}
+
 export const analyticsService = {
   getOverview: async (): Promise<AnalyticsOverview> => {
     const { data } = await apiClient.get<AnalyticsOverview>(
-      API_ENDPOINTS.ADMIN_ANALYTICS.OVERVIEW
+      API_ENDPOINTS.ADMIN_ANALYTICS.OVERVIEW,
     );
-    return data;
+    return unwrap<AnalyticsOverview>(data);
   },
 
   getGrowth: async (): Promise<GrowthTrends> => {
     const { data } = await apiClient.get<GrowthTrends>(API_ENDPOINTS.ADMIN_ANALYTICS.GROWTH);
-    return data;
+    return unwrap<GrowthTrends>(data);
   },
 
   getEngagement: async (): Promise<EngagementMetrics> => {
     const { data } = await apiClient.get<EngagementMetrics>(
-      API_ENDPOINTS.ADMIN_ANALYTICS.ENGAGEMENT
+      API_ENDPOINTS.ADMIN_ANALYTICS.ENGAGEMENT,
     );
-    return data;
+    return unwrap<EngagementMetrics>(data);
   },
 
   getTopContent: async (): Promise<TopContent> => {
     const { data } = await apiClient.get<TopContent>(API_ENDPOINTS.ADMIN_ANALYTICS.TOP_CONTENT);
-    return data;
+    return unwrap<TopContent>(data);
   },
 
   getRecentActivity: async (): Promise<ActivityEvent[]> => {
     const { data } = await apiClient.get<ActivityEvent[]>(
-      API_ENDPOINTS.ADMIN_ANALYTICS.RECENT_ACTIVITY
+      API_ENDPOINTS.ADMIN_ANALYTICS.RECENT_ACTIVITY,
     );
-    return data;
+    return unwrap<ActivityEvent[]>(data);
   },
 };

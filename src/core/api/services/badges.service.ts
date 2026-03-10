@@ -1,3 +1,4 @@
+// src/core/api/services/badges.service.ts
 import { apiClient } from '../client';
 import { API_ENDPOINTS } from '../endpoints';
 
@@ -19,6 +20,7 @@ export const badgesService = {
     const { data } = await apiClient.get<{ success: boolean; data: BadgeItem[] }>(
       API_ENDPOINTS.BADGES.LIST,
     );
-    return data?.data ?? (data as unknown as BadgeItem[]);
+    // handle { data: [...] } or [...] directly
+    return (data as any)?.data ?? (data as unknown as BadgeItem[]);
   },
 };
