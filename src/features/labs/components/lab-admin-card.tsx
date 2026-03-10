@@ -10,7 +10,6 @@ import { InlineEditable } from './inline-editable';
 import { labsService } from '@/core/api/services';
 import { ROUTES } from '@/shared/constants';
 import { useTranslation } from 'react-i18next';
-import { useLocale } from '@/hooks/use-locale';
 import type { LabListItem } from '@/core/types';
 
 const DIFF_BG: Record<string, string> = {
@@ -56,13 +55,14 @@ function LabThumbnail({ lab, className }: { lab: LabListItem; className?: string
 export function LabAdminCard({ lab, index = 0 }: { lab: LabListItem; index?: number }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { t } = useTranslation('labs');
-  const { locale } = useLocale();
+  // useTranslation ensures re-render on language change
+  const { t, i18n } = useTranslation('labs');
+  const lang = i18n.language?.startsWith('ar') ? 'ar' : 'en';
   const diff = lab.difficulty ?? 'INTERMEDIATE';
   const ExecIcon = EXEC_ICON[lab.executionMode ?? 'BROWSER'] ?? BookOpen;
 
-  const displayTitle = locale === 'ar' && lab.ar_title ? lab.ar_title : lab.title;
-  const displayDescription = locale === 'ar' && (lab as any).ar_description
+  const displayTitle = lang === 'ar' && lab.ar_title ? lab.ar_title : lab.title;
+  const displayDescription = lang === 'ar' && (lab as any).ar_description
     ? (lab as any).ar_description
     : (lab as any).description ?? '';
 
@@ -109,25 +109,27 @@ export function LabAdminCard({ lab, index = 0 }: { lab: LabListItem; index?: num
       </div>
 
       <div className="flex flex-col flex-1 p-4 gap-3">
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
           <InlineEditable
             value={displayTitle}
-            onSave={(val) => updateMutation.mutateAsync(locale === 'ar' ? { ar_title: val } : { title: val })}
+            onSave={(val) => updateMutation.mutateAsync(lang === 'ar' ? { ar_title: val } : { title: val })}
             className="text-sm font-bold text-foreground leading-snug"
           />
-          {locale === 'ar' && lab.title && (
+          {lang === 'ar' && lab.title && (
             <p className="mt-0.5 text-[11px] text-muted-foreground/60 truncate" dir="ltr">{lab.title}</p>
           )}
         </div>
 
         {displayDescription !== undefined && (
-          <InlineEditable
-            value={displayDescription}
-            onSave={(val) => updateMutation.mutateAsync(locale === 'ar' ? { ar_description: val } : { description: val })}
-            as="textarea"
-            className="text-xs text-muted-foreground leading-relaxed"
-            placeholder={t('addDescription')}
-          />
+          <div onClick={(e) => e.stopPropagation()}>
+            <InlineEditable
+              value={displayDescription}
+              onSave={(val) => updateMutation.mutateAsync(lang === 'ar' ? { ar_description: val } : { description: val })}
+              as="textarea"
+              className="text-xs text-muted-foreground leading-relaxed"
+              placeholder={t('addDescription')}
+            />
+          </div>
         )}
 
         <div className="flex flex-wrap items-center gap-1.5">

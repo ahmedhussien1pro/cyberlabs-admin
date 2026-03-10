@@ -60,11 +60,13 @@ export function LabAdminOverlayControls({ lab }: Props) {
 
   return (
     <>
+      {/* pointer-events-none when hidden, auto when visible — so card click works */}
       <div
         className={cn(
           'absolute inset-0 z-10 flex flex-col justify-between p-2',
           'bg-gradient-to-b from-black/70 via-transparent to-black/70',
           'opacity-0 group-hover:opacity-100 transition-opacity duration-200',
+          'pointer-events-none group-hover:pointer-events-auto',
         )}
         onClick={stopProp}
       >
@@ -77,7 +79,7 @@ export function LabAdminOverlayControls({ lab }: Props) {
                 ? 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/40'
                 : 'bg-zinc-800/80 text-zinc-300 hover:bg-zinc-700',
             )}
-            onClick={() => publishMutation.mutate()}
+            onClick={(e) => { stopProp(e); publishMutation.mutate(); }}
             disabled={publishMutation.isPending}
           >
             {lab.isPublished
@@ -98,14 +100,14 @@ export function LabAdminOverlayControls({ lab }: Props) {
           <Button
             size="sm"
             className="flex-1 h-8 text-[11px] gap-1.5 bg-primary/80 hover:bg-primary text-white rounded-lg"
-            onClick={() => navigate(ROUTES.LAB_EDIT(lab.id))}
+            onClick={(e) => { stopProp(e); navigate(ROUTES.LAB_EDIT(lab.id)); }}
           >
             <Pencil className="h-3 w-3" /> {t('edit')}
           </Button>
           <Button
             size="sm" variant="ghost"
             className="h-8 w-8 p-0 bg-white/10 text-white hover:bg-white/20 rounded-lg"
-            onClick={() => duplicateMutation.mutate()}
+            onClick={(e) => { stopProp(e); duplicateMutation.mutate(); }}
             disabled={duplicateMutation.isPending}
             title={t('duplicate')}
           >
@@ -114,7 +116,7 @@ export function LabAdminOverlayControls({ lab }: Props) {
           <Button
             size="sm" variant="ghost"
             className="h-8 w-8 p-0 bg-red-500/20 text-red-300 hover:bg-red-500/40 rounded-lg"
-            onClick={() => setDeleteOpen(true)}
+            onClick={(e) => { stopProp(e); setDeleteOpen(true); }}
             title={t('delete')}
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -123,7 +125,7 @@ export function LabAdminOverlayControls({ lab }: Props) {
       </div>
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent onClick={stopProp}>
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('deleteTitle', { title: lab.title })}</AlertDialogTitle>
             <AlertDialogDescription>{t('deleteDesc')}</AlertDialogDescription>

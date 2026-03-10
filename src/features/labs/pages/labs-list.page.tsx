@@ -16,14 +16,38 @@ import {
 import { ROUTES } from '@/shared/constants';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
-import { useLocale } from '@/hooks/use-locale';
 import type { SortOption } from '../components/lab-filters';
 import type { LabListItem } from '@/core/types';
 
+// Normalize arabic/latin text for search matching
+function normalizeText(str: string): string {
+  return str
+    .toLowerCase()
+    .replace(/[أإآاى]/g, 'ا')
+    .replace(/[ةه]/g, 'ه')
+    .replace(/[يى]/g, 'ي')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function labMatchesSearch(lab: LabListItem, q: string): boolean {
+  if (!q) return true;
+  const norm = normalizeText(q);
+  const fields = [
+    lab.title,
+    lab.ar_title,
+    lab.slug,
+    lab.category,
+    (lab as any).description,
+    (lab as any).ar_description,
+  ];
+  return fields.some((f) => f && normalizeText(f).includes(norm));
+}
+
 export default function LabsListPage() {
   const navigate = useNavigate();
-  const { t } = useTranslation('labs');
-  const { isRTL } = useLocale();
+  const { t, i18n } = useTranslation('labs');
+  const isRTL = i18n.language?.startsWith('ar');
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -40,12 +64,13 @@ export default function LabsListPage() {
     queryFn: labsService.getStats,
   });
 
+  // Fetch all with server-side published filter only — search/difficulty/category done client-side
+  // This ensures arabic search works even when backend doesn't normalize arabic
   const { data: labsData, isLoading, error, refetch } = useQuery({
-    queryKey: ['labs', 'list', page, search, publishedFilter],
+    queryKey: ['labs', 'list', page, publishedFilter],
     queryFn: () => labsService.getAll({
       page,
       limit,
-      search: search || undefined,
       isPublished: publishedFilter === 'all' ? undefined : publishedFilter === 'published',
     }),
     staleTime: 30_000,
@@ -53,6 +78,8 @@ export default function LabsListPage() {
 
   const filteredLabs = useMemo(() => {
     let items: LabListItem[] = labsData?.data ?? [];
+    // Client-side search — supports arabic normalized matching
+    if (search.trim()) items = items.filter((l) => labMatchesSearch(l, search));
     if (difficultyFilter !== 'ALL') items = items.filter((l) => l.difficulty === difficultyFilter);
     if (categoryFilter !== 'ALL') items = items.filter((l) => l.category === categoryFilter);
     if (executionModeFilter !== 'ALL') items = items.filter((l) => l.executionMode === executionModeFilter);
@@ -64,7 +91,7 @@ export default function LabsListPage() {
       default: items = [...items].sort((a, b) => new Date((b as any).createdAt ?? 0).getTime() - new Date((a as any).createdAt ?? 0).getTime());
     }
     return items;
-  }, [labsData, difficultyFilter, categoryFilter, executionModeFilter, sort]);
+  }, [labsData, search, difficultyFilter, categoryFilter, executionModeFilter, sort]);
 
   const resetPage = () => setPage(1);
 
