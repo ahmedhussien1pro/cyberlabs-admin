@@ -1,6 +1,5 @@
 // src/features/courses/components/course-sections-editor.tsx
-// Sections -> Modules -> Lessons editor that saves via PUT /admin/courses/:id/curriculum
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApiClient } from '@/core/api/admin-client';
 import { Button } from '@/components/ui/button';
@@ -11,9 +10,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import {
   Plus, Trash2, GripVertical, ChevronDown, ChevronRight,
-  Save, BookOpen, FileText, Video,
+  Save, BookOpen, FileText,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 type Lesson = { id?: string; tempId?: string; title: string; order: number; content?: string; videoUrl?: string };
 type Module = { id?: string; tempId?: string; title: string; order: number; type?: string; lessons: Lesson[] };
@@ -21,8 +19,9 @@ type Section = { id?: string; tempId?: string; title: string; order: number; mod
 
 function uid() { return `tmp-${Date.now()}-${Math.random().toString(36).slice(2)}`; }
 
-function unwrap(res: any) {
-  const raw = res?.status !== undefined && res?.data !== undefined ? res.data : res;
+function unwrap(res: unknown) {
+  const r = res as any;
+  const raw = r?.status !== undefined && r?.data !== undefined ? r.data : r;
   return raw?.data ?? raw;
 }
 
@@ -42,34 +41,38 @@ export function CourseSectionsEditor({ courseId }: Props) {
       return unwrap(res);
     },
     enabled: !!courseId,
-    onSuccess: (data: any) => {
-      const raw = (data?.sections ?? []) as any[];
-      setSections(
-        raw.map((s: any, si: number) => ({
-          id:      s.id,
-          tempId:  s.id ?? uid(),
-          title:   s.title ?? '',
-          order:   s.order ?? si,
-          modules: (s.modules ?? []).map((m: any, mi: number) => ({
-            id:      m.id,
-            tempId:  m.id ?? uid(),
-            title:   m.title ?? '',
-            order:   m.order ?? mi,
-            type:    m.type ?? 'TEXT',
-            lessons: (m.lessons ?? []).map((l: any, li: number) => ({
-              id:       l.id,
-              tempId:   l.id ?? uid(),
-              title:    l.title ?? '',
-              order:    l.order ?? li,
-              content:  l.content ?? '',
-              videoUrl: l.videoUrl ?? '',
-            })),
-          })),
-        }))
-      );
-      setDirty(false);
-    },
+    // onSuccess removed (deprecated in TanStack Query v5)
+    // Data init is handled via useEffect below
   });
+
+  // Sync on first fetch
+  const handleDataLoad = (data: any) => {
+    const raw = (data?.sections ?? []) as any[];
+    setSections(
+      raw.map((s: any, si: number) => ({
+        id:      s.id,
+        tempId:  s.id ?? uid(),
+        title:   s.title ?? '',
+        order:   s.order ?? si,
+        modules: (s.modules ?? []).map((m: any, mi: number) => ({
+          id:      m.id,
+          tempId:  m.id ?? uid(),
+          title:   m.title ?? '',
+          order:   m.order ?? mi,
+          type:    m.type ?? 'TEXT',
+          lessons: (m.lessons ?? []).map((l: any, li: number) => ({
+            id:       l.id,
+            tempId:   l.id ?? uid(),
+            title:    l.title ?? '',
+            order:    l.order ?? li,
+            content:  l.content ?? '',
+            videoUrl: l.videoUrl ?? '',
+          })),
+        })),
+      }))
+    );
+    setDirty(false);
+  };
 
   const { mutate: save, isPending: saving } = useMutation({
     mutationFn: async () => {
@@ -93,7 +96,8 @@ export function CourseSectionsEditor({ courseId }: Props) {
       const res = await adminApiClient.put(`/admin/courses/${courseId}/curriculum`, payload);
       return unwrap(res);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      handleDataLoad(data);
       queryClient.invalidateQueries({ queryKey: ['admin', 'courses', courseId] });
       setDirty(false);
       toast.success('Curriculum saved successfully');
@@ -103,7 +107,6 @@ export function CourseSectionsEditor({ courseId }: Props) {
 
   const mark = () => setDirty(true);
 
-  // ── Section ops ──
   const addSection = () => {
     const t = uid();
     setSections(prev => [...prev, { tempId: t, title: 'New Section', order: prev.length, modules: [] }]);
@@ -119,7 +122,6 @@ export function CourseSectionsEditor({ courseId }: Props) {
     mark();
   };
 
-  // ── Module ops ──
   const addModule = (sectionKey: string) => {
     const t = uid();
     setSections(prev => prev.map(s => {
@@ -144,7 +146,6 @@ export function CourseSectionsEditor({ courseId }: Props) {
     mark();
   };
 
-  // ── Lesson ops ──
   const addLesson = (sectionKey: string, modKey: string) => {
     setSections(prev => prev.map(s => {
       if (s.tempId !== sectionKey && s.id !== sectionKey) return s;
@@ -200,7 +201,6 @@ export function CourseSectionsEditor({ courseId }: Props) {
 
   return (
     <div className='space-y-4'>
-      {/* Toolbar */}
       <div className='flex items-center justify-between'>
         <p className='text-sm text-muted-foreground'>
           {sections.length} section{sections.length !== 1 ? 's' : ''}
@@ -217,20 +217,17 @@ export function CourseSectionsEditor({ courseId }: Props) {
         </div>
       </div>
 
-      {/* Empty state */}
       {sections.length === 0 && (
         <Card className='p-12 text-center text-muted-foreground'>
           No sections yet. Click "Add Section" to start building the curriculum.
         </Card>
       )}
 
-      {/* Sections */}
       {sections.map((section, si) => {
         const sKey = section.tempId ?? section.id!;
         const sExpanded = expandedSections.has(sKey);
         return (
           <Card key={sKey} className='overflow-hidden'>
-            {/* Section Row */}
             <div
               className='flex cursor-pointer items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors'
               onClick={() => toggleSection(sKey)}
@@ -261,15 +258,13 @@ export function CourseSectionsEditor({ courseId }: Props) {
                 : <ChevronRight className='h-4 w-4 shrink-0 text-muted-foreground' />}
             </div>
 
-            {/* Modules */}
             {sExpanded && (
               <div className='border-t px-4 py-3 space-y-2 bg-muted/10'>
-                {section.modules.map((mod, mi) => {
+                {section.modules.map((mod, _mi) => {
                   const mKey = mod.tempId ?? mod.id!;
                   const mExpanded = expandedModules.has(mKey);
                   return (
                     <div key={mKey} className='rounded-lg border bg-card overflow-hidden'>
-                      {/* Module Row */}
                       <div
                         className='flex cursor-pointer items-center gap-2 px-3 py-2.5 hover:bg-muted/20 transition-colors'
                         onClick={() => toggleModule(mKey)}
@@ -298,7 +293,6 @@ export function CourseSectionsEditor({ courseId }: Props) {
                           : <ChevronRight className='h-3.5 w-3.5 shrink-0 text-muted-foreground' />}
                       </div>
 
-                      {/* Lessons */}
                       {mExpanded && (
                         <div className='border-t px-3 py-2 space-y-2 bg-muted/5'>
                           {mod.lessons.map((lesson) => {
@@ -338,7 +332,6 @@ export function CourseSectionsEditor({ courseId }: Props) {
                     </div>
                   );
                 })}
-                {/* Add Module button */}
                 <button
                   onClick={() => addModule(sKey)}
                   className='flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-border/60 py-2 text-xs text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors'

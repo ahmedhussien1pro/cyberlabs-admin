@@ -1,11 +1,13 @@
 // src/features/courses/components/inline-editable.tsx
-import { useState, useRef, useEffect, KeyboardEvent } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import type { KeyboardEvent } from 'react';
 import { cn } from '@/lib/utils';
 import { Check, X, Pencil } from 'lucide-react';
 
 interface InlineEditableProps {
   value: string;
-  onSave: (val: string) => Promise<void> | void;
+  // Broadened to accept any Promise return (e.g. mutateAsync) or void
+  onSave: (val: string) => Promise<unknown> | void;
   className?: string;
   inputClassName?: string;
   as?: 'input' | 'textarea';

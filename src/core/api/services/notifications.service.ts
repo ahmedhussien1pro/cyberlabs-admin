@@ -1,5 +1,5 @@
 // src/core/api/services/notifications.service.ts
-import apiClient from '@/core/api/client';
+import { apiClient } from '@/core/api/client';
 import { ENDPOINTS } from '@/core/api/endpoints';
 
 export interface BroadcastPayload {

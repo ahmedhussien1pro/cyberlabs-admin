@@ -1,5 +1,5 @@
 // src/features/courses/components/course-curriculum-editor.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminCoursesApi } from '../services/admin-courses.api';
 import type {
@@ -25,29 +25,25 @@ import {
 import { cn } from '@/lib/utils';
 
 const ELEMENT_TYPES: CurriculumElementType[] = [
-  'text',
-  'title',
-  'image',
-  'note',
-  'terminal',
-  'table',
-  'orderedList',
-  'list',
-  'quiz',
-  'hr',
+  'text', 'title', 'image', 'note', 'terminal',
+  'table', 'orderedList', 'list', 'quiz', 'hr',
 ];
 const ELEMENT_COLORS: Record<CurriculumElementType, string> = {
-  text: 'bg-blue-500/10 text-blue-400',
-  title: 'bg-purple-500/10 text-purple-400',
-  image: 'bg-emerald-500/10 text-emerald-400',
-  note: 'bg-yellow-500/10 text-yellow-400',
-  terminal: 'bg-zinc-500/10 text-zinc-400',
-  table: 'bg-orange-500/10 text-orange-400',
+  text:        'bg-blue-500/10 text-blue-400',
+  title:       'bg-purple-500/10 text-purple-400',
+  image:       'bg-emerald-500/10 text-emerald-400',
+  note:        'bg-yellow-500/10 text-yellow-400',
+  terminal:    'bg-zinc-500/10 text-zinc-400',
+  table:       'bg-orange-500/10 text-orange-400',
   orderedList: 'bg-cyan-500/10 text-cyan-400',
-  list: 'bg-cyan-500/10 text-cyan-300',
-  quiz: 'bg-rose-500/10 text-rose-400',
-  hr: 'bg-muted text-muted-foreground',
+  list:        'bg-cyan-500/10 text-cyan-300',
+  quiz:        'bg-rose-500/10 text-rose-400',
+  hr:          'bg-muted text-muted-foreground',
 };
+
+interface CurriculumData {
+  topics: CurriculumTopic[];
+}
 
 interface Props {
   courseId: string;
@@ -57,26 +53,26 @@ interface Props {
 export function CourseCurriculumEditor({ courseId, courseSlug }: Props) {
   const queryClient = useQueryClient();
   const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set());
-  const [localTopics, setLocalTopics] = useState<CurriculumTopic[] | null>(
-    null,
-  );
+  const [localTopics, setLocalTopics] = useState<CurriculumTopic[] | null>(null);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading } = useQuery<CurriculumData>({
     queryKey: ['admin', 'curriculum', courseSlug],
-    queryFn: () => adminCoursesApi.getCurriculum(courseSlug),
-    onSuccess: (d) => {
-      if (!localTopics) setLocalTopics(d.topics);
-    },
+    queryFn:  () => adminCoursesApi.getCurriculum(courseSlug),
   });
 
-  const topics = localTopics ?? data?.topics ?? [];
+  // Sync server data into local state (once, on first load)
+  useEffect(() => {
+    if (data?.topics && localTopics === null) {
+      setLocalTopics(data.topics);
+    }
+  }, [data, localTopics]);
+
+  const topics: CurriculumTopic[] = localTopics ?? data?.topics ?? [];
 
   const { mutate: save, isPending: saving } = useMutation({
     mutationFn: () => adminCoursesApi.saveCurriculum(courseId, topics),
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['admin', 'curriculum', courseSlug],
-      });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'curriculum', courseSlug] });
       toast.success('Curriculum saved');
     },
     onError: () => toast.error('Failed to save curriculum'),
@@ -126,12 +122,7 @@ export function CourseCurriculumEditor({ courseId, courseSlug }: Props) {
     setLocalTopics(
       topics.map((t) =>
         t.id === topicId
-          ? {
-              ...t,
-              elements: t.elements.map((e) =>
-                e.id === elId ? { ...e, ...updates } : e,
-              ),
-            }
+          ? { ...t, elements: t.elements.map((e) => e.id === elId ? { ...e, ...updates } : e) }
           : t,
       ),
     );
@@ -156,33 +147,18 @@ export function CourseCurriculumEditor({ courseId, courseSlug }: Props) {
 
   return (
     <div className='space-y-4'>
-      {/* Header */}
       <div className='flex items-center justify-between'>
-        <div>
-          <p className='text-sm text-muted-foreground'>
-            {topics.length} topics
-          </p>
-        </div>
+        <p className='text-sm text-muted-foreground'>{topics.length} topics</p>
         <div className='flex gap-2'>
-          <Button
-            variant='outline'
-            size='sm'
-            onClick={addTopic}
-            className='gap-1.5'>
+          <Button variant='outline' size='sm' onClick={addTopic} className='gap-1.5'>
             <Plus className='h-3.5 w-3.5' /> Add Topic
           </Button>
-          <Button
-            size='sm'
-            onClick={() => save()}
-            disabled={saving}
-            className='gap-1.5'>
-            <Save className='h-3.5 w-3.5' />{' '}
-            {saving ? 'Saving...' : 'Save Curriculum'}
+          <Button size='sm' onClick={() => save()} disabled={saving} className='gap-1.5'>
+            <Save className='h-3.5 w-3.5' />{saving ? 'Saving...' : 'Save Curriculum'}
           </Button>
         </div>
       </div>
 
-      {/* Topics List */}
       {topics.length === 0 && (
         <Card className='p-12 text-center text-muted-foreground'>
           No topics yet. Click "Add Topic" to start building the curriculum.
@@ -191,79 +167,59 @@ export function CourseCurriculumEditor({ courseId, courseSlug }: Props) {
 
       {topics.map((topic, ti) => (
         <Card key={topic.id} className='overflow-hidden'>
-          {/* Topic Header */}
           <div
             className='flex cursor-pointer items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors'
-            onClick={() => toggleTopic(topic.id)}>
+            onClick={() => toggleTopic(topic.id)}
+          >
             <GripVertical className='h-4 w-4 text-muted-foreground/50 shrink-0' />
             <span className='flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary'>
               {ti + 1}
             </span>
             <div className='flex-1 min-w-0'>
-              <p className='font-medium truncate'>
-                {topic.title.en || 'Untitled Topic'}
-              </p>
-              <p className='text-xs text-muted-foreground truncate' dir='rtl'>
-                {topic.title.ar}
-              </p>
+              <p className='font-medium truncate'>{topic.title.en || 'Untitled Topic'}</p>
+              <p className='text-xs text-muted-foreground truncate' dir='rtl'>{topic.title.ar}</p>
             </div>
             <Badge variant='outline' className='text-xs shrink-0'>
               {topic.elements.length} elements
             </Badge>
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                deleteTopic(topic.id);
-              }}
-              className='shrink-0 rounded p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors'>
+              onClick={(e) => { e.stopPropagation(); deleteTopic(topic.id); }}
+              className='shrink-0 rounded p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors'
+            >
               <Trash2 className='h-3.5 w-3.5' />
             </button>
-            {expandedTopics.has(topic.id) ? (
-              <ChevronDown className='h-4 w-4 shrink-0' />
-            ) : (
-              <ChevronRight className='h-4 w-4 shrink-0' />
-            )}
+            {expandedTopics.has(topic.id)
+              ? <ChevronDown className='h-4 w-4 shrink-0' />
+              : <ChevronRight className='h-4 w-4 shrink-0' />}
           </div>
 
-          {/* Topic Content */}
           {expandedTopics.has(topic.id) && (
             <div className='border-t px-4 py-4 space-y-4'>
-              {/* Title Fields */}
               <div className='grid grid-cols-2 gap-3'>
                 <Input
                   placeholder='Topic title (EN)'
                   value={topic.title.en}
-                  onChange={(e) =>
-                    updateTopic(topic.id, {
-                      title: { ...topic.title, en: e.target.value },
-                    })
-                  }
+                  onChange={(e) => updateTopic(topic.id, { title: { ...topic.title, en: e.target.value } })}
                 />
                 <Input
                   dir='rtl'
                   placeholder='عنوان الموضوع (AR)'
                   value={topic.title.ar}
-                  onChange={(e) =>
-                    updateTopic(topic.id, {
-                      title: { ...topic.title, ar: e.target.value },
-                    })
-                  }
+                  onChange={(e) => updateTopic(topic.id, { title: { ...topic.title, ar: e.target.value } })}
                 />
               </div>
 
-              {/* Elements */}
               <div className='space-y-2'>
-                {topic.elements.map((el) => (
-                  <div
-                    key={el.id}
-                    className='rounded-lg border bg-muted/20 p-3 space-y-2'>
+                {topic.elements.map((el: CurriculumElement) => (
+                  <div key={el.id} className='rounded-lg border bg-muted/20 p-3 space-y-2'>
                     <div className='flex items-center gap-2'>
-                      <Badge className={cn('text-xs', ELEMENT_COLORS[el.type])}>
+                      <Badge className={cn('text-xs', ELEMENT_COLORS[el.type as CurriculumElementType])}>
                         {el.type}
                       </Badge>
                       <button
                         onClick={() => deleteElement(topic.id, el.id)}
-                        className='ml-auto rounded p-1 text-muted-foreground hover:text-destructive'>
+                        className='ml-auto rounded p-1 text-muted-foreground hover:text-destructive'
+                      >
                         <Trash2 className='h-3 w-3' />
                       </button>
                     </div>
@@ -273,11 +229,7 @@ export function CourseCurriculumEditor({ courseId, courseSlug }: Props) {
                           rows={3}
                           placeholder='Content (EN)'
                           value={el.value?.en ?? ''}
-                          onChange={(e) =>
-                            updateElement(topic.id, el.id, {
-                              value: { ...el.value!, en: e.target.value },
-                            })
-                          }
+                          onChange={(e) => updateElement(topic.id, el.id, { value: { ...el.value!, en: e.target.value } })}
                           className='text-xs'
                         />
                         <Textarea
@@ -285,11 +237,7 @@ export function CourseCurriculumEditor({ courseId, courseSlug }: Props) {
                           dir='rtl'
                           placeholder='المحتوى (AR)'
                           value={el.value?.ar ?? ''}
-                          onChange={(e) =>
-                            updateElement(topic.id, el.id, {
-                              value: { ...el.value!, ar: e.target.value },
-                            })
-                          }
+                          onChange={(e) => updateElement(topic.id, el.id, { value: { ...el.value!, ar: e.target.value } })}
                           className='text-xs'
                         />
                       </div>
@@ -298,11 +246,8 @@ export function CourseCurriculumEditor({ courseId, courseSlug }: Props) {
                 ))}
               </div>
 
-              {/* Add Element Buttons */}
               <div className='flex flex-wrap gap-1.5 border-t pt-3'>
-                <span className='text-xs text-muted-foreground self-center'>
-                  Add element:
-                </span>
+                <span className='text-xs text-muted-foreground self-center'>Add element:</span>
                 {ELEMENT_TYPES.map((type) => (
                   <button
                     key={type}
@@ -310,7 +255,8 @@ export function CourseCurriculumEditor({ courseId, courseSlug }: Props) {
                     className={cn(
                       'rounded-md border px-2 py-0.5 text-xs font-medium transition-colors hover:opacity-80',
                       ELEMENT_COLORS[type],
-                    )}>
+                    )}
+                  >
                     + {type}
                   </button>
                 ))}

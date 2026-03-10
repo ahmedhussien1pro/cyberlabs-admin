@@ -1,6 +1,4 @@
 // src/features/courses/components/course-admin-card.tsx
-// CMS Phase 1: Frontend-identical card + Admin Overlay + Inline Editing
-import { useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -13,7 +11,6 @@ import {
   Crown,
   Gem,
   Sparkles,
-  CheckCircle2,
   Users,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -24,7 +21,6 @@ import { InlineEditable } from './inline-editable';
 import { adminCoursesApi } from '../services/admin-courses.api';
 import type { AdminCourse } from '../types/admin-course.types';
 
-// ── Color maps (مطابقة للـ frontend) ─────────────────────────────────
 const FALLBACK_BG: Record<string, string> = {
   emerald: 'from-emerald-950 to-emerald-900 border-emerald-800/50',
   blue:    'from-blue-950    to-blue-900    border-blue-800/50',
@@ -81,22 +77,17 @@ function CourseThumbnail({ course, className }: { course: AdminCourse; className
   const color = (course.color ?? 'blue').toLowerCase();
   if (img) {
     return (
-      <img
-        src={img}
-        alt={course.title}
-        loading='lazy'
-        className={cn('w-full h-full object-cover', className)}
-      />
+      <img src={img} alt={course.title} loading='lazy'
+        className={cn('w-full h-full object-cover', className)} />
     );
   }
   return (
-    <div
-      className={cn(
-        'w-full h-full flex items-center justify-center bg-gradient-to-br border',
-        FALLBACK_BG[color] ?? 'from-zinc-900 to-zinc-800 border-zinc-700',
-      )}
-    >
-      <p className={cn('font-black text-center px-3 leading-tight text-lg', FALLBACK_TEXT[color] ?? 'text-zinc-400')}>
+    <div className={cn(
+      'w-full h-full flex items-center justify-center bg-gradient-to-br border',
+      FALLBACK_BG[color] ?? 'from-zinc-900 to-zinc-800 border-zinc-700',
+    )}>
+      <p className={cn('font-black text-center px-3 leading-tight text-lg',
+        FALLBACK_TEXT[color] ?? 'text-zinc-400')}>
         {course.title}
       </p>
     </div>
@@ -119,7 +110,7 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
   const stateDot = STATE_DOT[course.state] ?? 'bg-zinc-400';
 
   const updateMutation = useMutation({
-    mutationFn: (data: { title?: string; description?: string }) =>
+    mutationFn: (data: { title?: string; description?: string; [key: string]: unknown }) =>
       adminCoursesApi.update(course.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
@@ -127,7 +118,6 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
     onError: () => toast.error('Failed to save changes'),
   });
 
-  // ── List view ──────────────────────────────────────────────────────────
   if (view === 'list') {
     return (
       <div className='group relative flex items-center gap-4 rounded-lg border border-border/50 bg-card px-4 py-3 hover:border-border transition-colors'>
@@ -139,7 +129,7 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
         <div className='min-w-0 flex-1'>
           <InlineEditable
             value={course.title}
-            onSave={(val) => updateMutation.mutateAsync({ title: val })}
+            onSave={(val) => void updateMutation.mutateAsync({ title: val })}
             className='font-medium text-sm'
           />
           {course.ar_title && (
@@ -160,7 +150,6 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
     );
   }
 
-  // ── Grid view (مطابق للـ frontend FullCard + admin overlay) ───────────
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -173,15 +162,11 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
         'hover:shadow-xl hover:-translate-y-0.5',
       )}
     >
-      {/* Admin Overlay — يظهر عند hover */}
       <AdminOverlayControls course={course} />
 
-      {/* ── Thumbnail (مطابق للـ frontend) ── */}
       <div className='relative aspect-video overflow-hidden bg-muted'>
-        <CourseThumbnail
-          course={course}
-          className='transition-transform duration-500 group-hover:scale-105'
-        />
+        <CourseThumbnail course={course}
+          className='transition-transform duration-500 group-hover:scale-105' />
 
         {comingSoon && (
           <div className='absolute inset-0 z-0 flex items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-none'>
@@ -191,7 +176,6 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
           </div>
         )}
 
-        {/* State badge — top left */}
         <div className='absolute top-2 start-2 z-20 pointer-events-none'>
           <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold border',
             course.state === 'PUBLISHED' ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300' :
@@ -204,21 +188,19 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
         </div>
       </div>
 
-      {/* ── Body (مطابق للـ frontend) ── */}
       <div className='flex flex-col flex-1 p-4 gap-3'>
-        {/* Title — inline editable */}
         <div className='flex items-start justify-between gap-2'>
           <div className='flex-1 min-w-0'>
             <InlineEditable
               value={course.title}
-              onSave={(val) => updateMutation.mutateAsync({ title: val })}
+              onSave={(val) => void updateMutation.mutateAsync({ title: val })}
               className='text-sm font-bold text-foreground leading-snug'
             />
             {course.ar_title && (
               <div className='mt-0.5' dir='rtl'>
                 <InlineEditable
                   value={course.ar_title}
-                  onSave={(val) => updateMutation.mutateAsync({ ar_title: val } as any)}
+                  onSave={(val) => void updateMutation.mutateAsync({ ar_title: val })}
                   className='text-xs text-muted-foreground/70'
                 />
               </div>
@@ -231,18 +213,16 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
           )}
         </div>
 
-        {/* Description — inline editable */}
         {course.description !== undefined && (
           <InlineEditable
             value={course.description ?? ''}
-            onSave={(val) => updateMutation.mutateAsync({ description: val })}
+            onSave={(val) => void updateMutation.mutateAsync({ description: val })}
             as='textarea'
             className='text-xs text-muted-foreground leading-relaxed'
             placeholder='Add description...'
           />
         )}
 
-        {/* Badges (مطابق للـ frontend) */}
         <div className='flex flex-wrap items-center gap-1.5'>
           {diff && (
             <Badge variant='outline' className='gap-1 text-[10px] font-semibold border-border/60 bg-muted/40'>
@@ -266,7 +246,6 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
           )}
         </div>
 
-        {/* Stats row */}
         <div className='mt-auto flex items-center gap-3 text-xs text-muted-foreground pt-2 border-t border-border/30'>
           <span className='flex items-center gap-1'><Users className='h-3 w-3' />{course.enrollmentCount ?? 0} enrolled</span>
           {course.estimatedHours != null && (
