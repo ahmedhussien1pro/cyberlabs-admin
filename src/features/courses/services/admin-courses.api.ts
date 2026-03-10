@@ -23,7 +23,7 @@ function unwrap<T>(res: any): T {
     ? res.data
     : res;
   if (raw?.course) return raw.course as T;
-  return raw as T;
+  return (raw?.data ?? raw) as T;
 }
 
 function normalizeArrays(course: AdminCourse): AdminCourse {
@@ -99,7 +99,17 @@ export const adminCoursesApi = {
     return normalizeArrays(unwrap<AdminCourse>(res));
   },
 
-  // ── NEW: Duplicate ───────────────────────────────────────────────────
+  // Publish / Unpublish using dedicated endpoints
+  publish: async (id: string): Promise<AdminCourse> => {
+    const res = await adminApiClient.patch(`/admin/courses/${id}/publish`);
+    return normalizeArrays(unwrap<AdminCourse>(res));
+  },
+
+  unpublish: async (id: string): Promise<AdminCourse> => {
+    const res = await adminApiClient.patch(`/admin/courses/${id}/unpublish`);
+    return normalizeArrays(unwrap<AdminCourse>(res));
+  },
+
   duplicate: async (id: string): Promise<AdminCourse> => {
     const res = await adminApiClient.post(`/admin/courses/${id}/duplicate`);
     return normalizeArrays(unwrap<AdminCourse>(res));
