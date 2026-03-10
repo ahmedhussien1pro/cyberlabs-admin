@@ -2,11 +2,11 @@ import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { FlaskConical, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { ROUTES } from '@/shared/constants';
-import { useLabsT, useLocale } from '@/hooks/use-locale';
+import { useTranslation } from 'react-i18next';
+import { useLocale } from '@/hooks/use-locale';
 import type { LabListItem, PaginationMeta } from '@/core/types';
-import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
-import { FlaskConical } from 'lucide-react';
 
 interface LabsTableProps {
   data: LabListItem[];
@@ -18,7 +18,7 @@ interface LabsTableProps {
 
 export function LabsTable({ data, meta, page, onPageChange }: LabsTableProps) {
   const navigate = useNavigate();
-  const t = useLabsT();
+  const { t } = useTranslation('labs');
   const { locale } = useLocale();
 
   if (data.length === 0) {
@@ -27,8 +27,8 @@ export function LabsTable({ data, meta, page, onPageChange }: LabsTableProps) {
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
           <FlaskConical className="h-5 w-5 text-muted-foreground" />
         </div>
-        <p className="font-medium">{t.noLabs}</p>
-        <p className="text-sm text-muted-foreground">{t.noLabsHint}</p>
+        <p className="font-medium">{t('noLabs')}</p>
+        <p className="text-sm text-muted-foreground">{t('noLabsHint')}</p>
       </Card>
     );
   }
@@ -39,21 +39,18 @@ export function LabsTable({ data, meta, page, onPageChange }: LabsTableProps) {
         <table className="w-full">
           <thead className="border-b">
             <tr>
-              <th className="p-4 text-start text-sm font-medium">{t.colLab}</th>
-              <th className="p-4 text-start text-sm font-medium">{t.colCategory}</th>
-              <th className="p-4 text-start text-sm font-medium">{t.colDifficulty}</th>
-              <th className="p-4 text-start text-sm font-medium">{t.colMode}</th>
-              <th className="p-4 text-start text-sm font-medium">{t.colStatus}</th>
-              <th className="p-4 text-start text-sm font-medium">{t.colStats}</th>
-              <th className="p-4 text-end text-sm font-medium">{t.colActions}</th>
+              <th className="p-4 text-start text-sm font-medium">{t('colLab')}</th>
+              <th className="p-4 text-start text-sm font-medium">{t('colCategory')}</th>
+              <th className="p-4 text-start text-sm font-medium">{t('colDifficulty')}</th>
+              <th className="p-4 text-start text-sm font-medium">{t('colMode')}</th>
+              <th className="p-4 text-start text-sm font-medium">{t('colStatus')}</th>
+              <th className="p-4 text-start text-sm font-medium">{t('colStats')}</th>
+              <th className="p-4 text-end text-sm font-medium">{t('colActions')}</th>
             </tr>
           </thead>
           <tbody>
             {data.map((lab) => {
-              const displayTitle =
-                locale === 'ar' && (lab as any).ar_title
-                  ? (lab as any).ar_title
-                  : lab.title;
+              const displayTitle = locale === 'ar' && lab.ar_title ? lab.ar_title : lab.title;
               return (
                 <tr
                   key={lab.id}
@@ -61,52 +58,38 @@ export function LabsTable({ data, meta, page, onPageChange }: LabsTableProps) {
                   onClick={() => navigate(ROUTES.LAB_DETAIL(lab.id))}
                 >
                   <td className="p-4">
-                    <div>
-                      <div className="font-medium" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
-                        {displayTitle}
-                      </div>
-                      <div className="text-sm text-muted-foreground font-mono">{lab.slug}</div>
-                    </div>
+                    <div className="font-medium" dir={locale === 'ar' ? 'rtl' : 'ltr'}>{displayTitle}</div>
+                    <div className="text-sm text-muted-foreground font-mono">{lab.slug}</div>
                   </td>
                   <td className="p-4">
-                    {lab.category ? (
-                      <Badge variant="outline">
-                        {(t as any)[lab.category] ?? lab.category}
-                      </Badge>
-                    ) : '—'}
+                    {lab.category
+                      ? <Badge variant="outline">{t(lab.category as any, { defaultValue: lab.category })}</Badge>
+                      : '—'}
                   </td>
                   <td className="p-4">
-                    {lab.difficulty ? (
-                      <Badge>{(t as any)[lab.difficulty] ?? lab.difficulty}</Badge>
-                    ) : '—'}
+                    {lab.difficulty
+                      ? <Badge>{t(lab.difficulty as any, { defaultValue: lab.difficulty })}</Badge>
+                      : '—'}
                   </td>
                   <td className="p-4">
-                    {lab.executionMode ? (
-                      <Badge variant="secondary">
-                        {(t as any)[lab.executionMode] ?? lab.executionMode}
-                      </Badge>
-                    ) : '—'}
+                    {lab.executionMode
+                      ? <Badge variant="secondary">{t(lab.executionMode as any, { defaultValue: lab.executionMode })}</Badge>
+                      : '—'}
                   </td>
                   <td className="p-4">
                     <Badge variant={lab.isPublished ? 'default' : 'secondary'}>
-                      {lab.isPublished ? t.statusPublished : t.statusDraft}
+                      {lab.isPublished ? t('statusPublished') : t('statusDraft')}
                     </Badge>
                   </td>
                   <td className="p-4">
                     <div className="text-sm">
-                      <div>{lab._count.submissions} {t.submissions}</div>
-                      <div className="text-muted-foreground">
-                        {lab._count.usersProgress} {t.inProgress}
-                      </div>
+                      <div>{lab._count?.submissions ?? 0} {t('submissions')}</div>
+                      <div className="text-muted-foreground">{lab._count?.usersProgress ?? 0} {t('inProgress')}</div>
                     </div>
                   </td>
                   <td className="p-4 text-end" onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => navigate(ROUTES.LAB_DETAIL(lab.id))}
-                    >
-                      {t.view} <ExternalLink className="ms-2 h-3 w-3" />
+                    <Button variant="ghost" size="sm" onClick={() => navigate(ROUTES.LAB_DETAIL(lab.id))}>
+                      {t('view')} <ExternalLink className="ms-2 h-3 w-3" />
                     </Button>
                   </td>
                 </tr>
@@ -119,26 +102,14 @@ export function LabsTable({ data, meta, page, onPageChange }: LabsTableProps) {
       {meta && meta.totalPages > 1 && (
         <div className="flex items-center justify-between border-t p-4">
           <div className="text-sm text-muted-foreground">
-            {t.page} {meta.page} {t.of} {meta.totalPages} ({meta.total} {t.of.toLowerCase()})
+            {t('page')} {meta.page} {t('of')} {meta.totalPages} ({meta.total})
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(page - 1)}
-              disabled={page === 1}
-            >
-              <ChevronLeft className="h-4 w-4" />
-              {t.previous}
+            <Button variant="outline" size="sm" onClick={() => onPageChange(page - 1)} disabled={page === 1}>
+              <ChevronLeft className="h-4 w-4" /> {t('previous')}
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(page + 1)}
-              disabled={page === meta.totalPages}
-            >
-              {t.next}
-              <ChevronRight className="h-4 w-4" />
+            <Button variant="outline" size="sm" onClick={() => onPageChange(page + 1)} disabled={page === meta.totalPages}>
+              {t('next')} <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </div>

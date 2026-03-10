@@ -65,7 +65,6 @@ export interface UserListItem {
   };
 }
 
-/** Shape returned by GET /admin/users/stats */
 export interface UserStats {
   total: number;
   newThisMonth: number;
@@ -172,7 +171,6 @@ export interface CourseListItem {
   };
 }
 
-/** Shape returned by GET /admin/courses/stats */
 export interface CourseStats {
   total: number;
   published: number;
@@ -243,6 +241,7 @@ export type LabExecutionMode =
 export interface LabListItem {
   id: string;
   title: string;
+  ar_title?: string;
   slug?: string;
   category: LabCategory;
   difficulty: LabDifficulty;
@@ -251,7 +250,7 @@ export interface LabListItem {
   isPublished: boolean;
   createdAt: string;
   _count: {
-    submissions: number;
+    submissions?: number;
     usersProgress?: number;
     hints?: number;
     instances?: number;
@@ -261,7 +260,8 @@ export interface LabListItem {
 export interface Lab extends LabListItem {
   ar_title?: string;
   description?: string;
-  flagAnswer: string;
+  ar_description?: string;
+  flagAnswer?: string;
   solution?: string;
   hints?: string[];
   resources?: string[];
@@ -276,7 +276,6 @@ export interface Lab extends LabListItem {
   updatedAt: string;
 }
 
-/** Shape returned by GET /admin/labs/stats */
 export interface LabStats {
   total: number;
   published: number;
@@ -294,12 +293,15 @@ export interface LabStats {
 export interface CreateLabRequest {
   title: string;
   slug?: string;
+  ar_title?: string;
   description?: string;
+  ar_description?: string;
   category?: LabCategory;
   difficulty?: LabDifficulty;
   executionMode?: LabExecutionMode;
   points?: number;
   flagAnswer?: string;
+  solution?: string;
   hints?: string[];
   resources?: string[];
   dockerImage?: string;
@@ -309,6 +311,7 @@ export interface CreateLabRequest {
   duration?: number;
   maxAttempts?: number;
   timeLimit?: number;
+  skills?: string[];
 }
 
 export interface UpdateLabRequest extends Partial<CreateLabRequest> {}
@@ -369,7 +372,6 @@ export interface LearningPath extends LearningPathListItem {
   modules: PathModule[];
 }
 
-/** Shape returned by GET /admin/paths/stats */
 export interface PathStats {
   total: number;
   published: number;
@@ -401,7 +403,6 @@ export interface CreatePathRequest {
 export interface UpdatePathRequest extends Partial<CreatePathRequest> {}
 
 // ─── Analytics Types ───────────────────────────────────────────────────────────
-/** Shape returned by GET /admin/analytics/overview */
 export interface AnalyticsOverview {
   users: number;
   courses: number;
@@ -412,27 +413,23 @@ export interface AnalyticsOverview {
   totalPoints: number;
 }
 
-/** Single data point returned by growth arrays */
 export interface GrowthDataPoint {
-  month: string; // e.g. "2025-03"
+  month: string;
   count: number;
 }
 
-/** Shape returned by GET /admin/analytics/growth */
 export interface GrowthTrends {
   users: GrowthDataPoint[];
   enrollments: GrowthDataPoint[];
 }
 
-/** Shape returned by GET /admin/analytics/engagement */
 export interface EngagementMetrics {
   activeUsers: number;
   labLaunches: number;
   submissions: number;
-  avgSessionDuration: number; // seconds
+  avgSessionDuration: number;
 }
 
-/** Shape returned by GET /admin/analytics/top-content */
 export interface TopContent {
   courses: Array<{
     id: string;
@@ -452,7 +449,6 @@ export interface TopContent {
   }>;
 }
 
-/** Shape returned by GET /admin/analytics/recent-activity */
 export interface ActivityEvent {
   type: 'user_registered' | 'course_enrolled' | 'lab_completed';
   timestamp: string;
