@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  Bell,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -31,22 +32,25 @@ export function Sidebar() {
       label: t('nav.dashboard'),
       path: ROUTES.DASHBOARD,
     },
-    { icon: Users, label: t('nav.users'), path: ROUTES.USERS },
-    { icon: BookOpen, label: t('nav.courses'), path: ROUTES.COURSES },
-    { icon: FlaskConical, label: t('nav.labs'), path: ROUTES.LABS },
-    { icon: Layers, label: t('nav.paths'), path: ROUTES.PATHS },
-    { icon: Map, label: t('nav.map'), path: ROUTES.MAP },
-    { icon: Award, label: t('nav.badges'), path: ROUTES.BADGES },
+    { icon: Users,        label: t('nav.users'),    path: ROUTES.USERS },
+    { icon: BookOpen,     label: t('nav.courses'),  path: ROUTES.COURSES },
+    { icon: FlaskConical, label: t('nav.labs'),     path: ROUTES.LABS },
+    { icon: Layers,       label: t('nav.paths'),    path: ROUTES.PATHS },
+    { icon: Map,          label: t('nav.map'),      path: ROUTES.MAP },
+    { icon: Award,        label: t('nav.badges'),   path: ROUTES.BADGES },
+    { icon: Bell,         label: 'Notifications',   path: ROUTES.NOTIFICATIONS },
   ];
 
   const bottomItems = [
     { icon: Settings, label: t('nav.settings'), path: ROUTES.SETTINGS },
   ];
+
   interface NavItem {
     icon: React.ForwardRefExoticComponent<any>;
     label: string;
     path: string;
   }
+
   const NavLink = ({ item }: { item: NavItem }) => {
     const isActive =
       location.pathname === item.path ||
@@ -91,7 +95,7 @@ export function Sidebar() {
         sidebarCollapsed ? 'lg:w-20' : 'lg:w-64',
       )}>
       <div className='flex h-full flex-col'>
-        {/* ── Logo area ──────────────────────────────────────────────── */}
+        {/* ── Logo area ──────────────────────────────────────────────────── */}
         <div className='flex h-16 items-center justify-between gap-2 border-b px-4'>
           <div
             className={cn(
@@ -130,14 +134,14 @@ export function Sidebar() {
           </Button>
         </div>
 
-        {/* ── Main Navigation ───────────────────────────────────────── */}
+        {/* ── Main Navigation ───────────────────────────────────────────── */}
         <nav className='flex-1 space-y-1 overflow-y-auto p-3'>
           {navItems.map((item) => (
             <NavLink key={item.path} item={item} />
           ))}
         </nav>
 
-        {/* ── Bottom Navigation (Settings) ──────────────────────────── */}
+        {/* ── Bottom Navigation (Settings) ────────────────────────────── */}
         <div className='border-t p-3 space-y-1'>
           {bottomItems.map((item) => (
             <NavLink key={item.path} item={item} />
