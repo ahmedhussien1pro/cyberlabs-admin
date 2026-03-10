@@ -4,7 +4,10 @@ import type { LoginRequest, AuthResponse, User } from '@/core/types';
 
 export const authService = {
   login: async (credentials: LoginRequest): Promise<AuthResponse> => {
-    const { data } = await apiClient.post<AuthResponse>(API_ENDPOINTS.AUTH.LOGIN, credentials);
+    const { data } = await apiClient.post<AuthResponse>(
+      API_ENDPOINTS.AUTH.LOGIN,
+      credentials,
+    );
     return data;
   },
 

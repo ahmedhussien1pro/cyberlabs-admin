@@ -3,7 +3,6 @@ import { Shield } from 'lucide-react';
 import { ThemeToggle } from '@/shared/components/common/theme-toggle';
 import { LanguageSwitcher } from '@/shared/components/common/language-switcher';
 import { Logo } from '@/shared/components/common/Logo';
-// import { Preloader } from '@/shared/components/common/preloader';
 import { LoginForm } from '../components/login-form';
 import '../styles/auth.css';
 import { useTranslation } from 'react-i18next';

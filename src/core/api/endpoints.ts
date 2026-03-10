@@ -3,10 +3,10 @@ const BASE = '/admin';
 
 export const ENDPOINTS = {
   AUTH: {
-    LOGIN: `${BASE}/auth/login`,
-    ME: `${BASE}/auth/me`,
-    REFRESH: `${BASE}/auth/refresh`,
-    LOGOUT: `${BASE}/auth/logout`,
+    LOGIN: `/auth/login`,
+    ME: `/auth/me`,
+    REFRESH: `/auth/refresh`,
+    LOGOUT: `/auth/logout`,
   },
   USERS: {
     LIST: `${BASE}/users`,

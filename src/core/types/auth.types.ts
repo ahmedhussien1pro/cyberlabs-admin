@@ -7,12 +7,14 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   user: User;
-  accessToken?: string;  // CamelCase (used by backend)
-  access_token?: string; // Snake case (alternative)
-  token?: string;        // Simple key (alternative)
+  accessToken?: string;
+  access_token?: string;
+  token?: string;
   refreshToken?: string;
   expiresIn?: number;
 }
+
+export type AuthResponse = LoginResponse;
 
 export interface AuthState {
   user: User | null;
