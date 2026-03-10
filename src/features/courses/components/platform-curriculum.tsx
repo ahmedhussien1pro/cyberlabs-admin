@@ -1,8 +1,3 @@
-// src/features/courses/components/platform-curriculum.tsx
-// ─── نسخة طبق الأصل من course-curriculum.tsx (المنصة الأساسية) ──────────────
-// يدعم وضعين:
-//   1. elements: CourseElement[]  → يعرض CourseElementRenderer (import preview / curriculum API)
-//   2. lessons: PreviewLesson[]   → يعرض قائمة الـ lessons (DB preview)
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -55,18 +50,6 @@ const LESSON_ICON: Record<string, React.ElementType> = {
 };
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
-function CurriculumSkeleton() {
-  return (
-    <div className='space-y-3'>
-      {[1, 2, 3].map((i) => (
-        <div key={i} className='flex gap-4'>
-          <div className='h-[50px] w-[50px] shrink-0 animate-pulse rounded-full bg-muted' />
-          <div className='h-16 flex-1 animate-pulse rounded-xl border border-border/30 bg-muted/20' />
-        </div>
-      ))}
-    </div>
-  );
-}
 
 // ─── TopicRow ─────────────────────────────────────────────────────────────────
 function TopicRow({
@@ -88,8 +71,7 @@ function TopicRow({
   const isLast = topicIndex === total - 1;
   const title =
     lang === 'ar' && section.ar_title ? section.ar_title : section.title;
-  const subtitle =
-    lang === 'ar' ? section.title : (section.ar_title ?? null);
+  const subtitle = lang === 'ar' ? section.title : (section.ar_title ?? null);
   const lessons = section.lessons ?? [];
   const elements = section.elements ?? [];
   const hasRichContent = elements.length > 0;
@@ -169,7 +151,8 @@ function TopicRow({
                 </p>
               )}
               <p className='mt-0.5 text-xs text-muted-foreground'>
-                {itemCount} {itemLabel}{itemCount !== 1 ? 's' : ''}
+                {itemCount} {itemLabel}
+                {itemCount !== 1 ? 's' : ''}
               </p>
             </div>
 
@@ -234,9 +217,13 @@ function TopicRow({
                             <span
                               className={cn(
                                 'h-1.5 w-1.5 shrink-0 rounded-full',
-                                lesson.isPublished ? 'bg-emerald-500' : 'bg-border',
+                                lesson.isPublished
+                                  ? 'bg-emerald-500'
+                                  : 'bg-border',
                               )}
-                              title={lesson.isPublished ? 'Published' : 'Unpublished'}
+                              title={
+                                lesson.isPublished ? 'Published' : 'Unpublished'
+                              }
                             />
                           </div>
                         );
@@ -260,15 +247,12 @@ export function PlatformCurriculum({
 }: PlatformCurriculumProps) {
   const { i18n } = useTranslation();
   const lang = (i18n.language === 'ar' ? 'ar' : 'en') as 'en' | 'ar';
-  const [openId, setOpenId] = useState<string | null>(
-    sections[0]?.id ?? null,
-  );
+  const [openId, setOpenId] = useState<string | null>(sections[0]?.id ?? null);
 
   const toggle = (id: string) => setOpenId((p) => (p === id ? null : id));
   const total = sections.length;
   const totalLessons = sections.reduce(
-    (sum, s) =>
-      sum + (s.elements?.length ?? s.lessons?.length ?? 0),
+    (sum, s) => sum + (s.elements?.length ?? s.lessons?.length ?? 0),
     0,
   );
 

@@ -27,14 +27,13 @@ import {
   Loader2,
   Link2,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 interface Props {
   courseId: string;
   courseTitle: string;
 }
 
-export function CoursePathRelations({ courseId, courseTitle }: Props) {
+export function CoursePathRelations({ courseId }: Props) {
   const queryClient = useQueryClient();
   const [selectedPathId, setSelectedPathId] = useState('');
   const [newOrder, setNewOrder] = useState<number>(1);
@@ -82,13 +81,8 @@ export function CoursePathRelations({ courseId, courseTitle }: Props) {
 
   // إعادة ترتيب
   const { mutate: reorder, isPending: reordering } = useMutation({
-    mutationFn: ({
-      moduleId,
-      order,
-    }: {
-      moduleId: string;
-      order: number;
-    }) => adminCoursesApi.reorderPathModule(moduleId, order),
+    mutationFn: ({ moduleId, order }: { moduleId: string; order: number }) =>
+      adminCoursesApi.reorderPathModule(moduleId, order),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['admin', 'courses', courseId, 'path-modules'],
@@ -133,10 +127,7 @@ export function CoursePathRelations({ courseId, courseTitle }: Props) {
         ) : (
           <div className='space-y-2'>
             {modules.map((mod: any, idx: number) => (
-              <Card
-                key={mod.id}
-                className='flex items-center gap-3 px-4 py-3'
-              >
+              <Card key={mod.id} className='flex items-center gap-3 px-4 py-3'>
                 {/* Order badge */}
                 <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary'>
                   {mod.order ?? idx + 1}
@@ -164,8 +155,7 @@ export function CoursePathRelations({ courseId, courseTitle }: Props) {
                         moduleId: mod.id,
                         order: (mod.order ?? idx + 1) - 1,
                       })
-                    }
-                  >
+                    }>
                     <ArrowUp className='h-3.5 w-3.5' />
                   </Button>
                   <Button
@@ -178,8 +168,7 @@ export function CoursePathRelations({ courseId, courseTitle }: Props) {
                         moduleId: mod.id,
                         order: (mod.order ?? idx + 1) + 1,
                       })
-                    }
-                  >
+                    }>
                     <ArrowDown className='h-3.5 w-3.5' />
                   </Button>
                 </div>
@@ -190,8 +179,7 @@ export function CoursePathRelations({ courseId, courseTitle }: Props) {
                   size='icon'
                   className='h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10'
                   disabled={removing}
-                  onClick={() => removeFromPath(mod.id)}
-                >
+                  onClick={() => removeFromPath(mod.id)}>
                   {removing ? (
                     <Loader2 className='h-3.5 w-3.5 animate-spin' />
                   ) : (
@@ -223,10 +211,7 @@ export function CoursePathRelations({ courseId, courseTitle }: Props) {
             {/* Select Path */}
             <div className='flex-1 space-y-1.5'>
               <Label className='text-xs'>Select Path</Label>
-              <Select
-                value={selectedPathId}
-                onValueChange={setSelectedPathId}
-              >
+              <Select value={selectedPathId} onValueChange={setSelectedPathId}>
                 <SelectTrigger>
                   <SelectValue placeholder='Choose a path...' />
                 </SelectTrigger>
@@ -255,8 +240,7 @@ export function CoursePathRelations({ courseId, courseTitle }: Props) {
             <Button
               onClick={() => addToPath()}
               disabled={!selectedPathId || adding}
-              className='gap-2'
-            >
+              className='gap-2'>
               {adding ? (
                 <Loader2 className='h-4 w-4 animate-spin' />
               ) : (

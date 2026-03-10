@@ -10,7 +10,7 @@ export const ROUTES = {
   COURSE_IMPORT: '/courses/import',
 
   COURSE_EDIT: (slug: string) => `/courses/${slug}/edit`,
-
+  COURSE_DETAIL: (slug: string) => `/courses/${slug}/detail`,
   // ── Labs ──
   LABS: '/labs',
   LAB_DETAIL: (id: string) => `/labs/${id}`,

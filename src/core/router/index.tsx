@@ -21,9 +21,7 @@ const UserDetailPage = lazy(
 const CoursesListPage = lazy(
   () => import('@/features/courses/pages/courses-list.page'),
 );
-const CourseDetailPage = lazy(
-  () => import('@/features/courses/pages/course-detail.page'),
-);
+
 const CourseCreatePage = lazy(
   () => import('@/features/courses/pages/course-create.page'),
 );
@@ -33,9 +31,7 @@ const CourseEditPage = lazy(
 const CourseImportPage = lazy(
   () => import('@/features/courses/pages/course-import.page'),
 );
-const CoursePlatformPreviewPage = lazy(
-  () => import('@/features/courses/pages/course-platform-preview.page'),
-);
+
 const LabsListPage = lazy(() => import('@/features/labs/pages/labs-list.page'));
 const LabDetailPage = lazy(
   () => import('@/features/labs/pages/lab-detail.page'),
@@ -144,14 +140,6 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: 'courses/:id',
-        element: (
-          <S>
-            <CourseDetailPage />
-          </S>
-        ),
-      },
-      {
         path: 'courses/:id/edit',
         element: (
           <S>
@@ -159,10 +147,7 @@ const router = createBrowserRouter([
           </S>
         ),
       },
-      {
-        path: 'courses/:id/platform-preview',
-        element: <CoursePlatformPreviewPage />,
-      },
+
       { path: '/courses/editor', element: <CourseEditorPage /> },
       { path: '/courses/:id/content', element: <CourseEditorPage /> },
       // ─── Labs
