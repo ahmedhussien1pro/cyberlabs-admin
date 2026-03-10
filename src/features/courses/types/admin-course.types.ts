@@ -1,5 +1,5 @@
 // src/features/courses/types/admin-course.types.ts
-// ✅ Types مطابقة تماماً لـ cyberlabs-frontend/course.types.ts
+// ✅ FIXED: CourseColor now UPPERCASE to match backend validation
 
 export type CourseAccess = 'FREE' | 'PRO' | 'PREMIUM';
 export type CourseDifficulty =
@@ -7,13 +7,16 @@ export type CourseDifficulty =
   | 'INTERMEDIATE'
   | 'ADVANCED'
   | 'EXPERT';
+
+// ✅ FIXED: backend expects UPPERCASE color values
 export type CourseColor =
-  | 'emerald'
-  | 'blue'
-  | 'violet'
-  | 'orange'
-  | 'rose'
-  | 'cyan';
+  | 'EMERALD'
+  | 'BLUE'
+  | 'VIOLET'
+  | 'ORANGE'
+  | 'ROSE'
+  | 'CYAN';
+
 export type CourseState = 'PUBLISHED' | 'COMING_SOON' | 'DRAFT';
 export type CourseContentType = 'PRACTICAL' | 'THEORETICAL' | 'MIXED';
 export type CourseCategory =
@@ -27,18 +30,10 @@ export type CourseCategory =
   | 'TOOLS_AND_TECHNIQUES'
   | 'CAREER_AND_INDUSTRY';
 
-// ── Curriculum (مطابق لـ CurriculumTopic في المنصة) ──────────────────
+// ── Curriculum (مطابق لـ CurriculumTopic في المنصة) ──────────────────────
 export type CurriculumElementType =
-  | 'image'
-  | 'title'
-  | 'text'
-  | 'table'
-  | 'terminal'
-  | 'note'
-  | 'hr'
-  | 'orderedList'
-  | 'list'
-  | 'quiz';
+  | 'image' | 'title' | 'text' | 'table' | 'terminal'
+  | 'note'  | 'hr'    | 'orderedList' | 'list' | 'quiz';
 
 export interface CurriculumElement {
   id: string | number;
@@ -59,7 +54,7 @@ export interface CurriculumData {
   landingData?: Record<string, unknown> | null;
 }
 
-// ── Course Admin DTO ─────────────────────────────────────────────────
+// ── Course Admin DTO ────────────────────────────────────────────────────
 export interface AdminCourse {
   id: string;
   slug: string;
@@ -73,7 +68,7 @@ export interface AdminCourse {
   thumbnail: string | null;
   color: CourseColor;
   access: CourseAccess;
-  state: CourseState; // ✅ ليس isPublished boolean
+  state: CourseState;
   difficulty: CourseDifficulty;
   category: CourseCategory;
   contentType: CourseContentType;
@@ -90,10 +85,14 @@ export interface AdminCourse {
   isFeatured: boolean;
   isNew: boolean;
   labsLink?: string | null;
+  // ✅ Added: labs attached to this course (array of lab slugs)
+  labSlugs: string[];
+  // ✅ Added: instructor relationship (backend requires this on create)
+  instructorId?: string | null;
 }
 
 export type AdminCourseUpdateDto = Partial<
-  Omit<AdminCourse, 'id' | 'slug' | 'enrollmentCount'>
+  Omit<AdminCourse, 'id' | 'slug' | 'enrollmentCount' | 'labSlugs'>
 >;
 
 export interface AdminCoursesListResponse {
@@ -107,4 +106,18 @@ export interface AdminCourseStats {
   draft: number;
   comingSoon: number;
   featured: number;
+}
+
+// ── Create DTO ────────────────────────────────────────────────────────
+export interface AdminCourseCreateDto {
+  title: string;
+  ar_title?: string;
+  slug: string;
+  description?: string;
+  difficulty: CourseDifficulty;
+  access: CourseAccess;
+  category: CourseCategory;
+  color: CourseColor;
+  contentType: CourseContentType;
+  instructorId: string;
 }

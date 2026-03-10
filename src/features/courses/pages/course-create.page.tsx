@@ -1,9 +1,10 @@
 // src/features/courses/pages/course-create.page.tsx
-// ✅ Fixed: added slug field with auto-generate from title (required by backend)
+// ✅ Fixed: color UPPERCASE + instructorId field + defensive error display
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { adminCoursesApi } from '../services/admin-courses.api';
+import { adminApiClient } from '@/core/api/admin-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,12 +17,17 @@ import {
 import { toast } from 'sonner';
 import { ROUTES } from '@/shared/constants';
 import { ArrowLeft, ChevronRight, Loader2, Plus, RefreshCw } from 'lucide-react';
-import type { AdminCourse } from '../types/admin-course.types';
+import type { AdminCourseCreateDto, CourseColor } from '../types/admin-course.types';
 
-type CreateFields = Pick<
-  AdminCourse,
-  'title' | 'ar_title' | 'slug' | 'description' | 'difficulty' | 'access' | 'category' | 'color' | 'contentType'
->;
+// ── Color map — UPPERCASE values matching backend enum ──
+const COLOR_OPTIONS: { value: CourseColor; label: string; dot: string }[] = [
+  { value: 'EMERALD', label: 'Emerald', dot: 'bg-emerald-500' },
+  { value: 'BLUE',    label: 'Blue',    dot: 'bg-blue-500' },
+  { value: 'VIOLET',  label: 'Violet',  dot: 'bg-violet-500' },
+  { value: 'ORANGE',  label: 'Orange',  dot: 'bg-orange-500' },
+  { value: 'ROSE',    label: 'Rose',    dot: 'bg-rose-500' },
+  { value: 'CYAN',    label: 'Cyan',    dot: 'bg-cyan-500' },
+];
 
 function toSlug(title: string): string {
   return title
@@ -35,6 +41,21 @@ function toSlug(title: string): string {
 export default function CourseCreatePage() {
   const navigate = useNavigate();
 
+  // ── Fetch instructors list ──
+  const { data: instructors = [] } = useQuery({
+    queryKey: ['admin', 'instructors'],
+    queryFn: async () => {
+      try {
+        const res = await adminApiClient.get('/admin/instructors');
+        const d = res?.data ?? res;
+        return Array.isArray(d) ? d : (d?.data ?? []);
+      } catch {
+        // fallback — if endpoint doesn't exist, return empty
+        return [];
+      }
+    },
+  });
+
   const {
     register,
     handleSubmit,
@@ -42,37 +63,42 @@ export default function CourseCreatePage() {
     getValues,
     watch,
     formState: { errors },
-  } = useForm<CreateFields>({
+  } = useForm<AdminCourseCreateDto>({
     defaultValues: {
       difficulty:   'BEGINNER',
       access:       'FREE',
       category:     'FUNDAMENTALS',
-      color:        'blue',
+      color:        'BLUE',
       contentType:  'PRACTICAL',
+      instructorId: '',
     },
   });
 
   const { mutate, isPending } = useMutation({
-    mutationFn: (data: Partial<AdminCourse>) => adminCoursesApi.create(data),
+    mutationFn: (data: AdminCourseCreateDto) => adminCoursesApi.create(data),
     onSuccess: (created) => {
       toast.success('Course created! Complete the details now.');
       navigate(ROUTES.COURSE_EDIT(created.slug));
     },
     onError: (err: any) => {
-      const msg = err?.response?.data?.message ?? 'Failed to create course';
-      toast.error(typeof msg === 'string' ? msg : JSON.stringify(msg));
+      const msg = err?.response?.data?.message ?? err?.message ?? 'Failed to create course';
+      const msgStr = Array.isArray(msg) ? msg.join(' \u2022 ') : String(msg);
+      toast.error(msgStr, { duration: 6000 });
     },
   });
 
-  const onSubmit = (data: CreateFields) => mutate(data);
+  const onSubmit = (data: AdminCourseCreateDto) => {
+    // Don't send empty instructorId — backend may reject empty string
+    if (!data.instructorId) {
+      delete (data as any).instructorId;
+    }
+    mutate(data);
+  };
 
-  // Auto-generate slug from title
   const handleTitleBlur = () => {
     const title = getValues('title');
     const currentSlug = getValues('slug');
-    if (title && !currentSlug) {
-      setValue('slug', toSlug(title), { shouldValidate: true });
-    }
+    if (title && !currentSlug) setValue('slug', toSlug(title), { shouldValidate: true });
   };
 
   const regenerateSlug = () => {
@@ -80,10 +106,11 @@ export default function CourseCreatePage() {
     if (title) setValue('slug', toSlug(title), { shouldValidate: true });
   };
 
-  const Field = ({ id, label, error, children }: any) => (
+  const Field = ({ id, label, error, children, hint }: any) => (
     <div className='space-y-1.5'>
       <Label htmlFor={id} className='text-sm font-medium'>{label}</Label>
       {children}
+      {hint  && <p className='text-[11px] text-muted-foreground'>{hint}</p>}
       {error && <p className='text-xs text-destructive'>{error}</p>}
     </div>
   );
@@ -128,7 +155,11 @@ export default function CourseCreatePage() {
           </div>
 
           {/* Slug */}
-          <Field id='slug' label='Slug *' error={errors.slug?.message}>
+          <Field
+            id='slug'
+            label='Slug *'
+            error={errors.slug?.message}
+            hint='URL-friendly identifier — auto-generated from title on blur.'>
             <div className='flex gap-2'>
               <Input
                 id='slug'
@@ -142,29 +173,15 @@ export default function CourseCreatePage() {
                   },
                 })}
               />
-              <Button
-                type='button'
-                variant='outline'
-                size='icon'
-                className='shrink-0'
-                onClick={regenerateSlug}
-                title='Auto-generate from title'>
+              <Button type='button' variant='outline' size='icon' className='shrink-0' onClick={regenerateSlug} title='Auto-generate from title'>
                 <RefreshCw className='h-4 w-4' />
               </Button>
             </div>
-            <p className='text-[11px] text-muted-foreground mt-1'>
-              URL-friendly identifier. Auto-generated from title on blur.
-            </p>
           </Field>
 
           {/* Description */}
           <Field id='description' label='Short Description'>
-            <Textarea
-              id='description'
-              rows={3}
-              placeholder='Brief overview of what students will learn...'
-              {...register('description')}
-            />
+            <Textarea id='description' rows={3} placeholder='Brief overview...' {...register('description')} />
           </Field>
 
           {/* Row: Difficulty + Access + Color */}
@@ -190,16 +207,18 @@ export default function CourseCreatePage() {
                 </SelectContent>
               </Select>
             </Field>
-            <Field id='color' label='Color'>
-              <Select value={watch('color')} onValueChange={(v) => setValue('color', v as any)}>
+            <Field id='color' label='Color Theme'>
+              <Select value={watch('color')} onValueChange={(v) => setValue('color', v as CourseColor)}>
                 <SelectTrigger id='color'><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value='emerald'>Emerald</SelectItem>
-                  <SelectItem value='blue'>Blue</SelectItem>
-                  <SelectItem value='violet'>Violet</SelectItem>
-                  <SelectItem value='orange'>Orange</SelectItem>
-                  <SelectItem value='rose'>Rose</SelectItem>
-                  <SelectItem value='cyan'>Cyan</SelectItem>
+                  {COLOR_OPTIONS.map(({ value, label, dot }) => (
+                    <SelectItem key={value} value={value}>
+                      <div className='flex items-center gap-2'>
+                        <span className={`h-3 w-3 rounded-full ${dot}`} />
+                        {label}
+                      </div>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </Field>
@@ -234,6 +253,33 @@ export default function CourseCreatePage() {
               </Select>
             </Field>
           </div>
+
+          {/* Instructor */}
+          <Field
+            id='instructorId'
+            label='Instructor ID *'
+            error={errors.instructorId?.message}
+            hint={instructors.length > 0 ? undefined : 'Enter instructor UUID manually (e.g. from backend user list).'}>
+            {instructors.length > 0 ? (
+              <Select value={watch('instructorId') ?? ''} onValueChange={(v) => setValue('instructorId', v)}>
+                <SelectTrigger id='instructorId'><SelectValue placeholder='Select instructor' /></SelectTrigger>
+                <SelectContent>
+                  {instructors.map((inst: any) => (
+                    <SelectItem key={inst.id} value={inst.id}>
+                      {inst.name ?? inst.email ?? inst.id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                id='instructorId'
+                placeholder='xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+                className='font-mono text-sm'
+                {...register('instructorId', { required: 'Instructor ID is required' })}
+              />
+            )}
+          </Field>
 
           {/* Submit */}
           <div className='flex justify-end pt-2'>
