@@ -60,7 +60,7 @@ import {
 } from '@/core/api/services/notifications.service';
 import { usersService } from '@/core/api/services/users.service';
 
-// ── Type config ────────────────────────────────────────────────────────────
+// ── Type config ──────────────────────────────────────────────────────
 const TYPE_KEYS = ['INFO', 'SUCCESS', 'WARNING', 'ALERT'] as const;
 type NotifType = (typeof TYPE_KEYS)[number];
 
@@ -99,7 +99,7 @@ const TYPE_META: Record<
   },
 };
 
-// ── useDebounce hook ─────────────────────────────────────────────────────────
+// ── useDebounce hook ───────────────────────────────────────────────────
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState<T>(value);
   useEffect(() => {
@@ -109,7 +109,7 @@ function useDebounce<T>(value: T, delay: number): T {
   return debounced;
 }
 
-// ── UserSearchInput ─────────────────────────────────────────────────────────
+// ── UserSearchInput ─────────────────────────────────────────────────────
 interface SelectedUser {
   id: string;
   name: string;
@@ -137,7 +137,6 @@ function UserSearchInput({
     queryFn: () =>
       usersService.getAll({ search: debouncedQuery || undefined, limit: 8 }),
     staleTime: 5_000,
-    // Always fetch so we show users on first focus even with empty query
     enabled: open,
   });
 
@@ -151,7 +150,6 @@ function UserSearchInput({
     email: u.email,
   }));
 
-  // reset highlight when list changes
   useEffect(() => setHighlighted(0), [users.length]);
 
   const choose = useCallback(
@@ -179,7 +177,6 @@ function UserSearchInput({
     }
   };
 
-  // close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (
@@ -194,7 +191,6 @@ function UserSearchInput({
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // scroll highlighted item into view
   useEffect(() => {
     const el = listRef.current?.querySelector<HTMLElement>(
       `[data-idx="${highlighted}"]`,
@@ -202,7 +198,6 @@ function UserSearchInput({
     el?.scrollIntoView({ block: 'nearest' });
   }, [highlighted]);
 
-  // ── Selected chip ──
   if (selected) {
     return (
       <div className='flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2.5 transition-colors'>
@@ -227,10 +222,8 @@ function UserSearchInput({
     );
   }
 
-  // ── Search dropdown ──
   return (
     <div data-user-search className='relative'>
-      {/* Input */}
       <div className='relative'>
         <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none' />
         {isFetching ? (
@@ -261,7 +254,6 @@ function UserSearchInput({
         />
       </div>
 
-      {/* Dropdown */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -271,7 +263,6 @@ function UserSearchInput({
             transition={{ duration: 0.13, ease: 'easeOut' }}
             className='absolute z-50 mt-1.5 w-full overflow-hidden rounded-xl border border-border/60 bg-popover shadow-2xl shadow-black/20'>
             <div ref={listRef} className='max-h-60 overflow-y-auto'>
-              {/* Loading skeleton */}
               {isFetching && users.length === 0 && (
                 <div className='space-y-1 p-2'>
                   {[1, 2, 3].map((i) => (
@@ -288,7 +279,6 @@ function UserSearchInput({
                 </div>
               )}
 
-              {/* No results */}
               {!isFetching && users.length === 0 && (
                 <div className='flex flex-col items-center gap-2 py-8'>
                   <Search className='h-6 w-6 text-muted-foreground/30' />
@@ -298,7 +288,6 @@ function UserSearchInput({
                 </div>
               )}
 
-              {/* User list */}
               {users.map((u, idx) => (
                 <button
                   key={u.id}
@@ -313,7 +302,6 @@ function UserSearchInput({
                     'flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors',
                     highlighted === idx ? 'bg-muted/80' : 'hover:bg-muted/50',
                   )}>
-                  {/* Avatar letter */}
                   <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500/20 to-blue-500/20 ring-1 ring-border/40'>
                     <span className='text-xs font-bold text-violet-400 uppercase'>
                       {u.name.charAt(0)}
@@ -336,7 +324,6 @@ function UserSearchInput({
               ))}
             </div>
 
-            {/* Footer hint */}
             {users.length > 0 && (
               <div className='border-t border-border/40 bg-muted/20 px-3 py-1.5 flex items-center gap-3 text-[10px] text-muted-foreground/60'>
                 <span>↑↓ {t('form.keyboardNav', 'navigate')}</span>
@@ -351,7 +338,6 @@ function UserSearchInput({
   );
 }
 
-/** Bold-highlight matched substring */
 function highlightMatch(text: string, query: string): React.ReactNode {
   if (!query.trim()) return text;
   const idx = text.toLowerCase().indexOf(query.toLowerCase());
@@ -367,7 +353,6 @@ function highlightMatch(text: string, query: string): React.ReactNode {
   );
 }
 
-// ── HistoryItem ────────────────────────────────────────────────────────────
 function HistoryItem({ notif }: { notif: Notification }) {
   const { t } = useTranslation('notifications');
   const meta = TYPE_META[notif.type as NotifType] ?? TYPE_META.INFO;
@@ -425,7 +410,6 @@ function HistoryItem({ notif }: { notif: Notification }) {
   );
 }
 
-// ── NotificationsPage ──────────────────────────────────────────────────────
 export default function NotificationsPage() {
   const { t } = useTranslation('notifications');
   const queryClient = useQueryClient();
@@ -456,9 +440,10 @@ export default function NotificationsPage() {
     mutationFn: (payload: BroadcastPayload) =>
       notificationsService.broadcast(payload),
     onSuccess: (res) => {
+      // count must be a number for i18n interpolation
       toast.success(
         t('toast.success', {
-          count: res.recipientCount?.toLocaleString() ?? 0,
+          count: res.recipientCount ?? 0,
         }),
       );
       setForm({ title: '', message: '', type: 'INFO' });
@@ -495,7 +480,6 @@ export default function NotificationsPage() {
 
   return (
     <div className='space-y-8'>
-      {/* Header */}
       <div className='flex items-center justify-between'>
         <div className='flex items-center gap-3'>
           <div className='flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500/20 to-blue-500/20 ring-1 ring-border/60'>
@@ -513,7 +497,6 @@ export default function NotificationsPage() {
       </div>
 
       <div className='grid grid-cols-1 gap-8 lg:grid-cols-2'>
-        {/* ── Compose ── */}
         <Card>
           <CardHeader>
             <div className='flex items-center gap-2'>
@@ -523,7 +506,6 @@ export default function NotificationsPage() {
             <CardDescription>{t('form.cardDescription')}</CardDescription>
           </CardHeader>
           <CardContent className='space-y-5'>
-            {/* Target toggle */}
             <div className='space-y-2'>
               <label className='text-sm font-medium'>
                 {t('form.targetLabel')}
@@ -551,7 +533,6 @@ export default function NotificationsPage() {
               </div>
             </div>
 
-            {/* User search */}
             <AnimatePresence initial={false}>
               {targetMode === 'user' && (
                 <motion.div
@@ -572,7 +553,6 @@ export default function NotificationsPage() {
               )}
             </AnimatePresence>
 
-            {/* Type */}
             <div className='space-y-2'>
               <label className='text-sm font-medium'>
                 {t('form.typeLabel')}
@@ -602,7 +582,6 @@ export default function NotificationsPage() {
               </Select>
             </div>
 
-            {/* Title */}
             <div className='space-y-2'>
               <label className='text-sm font-medium'>
                 {t('form.titleLabel')}
@@ -620,7 +599,6 @@ export default function NotificationsPage() {
               </p>
             </div>
 
-            {/* Message */}
             <div className='space-y-2'>
               <label className='text-sm font-medium'>
                 {t('form.messageLabel')}
@@ -640,7 +618,6 @@ export default function NotificationsPage() {
               </p>
             </div>
 
-            {/* Preview */}
             {(form.title || form.message) && (
               <div className='rounded-xl border border-border/50 bg-muted/20 p-4'>
                 <p className='mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground'>
@@ -673,7 +650,6 @@ export default function NotificationsPage() {
 
             <Separator />
 
-            {/* Warning */}
             <div className='flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3'>
               <AlertTriangle className='mt-0.5 h-4 w-4 shrink-0 text-amber-400' />
               <p
@@ -710,7 +686,6 @@ export default function NotificationsPage() {
           </CardContent>
         </Card>
 
-        {/* ── History ── */}
         <div className='space-y-4'>
           <div className='flex items-center justify-between'>
             <div className='flex items-center gap-2'>
@@ -751,7 +726,6 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      {/* Confirm */}
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
