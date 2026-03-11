@@ -4,10 +4,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, Edit, Eye, Trash2, Copy,
+  ArrowLeft, Edit, Copy,
   AlertCircle, BookOpen, Clock, Users,
   FlaskConical, Crown, Unlock, Shield,
-  CheckCircle2, Globe, Star,
+  CheckCircle2, Globe, Star, Trash2, Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -78,7 +78,7 @@ export default function CourseDetailPage() {
     onError: () => toast.error('Failed to duplicate'),
   });
 
-  const { mutate: publishCourse, isPending: publishing } = useMutation({
+  const { mutate: togglePublish, isPending: publishing } = useMutation({
     mutationFn: () =>
       course?.state === 'PUBLISHED'
         ? adminCoursesApi.unpublish(id!)
@@ -132,12 +132,12 @@ export default function CourseDetailPage() {
             <h1 className='text-xl font-bold truncate'>{course.title}</h1>
             <Badge variant='outline' className={`rounded-full text-xs ${stateClass}`}>
               {course.state === 'PUBLISHED'
-                ? <><CheckCircle2 className='h-3 w-3 mr-1' /> Published</>
+                ? <><CheckCircle2 className='h-3 w-3 mr-1 inline' />Published</>
                 : course.state.replace('_', ' ')}
             </Badge>
             {course.isFeatured && (
               <Badge variant='outline' className='rounded-full text-xs bg-yellow-500/10 border-yellow-500/30 text-yellow-400'>
-                <Star className='h-3 w-3 mr-1' /> Featured
+                <Star className='h-3 w-3 mr-1 inline' />Featured
               </Badge>
             )}
           </div>
@@ -148,31 +148,23 @@ export default function CourseDetailPage() {
         </div>
 
         {/* Actions */}
-        <div className='flex items-center gap-2 shrink-0'>
+        <div className='flex flex-wrap items-center gap-2 shrink-0'>
           <Button
-            variant='outline'
-            size='sm'
-            className='gap-2'
-            onClick={() => publishCourse()}
-            disabled={publishing}
+            variant='outline' size='sm' className='gap-2'
+            onClick={() => togglePublish()} disabled={publishing}
           >
-            {publishing
-              ? <Loader className='h-4 w-4 animate-spin' />
-              : <Globe className='h-4 w-4' />}
+            {publishing ? <Loader2 className='h-4 w-4 animate-spin' /> : <Globe className='h-4 w-4' />}
             {course.state === 'PUBLISHED' ? 'Unpublish' : 'Publish'}
           </Button>
           <Button
-            variant='outline'
-            size='sm'
-            className='gap-2'
-            onClick={() => duplicateCourse()}
-            disabled={duplicating}
+            variant='outline' size='sm' className='gap-2'
+            onClick={() => duplicateCourse()} disabled={duplicating}
           >
-            <Copy className='h-4 w-4' /> Duplicate
+            {duplicating ? <Loader2 className='h-4 w-4 animate-spin' /> : <Copy className='h-4 w-4' />}
+            Duplicate
           </Button>
           <Button
-            size='sm'
-            className='gap-2'
+            size='sm' className='gap-2'
             onClick={() => navigate(`/courses/${course.slug}/edit`)}
           >
             <Edit className='h-4 w-4' /> Edit
@@ -184,7 +176,6 @@ export default function CourseDetailPage() {
       <Card>
         <CardContent className='pt-5 pb-4'>
           <div className='flex items-start gap-4'>
-            {/* Thumbnail */}
             <div className='h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-border/50'>
               {course.image || course.thumbnail ? (
                 <img
@@ -205,17 +196,18 @@ export default function CourseDetailPage() {
                   {course.color?.toLowerCase()}
                 </Badge>
                 <Badge variant='outline' className='rounded-full text-xs'>
-                  {course.access === 'FREE' ? <Unlock className='h-3 w-3 mr-1' /> : <Crown className='h-3 w-3 mr-1' />}
+                  {course.access === 'FREE'
+                    ? <Unlock className='h-3 w-3 mr-1 inline' />
+                    : <Crown className='h-3 w-3 mr-1 inline' />}
                   {course.access}
                 </Badge>
                 <Badge variant='outline' className='rounded-full text-xs'>
-                  <Shield className='h-3 w-3 mr-1' />{course.difficulty}
+                  <Shield className='h-3 w-3 mr-1 inline' />{course.difficulty}
                 </Badge>
                 <Badge variant='outline' className='rounded-full text-xs'>
                   {course.category?.replace(/_/g, ' ')}
                 </Badge>
               </div>
-
               {course.description && (
                 <p className='text-sm text-muted-foreground leading-relaxed'>{course.description}</p>
               )}
@@ -226,10 +218,10 @@ export default function CourseDetailPage() {
 
       {/* Stats */}
       <div className='grid grid-cols-2 gap-3 sm:grid-cols-4'>
-        <StatCard label='Topics' value={course.totalTopics ?? 0} icon={BookOpen} />
-        <StatCard label='Est. Hours' value={`${course.estimatedHours ?? 0}h`} icon={Clock} />
-        <StatCard label='Enrolled' value={(course.enrollmentCount ?? 0).toLocaleString()} icon={Users} />
-        <StatCard label='Labs' value={course.labSlugs?.length ?? 0} icon={FlaskConical} />
+        <StatCard label='Topics'    value={course.totalTopics ?? 0}                       icon={BookOpen}     />
+        <StatCard label='Est. Hours' value={`${course.estimatedHours ?? 0}h`}             icon={Clock}        />
+        <StatCard label='Enrolled'  value={(course.enrollmentCount ?? 0).toLocaleString()} icon={Users}        />
+        <StatCard label='Labs'      value={course.labSlugs?.length ?? 0}                  icon={FlaskConical}  />
       </div>
 
       {/* Skills & Tags */}
@@ -283,11 +275,11 @@ export default function CourseDetailPage() {
       {/* Danger zone */}
       <div className='rounded-xl border border-destructive/30 bg-destructive/5 p-4'>
         <h3 className='text-sm font-semibold text-destructive mb-2'>Danger Zone</h3>
-        <p className='text-xs text-muted-foreground mb-3'>Deleting this course is irreversible. All curriculum data will be lost.</p>
+        <p className='text-xs text-muted-foreground mb-3'>
+          Deleting this course is irreversible. All curriculum data will be lost.
+        </p>
         <Button
-          variant='destructive'
-          size='sm'
-          className='gap-2'
+          variant='destructive' size='sm' className='gap-2'
           disabled={deleting}
           onClick={() => {
             if (window.confirm(`Delete "${course.title}"? This cannot be undone.`)) {
@@ -295,13 +287,11 @@ export default function CourseDetailPage() {
             }
           }}
         >
-          {deleting ? <><Loader className='h-4 w-4 animate-spin' /> Deleting...</> : <><Trash2 className='h-4 w-4' /> Delete Course</>}
+          {deleting
+            ? <><Loader2 className='h-4 w-4 animate-spin' /> Deleting...</>
+            : <><Trash2 className='h-4 w-4' /> Delete Course</>}
         </Button>
       </div>
     </div>
   );
-}
-
-function Loader({ className }: { className?: string }) {
-  return <span className={className} />;
 }
