@@ -1,6 +1,6 @@
 // src/features/courses/pages/course-edit.page.tsx
-import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,10 +14,38 @@ import { HeroInfoTab } from '../components/edit-tabs/hero-info-tab';
 import { CurriculumPlatformEditor } from '../components/curriculum-platform-editor';
 import { CoursePlatformPreviewTab } from '../components/course-preview-tab';
 
+const VALID_TABS = ['card', 'hero', 'curriculum', 'preview'] as const;
+type TabValue = (typeof VALID_TABS)[number];
+
 export default function CourseEditPage() {
+  // Route is /courses/:slug/edit — param name is "slug"
   const { slug } = useParams<{ slug: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [tab, setTab] = useState('card');
+
+  // Derive active tab from ?tab= query param
+  const tabParam = searchParams.get('tab') as TabValue | null;
+  const [tab, setTab] = useState<TabValue>(
+    tabParam && VALID_TABS.includes(tabParam) ? tabParam : 'card',
+  );
+
+  // Keep URL in sync when tab changes
+  const handleTabChange = (value: string) => {
+    const v = value as TabValue;
+    setTab(v);
+    if (v === 'card') {
+      searchParams.delete('tab');
+    } else {
+      searchParams.set('tab', v);
+    }
+    setSearchParams(searchParams, { replace: true });
+  };
+
+  // Sync tab when URL changes externally (e.g. back-button)
+  useEffect(() => {
+    const t = searchParams.get('tab') as TabValue | null;
+    if (t && VALID_TABS.includes(t) && t !== tab) setTab(t);
+  }, [searchParams]);
 
   const {
     data: course,
@@ -25,10 +53,14 @@ export default function CourseEditPage() {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['admin', 'course', 'slug', slug],
-    queryFn: () => adminCoursesApi.getBySlug(slug!),
+    queryKey: ['admin', 'course', 'edit', slug],
+    queryFn: async () => {
+      if (!slug) throw new Error('No slug provided');
+      return adminCoursesApi.getBySlug(slug);
+    },
     enabled: !!slug,
-    retry: false,
+    retry: 1,
+    staleTime: 30_000,
   });
 
   if (isLoading) {
@@ -42,12 +74,14 @@ export default function CourseEditPage() {
   }
 
   if (error || !course) {
+    const msg = error instanceof Error ? error.message : String(error ?? '');
     return (
       <div className='flex h-full items-center justify-center p-6'>
         <Alert variant='destructive' className='max-w-md'>
           <AlertCircle className='h-4 w-4' />
           <AlertDescription>
-            Course not found: <code className='font-mono text-xs'>{slug}</code>
+            Could not load course <code className='font-mono text-xs'>{slug}</code>
+            {msg ? `: ${msg}` : ''}
           </AlertDescription>
         </Alert>
       </div>
@@ -56,7 +90,7 @@ export default function CourseEditPage() {
 
   return (
     <div className='space-y-6'>
-      {/* ── Header ── */}
+      {/* Header */}
       <div className='flex items-center gap-4'>
         <Button
           variant='ghost'
@@ -67,25 +101,21 @@ export default function CourseEditPage() {
         </Button>
         <div className='flex-1 min-w-0'>
           <h1 className='text-xl font-bold truncate'>{course.title}</h1>
-          <p className='text-xs text-muted-foreground font-mono'>
-            {course.slug}
-          </p>
+          <p className='text-xs text-muted-foreground font-mono'>{course.slug}</p>
         </div>
         <span
           className={[
             'rounded-full px-3 py-1 text-xs font-semibold border',
-            course.state === 'PUBLISHED'
+            course.isPublished
               ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-              : course.state === 'COMING_SOON'
-                ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
-                : 'bg-zinc-500/10 border-zinc-500/30 text-zinc-400',
+              : 'bg-zinc-500/10 border-zinc-500/30 text-zinc-400',
           ].join(' ')}>
-          {course.state.replace('_', ' ')}
+          {course.isPublished ? 'PUBLISHED' : (course.state ?? 'DRAFT').replace('_', ' ')}
         </span>
       </div>
 
-      {/* ── Tabs ── */}
-      <Tabs value={tab} onValueChange={setTab}>
+      {/* Tabs */}
+      <Tabs value={tab} onValueChange={handleTabChange}>
         <TabsList className='grid w-full grid-cols-4 max-w-lg'>
           <TabsTrigger value='card'>Card Info</TabsTrigger>
           <TabsTrigger value='hero'>Hero Info</TabsTrigger>

@@ -58,13 +58,16 @@ function StatCard({ label, value, icon: Icon }: { label: string; value: string |
 }
 
 export default function CourseDetailPage() {
+  // Route is /courses/:id/detail — param name is "id" (UUID)
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [deleteOpen, setDeleteOpen] = useState(false);
 
+  const queryKey = ['admin', 'course', 'detail', id];
+
   const { data: course, isLoading, error } = useQuery({
-    queryKey: ['admin', 'course', id],
+    queryKey,
     queryFn: () => adminCoursesApi.getById(id!),
     enabled: !!id,
     retry: false,
@@ -85,20 +88,26 @@ export default function CourseDetailPage() {
     onSuccess: (dup: AdminCourse) => {
       toast.success(`Duplicated as "${dup.title}"`);
       queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
-      navigate(`/courses/${dup.slug}/edit`);
+      navigate(`/courses/${dup.id}/detail`);
     },
     onError: () => toast.error('Failed to duplicate'),
   });
 
+  const isPublished = course?.isPublished ?? course?.state === 'PUBLISHED';
+
   const { mutate: togglePublish, isPending: publishing } = useMutation({
     mutationFn: () =>
-      course?.state === 'PUBLISHED'
+      isPublished
         ? adminCoursesApi.unpublish(id!)
         : adminCoursesApi.publish(id!),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'course', id] });
+    onSuccess: (updated: AdminCourse) => {
+      // Update cache directly with the returned course — no round-trip needed
+      queryClient.setQueryData(queryKey, updated);
       queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
-      toast.success('State updated');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'course', 'edit'] });
+      toast.success(
+        updated.isPublished ? 'Course published ✓' : 'Course unpublished',
+      );
     },
     onError: () => toast.error('Failed to update state'),
   });
@@ -129,7 +138,8 @@ export default function CourseDetailPage() {
   }
 
   const colorClass = COLOR_CLASS[course.color?.toUpperCase()] ?? COLOR_CLASS.BLUE;
-  const stateClass = STATE_CLASS[course.state] ?? STATE_CLASS.DRAFT;
+  const courseState = course.isPublished ? 'PUBLISHED' : (course.state ?? 'DRAFT');
+  const stateClass = STATE_CLASS[courseState] ?? STATE_CLASS.DRAFT;
 
   return (
     <div className='space-y-6'>
@@ -143,9 +153,9 @@ export default function CourseDetailPage() {
           <div className='flex flex-wrap items-center gap-2 mb-1'>
             <h1 className='text-xl font-bold truncate'>{course.title}</h1>
             <Badge variant='outline' className={`rounded-full text-xs ${stateClass}`}>
-              {course.state === 'PUBLISHED'
+              {courseState === 'PUBLISHED'
                 ? <><CheckCircle2 className='h-3 w-3 mr-1 inline' />Published</>
-                : course.state.replace('_', ' ')}
+                : courseState.replace('_', ' ')}
             </Badge>
             {course.isFeatured && (
               <Badge variant='outline' className='rounded-full text-xs bg-yellow-500/10 border-yellow-500/30 text-yellow-400'>
@@ -165,14 +175,18 @@ export default function CourseDetailPage() {
             variant='outline' size='sm' className='gap-2'
             onClick={() => togglePublish()} disabled={publishing}
           >
-            {publishing ? <Loader2 className='h-4 w-4 animate-spin' /> : <Globe className='h-4 w-4' />}
-            {course.state === 'PUBLISHED' ? 'Unpublish' : 'Publish'}
+            {publishing
+              ? <Loader2 className='h-4 w-4 animate-spin' />
+              : <Globe className='h-4 w-4' />}
+            {isPublished ? 'Unpublish' : 'Publish'}
           </Button>
           <Button
             variant='outline' size='sm' className='gap-2'
             onClick={() => duplicateCourse()} disabled={duplicating}
           >
-            {duplicating ? <Loader2 className='h-4 w-4 animate-spin' /> : <Copy className='h-4 w-4' />}
+            {duplicating
+              ? <Loader2 className='h-4 w-4 animate-spin' />
+              : <Copy className='h-4 w-4' />}
             Duplicate
           </Button>
           <Button
@@ -207,7 +221,6 @@ export default function CourseDetailPage() {
                 </div>
               )}
             </div>
-
             <div className='min-w-0 flex-1 space-y-2'>
               <div className='flex flex-wrap gap-2'>
                 <Badge variant='outline' className={`rounded-full text-xs ${colorClass}`}>
@@ -236,10 +249,10 @@ export default function CourseDetailPage() {
 
       {/* Stats */}
       <div className='grid grid-cols-2 gap-3 sm:grid-cols-4'>
-        <StatCard label='Topics'     value={course.totalTopics ?? 0}                        icon={BookOpen}    />
-        <StatCard label='Est. Hours' value={`${course.estimatedHours ?? 0}h`}              icon={Clock}       />
-        <StatCard label='Enrolled'   value={(course.enrollmentCount ?? 0).toLocaleString()} icon={Users}       />
-        <StatCard label='Labs'       value={course.labSlugs?.length ?? 0}                   icon={FlaskConical} />
+        <StatCard label='Topics'     value={course.totalTopics ?? 0}                         icon={BookOpen}    />
+        <StatCard label='Est. Hours' value={`${course.estimatedHours ?? 0}h`}               icon={Clock}       />
+        <StatCard label='Enrolled'   value={(course.enrollmentCount ?? 0).toLocaleString()}  icon={Users}       />
+        <StatCard label='Labs'       value={course.labSlugs?.length ?? 0}                    icon={FlaskConical} />
       </div>
 
       {/* Skills & Tags */}
