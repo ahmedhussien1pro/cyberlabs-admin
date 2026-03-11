@@ -3,79 +3,43 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { adminCoursesApi } from '../services/admin-courses.api';
+import { AdminCourseCard } from '../components/admin-course-card';
 import { CoursesTable } from '../components/courses-table';
-import { CourseAdminCard } from '../components/course-admin-card';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
-  BookOpen,
-  Plus,
-  FileJson,
-  Globe,
-  EyeOff,
-  Clock,
-  AlertCircle,
-  LayoutGrid,
-  List,
-  ChevronLeft,
-  ChevronRight,
-  Search,
+  BookOpen, Plus, FileJson, Globe, EyeOff,
+  Clock, AlertCircle, LayoutGrid, List,
+  ChevronLeft, ChevronRight, Search,
 } from 'lucide-react';
 import { ROUTES } from '@/shared/constants';
 import { cn } from '@/lib/utils';
 import type { CourseState } from '../types/admin-course.types';
 
 const STAT_CARDS = [
-  {
-    key: 'total' as const,
-    label: 'Total Courses',
-    icon: BookOpen,
-    color: 'text-primary',
-    bg: 'bg-primary/10 border-primary/20',
-  },
-  {
-    key: 'published' as const,
-    label: 'Published',
-    icon: Globe,
-    color: 'text-emerald-400',
-    bg: 'bg-emerald-500/10 border-emerald-500/20',
-  },
-  {
-    key: 'draft' as const,
-    label: 'Draft',
-    icon: EyeOff,
-    color: 'text-amber-400',
-    bg: 'bg-amber-500/10 border-amber-500/20',
-  },
-  {
-    key: 'comingSoon' as const,
-    label: 'Coming Soon',
-    icon: Clock,
-    color: 'text-blue-400',
-    bg: 'bg-blue-500/10 border-blue-500/20',
-  },
+  { key: 'total'     as const, label: 'Total Courses', icon: BookOpen, color: 'text-primary',      bg: 'bg-primary/10 border-primary/20'             },
+  { key: 'published' as const, label: 'Published',     icon: Globe,    color: 'text-emerald-400',  bg: 'bg-emerald-500/10 border-emerald-500/20'     },
+  { key: 'draft'     as const, label: 'Draft',          icon: EyeOff,   color: 'text-amber-400',    bg: 'bg-amber-500/10 border-amber-500/20'         },
+  { key: 'comingSoon'as const, label: 'Coming Soon',   icon: Clock,    color: 'text-blue-400',     bg: 'bg-blue-500/10 border-blue-500/20'           },
 ];
 
 type StateFilter = CourseState | 'all';
-type DifficultyFilter = 'ALL' | 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT';
+type DiffFilter  = 'ALL' | 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT';
 
 export default function CoursesListPage() {
   const navigate = useNavigate();
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>('ALL');
-  const [stateFilter, setStateFilter] = useState<StateFilter>('all');
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [page,             setPage]            = useState(1);
+  const [search,           setSearch]          = useState('');
+  const [diffFilter,       setDiffFilter]      = useState<DiffFilter>('ALL');
+  const [stateFilter,      setStateFilter]     = useState<StateFilter>('all');
+  const [viewMode,         setViewMode]        = useState<'grid' | 'table'>('grid');
   const limit = 20;
 
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -84,20 +48,17 @@ export default function CoursesListPage() {
   });
 
   const { data: coursesData, isLoading, error, refetch } = useQuery({
-    queryKey: ['admin', 'courses', 'list', page, search, difficultyFilter, stateFilter],
-    queryFn: () =>
-      adminCoursesApi.list({
-        page,
-        limit,
-        search: search || undefined,
-        difficulty: difficultyFilter !== 'ALL' ? difficultyFilter : undefined,
-        state: stateFilter,
-      }),
+    queryKey: ['admin', 'courses', 'list', page, search, diffFilter, stateFilter],
+    queryFn: () => adminCoursesApi.list({
+      page,
+      limit,
+      search:     search || undefined,
+      difficulty: diffFilter !== 'ALL' ? diffFilter : undefined,
+      state:      stateFilter,
+    }),
   });
 
   const handleSearch = (val: string) => { setSearch(val); setPage(1); };
-  const handleDifficulty = (val: DifficultyFilter) => { setDifficultyFilter(val); setPage(1); };
-  const handleState = (val: StateFilter) => { setStateFilter(val); setPage(1); };
 
   if (error) {
     return (
@@ -119,14 +80,13 @@ export default function CoursesListPage() {
           <p className='mt-1 text-sm text-muted-foreground'>Manage and publish platform courses</p>
         </div>
         <div className='flex shrink-0 items-center gap-2'>
-          <Button variant='outline' size='sm' className='h-9 gap-2' onClick={() => navigate(ROUTES.COURSE_IMPORT)}>
+          <Button variant='outline' size='sm' className='h-9 gap-2' onClick={() => navigate(ROUTES.COURSE_IMPORT ?? '/courses/import')}>
             <FileJson className='h-4 w-4' />
             <span className='hidden sm:inline'>Import JSON</span>
             <span className='sm:hidden'>Import</span>
           </Button>
-          <Button size='sm' className='h-9 gap-2' onClick={() => navigate(ROUTES.COURSE_CREATE)}>
-            <Plus className='h-4 w-4' />
-            New Course
+          <Button size='sm' className='h-9 gap-2' onClick={() => navigate(ROUTES.COURSE_CREATE ?? '/courses/new')}>
+            <Plus className='h-4 w-4' /> New Course
           </Button>
         </div>
       </div>
@@ -148,9 +108,8 @@ export default function CoursesListPage() {
             ))}
       </div>
 
-      {/* ── Search + Filters + View Toggle (inline, no sidebar) ── */}
+      {/* ── Search + Filters + View toggle ── */}
       <div className='flex items-center gap-2 flex-wrap'>
-        {/* Search */}
         <div className='relative flex-1 min-w-[180px]'>
           <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
           <Input
@@ -161,8 +120,7 @@ export default function CoursesListPage() {
           />
         </div>
 
-        {/* Status filter */}
-        <Select value={stateFilter} onValueChange={handleState}>
+        <Select value={stateFilter} onValueChange={(v) => { setStateFilter(v as StateFilter); setPage(1); }}>
           <SelectTrigger className='h-9 w-36 bg-background'>
             <SelectValue placeholder='All Status' />
           </SelectTrigger>
@@ -174,8 +132,7 @@ export default function CoursesListPage() {
           </SelectContent>
         </Select>
 
-        {/* Difficulty filter */}
-        <Select value={difficultyFilter} onValueChange={handleDifficulty}>
+        <Select value={diffFilter} onValueChange={(v) => { setDiffFilter(v as DiffFilter); setPage(1); }}>
           <SelectTrigger className='h-9 w-36 bg-background'>
             <SelectValue placeholder='All Levels' />
           </SelectTrigger>
@@ -188,22 +145,15 @@ export default function CoursesListPage() {
           </SelectContent>
         </Select>
 
-        {/* View mode toggle */}
         <div className='flex shrink-0 items-center gap-0.5 rounded-lg border border-border/50 bg-muted/30 p-0.5'>
           <Button
-            variant={viewMode === 'grid' ? 'default' : 'ghost'}
-            size='sm'
-            className='h-8 w-8 p-0'
-            onClick={() => setViewMode('grid')}
-            title='Grid view'>
+            variant={viewMode === 'grid' ? 'default' : 'ghost'} size='sm'
+            className='h-8 w-8 p-0' onClick={() => setViewMode('grid')} title='Grid view'>
             <LayoutGrid className='h-3.5 w-3.5' />
           </Button>
           <Button
-            variant={viewMode === 'table' ? 'default' : 'ghost'}
-            size='sm'
-            className='h-8 w-8 p-0'
-            onClick={() => setViewMode('table')}
-            title='Table view'>
+            variant={viewMode === 'table' ? 'default' : 'ghost'} size='sm'
+            className='h-8 w-8 p-0' onClick={() => setViewMode('table')} title='Table view'>
             <List className='h-3.5 w-3.5' />
           </Button>
         </div>
@@ -213,7 +163,7 @@ export default function CoursesListPage() {
       {isLoading ? (
         viewMode === 'grid' ? (
           <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
-            {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className='h-72 rounded-xl' />)}
+            {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className='h-80 rounded-2xl' />)}
           </div>
         ) : (
           <Card className='p-6'>
@@ -234,8 +184,8 @@ export default function CoursesListPage() {
             </Card>
           ) : (
             <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
-              {(coursesData?.data ?? []).map((course) => (
-                <CourseAdminCard key={course.id} course={course} />
+              {(coursesData?.data ?? []).map((course, i) => (
+                <AdminCourseCard key={course.id} course={course} index={i} />
               ))}
             </div>
           )}
@@ -247,8 +197,8 @@ export default function CoursesListPage() {
                 Showing{' '}
                 <span className='font-semibold text-foreground'>
                   {(page - 1) * limit + 1}–{Math.min(page * limit, coursesData.meta.total)}
-                </span>{' '}
-                of{' '}
+                </span>
+                {' '}of{' '}
                 <span className='font-semibold text-foreground'>{coursesData.meta.total}</span>
               </p>
               <div className='flex items-center gap-1'>
