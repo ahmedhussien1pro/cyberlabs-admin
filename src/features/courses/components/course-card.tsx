@@ -1,49 +1,67 @@
 // CourseCard — نفس SharedCourseCard من الـ frontend + AdminOverlay فوقه
 import {
-  BookOpen, FlaskConical, BookMarked, BarChart3, Clock,
-  ArrowRight, Unlock, Crown, Gem, Globe, EyeOff, Sparkles,
-  CheckCircle2, Zap,
+  BookOpen,
+  FlaskConical,
+  BookMarked,
+  BarChart3,
+  Clock,
+  Unlock,
+  Crown,
+  Gem,
+  Globe,
+  EyeOff,
+  Sparkles,
+  Zap,
 } from 'lucide-react';
-import { motion }       from 'framer-motion';
-import { cn }           from '@/lib/utils';
-import { Badge }        from '@/components/ui/badge';
+import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 import { AdminOverlay } from './admin-overlay';
-import type { Course }  from '../types/course.types';
+import type { Course } from '../types/course.types';
 
 // ── Color maps (مطابق للـ frontend) ───────────────────────────────────
 const COLOR = (c: string) => c.toLowerCase();
 
 const FALLBACK_BG: Record<string, string> = {
   emerald: 'from-emerald-950 to-emerald-900 border-emerald-800/50',
-  blue:    'from-blue-950    to-blue-900    border-blue-800/50',
-  violet:  'from-violet-950  to-violet-900  border-violet-800/50',
-  orange:  'from-orange-950  to-orange-900  border-orange-800/50',
-  rose:    'from-rose-950    to-rose-900    border-rose-800/50',
-  cyan:    'from-cyan-950    to-cyan-900    border-cyan-800/50',
+  blue: 'from-blue-950    to-blue-900    border-blue-800/50',
+  violet: 'from-violet-950  to-violet-900  border-violet-800/50',
+  orange: 'from-orange-950  to-orange-900  border-orange-800/50',
+  rose: 'from-rose-950    to-rose-900    border-rose-800/50',
+  cyan: 'from-cyan-950    to-cyan-900    border-cyan-800/50',
 };
 const FALLBACK_TEXT: Record<string, string> = {
-  emerald: 'text-emerald-400', blue: 'text-blue-400',
-  violet:  'text-violet-400',  orange: 'text-orange-400',
-  rose:    'text-rose-400',    cyan: 'text-cyan-400',
+  emerald: 'text-emerald-400',
+  blue: 'text-blue-400',
+  violet: 'text-violet-400',
+  orange: 'text-orange-400',
+  rose: 'text-rose-400',
+  cyan: 'text-cyan-400',
 };
 const HOVER_RING: Record<string, string> = {
-  emerald: 'hover:ring-emerald-500/30', blue: 'hover:ring-blue-500/30',
-  violet:  'hover:ring-violet-500/30',  orange: 'hover:ring-orange-500/30',
-  rose:    'hover:ring-rose-500/30',    cyan: 'hover:ring-cyan-500/30',
+  emerald: 'hover:ring-emerald-500/30',
+  blue: 'hover:ring-blue-500/30',
+  violet: 'hover:ring-violet-500/30',
+  orange: 'hover:ring-orange-500/30',
+  rose: 'hover:ring-rose-500/30',
+  cyan: 'hover:ring-cyan-500/30',
 };
 const ACCESS_BADGE: Record<string, string> = {
-  FREE:    'border-emerald-500/40 text-emerald-400 bg-emerald-500/10',
-  PRO:     'border-blue-500/40    text-blue-400    bg-blue-500/10',
+  FREE: 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10',
+  PRO: 'border-blue-500/40    text-blue-400    bg-blue-500/10',
   PREMIUM: 'border-violet-500/40  text-violet-400  bg-violet-500/10',
 };
 const ACCESS_ICON: Record<string, React.ElementType> = {
-  FREE: Unlock, PRO: Crown, PREMIUM: Gem,
+  FREE: Unlock,
+  PRO: Crown,
+  PREMIUM: Gem,
 };
-const CONTENT_ICON: Record<string, { Icon: React.ElementType; label: string }> = {
-  PRACTICAL:   { Icon: FlaskConical, label: 'Practical' },
-  THEORETICAL: { Icon: BookMarked,   label: 'Theory'    },
-  MIXED:       { Icon: BookOpen,     label: 'Mixed'     },
-};
+const CONTENT_ICON: Record<string, { Icon: React.ElementType; label: string }> =
+  {
+    PRACTICAL: { Icon: FlaskConical, label: 'Practical' },
+    THEORETICAL: { Icon: BookMarked, label: 'Theory' },
+    MIXED: { Icon: BookOpen, label: 'Mixed' },
+  };
 
 // ── State badge ────────────────────────────────────────────────────────
 function StateBadge({ state }: { state: Course['state'] }) {
@@ -68,7 +86,7 @@ function StateBadge({ state }: { state: Course['state'] }) {
 
 // ── Thumbnail (مطابق للـ frontend) ────────────────────────────────────
 function Thumbnail({ course }: { course: Course }) {
-  const img   = course.image ?? course.thumbnail;
+  const img = course.image ?? course.thumbnail;
   const color = COLOR(course.color ?? 'blue');
   if (img)
     return (
@@ -84,14 +102,12 @@ function Thumbnail({ course }: { course: Course }) {
       className={cn(
         'w-full h-full flex items-center justify-center bg-gradient-to-br border',
         FALLBACK_BG[color] ?? 'from-zinc-900 to-zinc-800 border-zinc-700',
-      )}
-    >
+      )}>
       <p
         className={cn(
           'font-black text-center px-3 leading-tight text-lg',
           FALLBACK_TEXT[color] ?? 'text-zinc-400',
-        )}
-      >
+        )}>
         {course.title}
       </p>
     </div>
@@ -105,8 +121,8 @@ interface Props {
 }
 
 export function CourseCard({ course, index = 0 }: Props) {
-  const color      = COLOR(course.color ?? 'blue');
-  const ct         = CONTENT_ICON[course.contentType ?? 'MIXED'];
+  const color = COLOR(course.color ?? 'blue');
+  const ct = CONTENT_ICON[course.contentType ?? 'MIXED'];
   const AccessIcon = ACCESS_ICON[course.access ?? 'FREE'] ?? Unlock;
 
   return (
@@ -119,8 +135,7 @@ export function CourseCard({ course, index = 0 }: Props) {
         'transition-all duration-300 ring-1 ring-transparent',
         HOVER_RING[color] ?? 'hover:ring-primary/20',
         'hover:shadow-xl hover:-translate-y-0.5',
-      )}
-    >
+      )}>
       {/* ── AdminOverlay — يظهر عند hover ── */}
       <AdminOverlay course={course} />
 
@@ -158,26 +173,35 @@ export function CourseCard({ course, index = 0 }: Props) {
         {/* Badges */}
         <div className='flex flex-wrap items-center gap-1.5'>
           {course.difficulty && (
-            <Badge variant='outline' className='gap-1 text-[10px] font-semibold border-border/60 bg-muted/40'>
+            <Badge
+              variant='outline'
+              className='gap-1 text-[10px] font-semibold border-border/60 bg-muted/40'>
               <BarChart3 className='h-3 w-3' />
-              {course.difficulty.charAt(0) + course.difficulty.slice(1).toLowerCase()}
+              {course.difficulty.charAt(0) +
+                course.difficulty.slice(1).toLowerCase()}
             </Badge>
           )}
           {course.access && (
             <Badge
               variant='outline'
-              className={cn('gap-1 text-[10px] font-bold', ACCESS_BADGE[course.access])}
-            >
+              className={cn(
+                'gap-1 text-[10px] font-bold',
+                ACCESS_BADGE[course.access],
+              )}>
               <AccessIcon className='h-3 w-3' /> {course.access}
             </Badge>
           )}
           {(course.totalTopics ?? 0) > 0 && (
-            <Badge variant='outline' className='gap-1 text-[10px] font-semibold text-primary border-primary/30 bg-primary/5'>
+            <Badge
+              variant='outline'
+              className='gap-1 text-[10px] font-semibold text-primary border-primary/30 bg-primary/5'>
               <Clock className='h-3 w-3' /> {course.totalTopics} Topics
             </Badge>
           )}
           {ct && (
-            <Badge variant='outline' className='gap-1 text-[10px] text-muted-foreground border-border/40'>
+            <Badge
+              variant='outline'
+              className='gap-1 text-[10px] text-muted-foreground border-border/40'>
               <ct.Icon className='h-3 w-3' /> {ct.label}
             </Badge>
           )}

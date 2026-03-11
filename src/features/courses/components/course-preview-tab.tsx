@@ -1,5 +1,3 @@
-// src/features/courses/components/course-preview-tab.tsx
-// ✅ Platform-accurate preview — opens in new window with exact frontend UI
 import { useRef } from 'react';
 import type { AdminCourse } from '../types/admin-course.types';
 import { useQuery } from '@tanstack/react-query';
@@ -9,34 +7,64 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Eye, ExternalLink, Clock, Users, BookOpen, FlaskConical,
-  Shield, Unlock, Crown, Zap, Star, Tag, GraduationCap,
-  CheckCircle2, ChevronRight,
+  Eye,
+  ExternalLink,
+  Clock,
+  Users,
+  BookOpen,
+  FlaskConical,
+  Shield,
+  Unlock,
+  Crown,
+  Zap,
+  Star,
+  Tag,
+  GraduationCap,
+  ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PreviewSection } from './platform-curriculum';
 
 // ── exact same color maps as frontend course-detail-hero ──────────────
 const MATRIX_COLOR: Record<string, string> = {
-  emerald: '#10b981', blue: '#3b82f6', violet: '#8b5cf6',
-  rose: '#f43f5e', orange: '#f97316', cyan: '#06b6d4',
+  emerald: '#10b981',
+  blue: '#3b82f6',
+  violet: '#8b5cf6',
+  rose: '#f43f5e',
+  orange: '#f97316',
+  cyan: '#06b6d4',
 };
 const STRIPE_CLASS: Record<string, string> = {
-  emerald: 'bg-emerald-500', blue: 'bg-blue-500', violet: 'bg-violet-500',
-  rose: 'bg-rose-500', orange: 'bg-orange-500', cyan: 'bg-cyan-500',
+  emerald: 'bg-emerald-500',
+  blue: 'bg-blue-500',
+  violet: 'bg-violet-500',
+  rose: 'bg-rose-500',
+  orange: 'bg-orange-500',
+  cyan: 'bg-cyan-500',
 };
 const BLOOM_CLASS: Record<string, string> = {
-  emerald: 'bg-emerald-500', blue: 'bg-blue-500', violet: 'bg-violet-500',
-  rose: 'bg-rose-500', orange: 'bg-orange-500', cyan: 'bg-cyan-500',
+  emerald: 'bg-emerald-500',
+  blue: 'bg-blue-500',
+  violet: 'bg-violet-500',
+  rose: 'bg-rose-500',
+  orange: 'bg-orange-500',
+  cyan: 'bg-cyan-500',
 };
 const TEXT_COLOR: Record<string, string> = {
-  emerald: 'text-emerald-400', blue: 'text-blue-400', violet: 'text-violet-400',
-  rose: 'text-rose-400', orange: 'text-orange-400', cyan: 'text-cyan-400',
+  emerald: 'text-emerald-400',
+  blue: 'text-blue-400',
+  violet: 'text-violet-400',
+  rose: 'text-rose-400',
+  orange: 'text-orange-400',
+  cyan: 'text-cyan-400',
 };
 const FALLBACK_BG: Record<string, string> = {
-  emerald: 'from-emerald-950 to-emerald-900', blue: 'from-blue-950 to-blue-900',
-  violet: 'from-violet-950 to-violet-900', orange: 'from-orange-950 to-orange-900',
-  rose: 'from-rose-950 to-rose-900', cyan: 'from-cyan-950 to-cyan-900',
+  emerald: 'from-emerald-950 to-emerald-900',
+  blue: 'from-blue-950 to-blue-900',
+  violet: 'from-violet-950 to-violet-900',
+  orange: 'from-orange-950 to-orange-900',
+  rose: 'from-rose-950 to-rose-900',
+  cyan: 'from-cyan-950 to-cyan-900',
 };
 const ACCESS_BADGE: Record<string, string> = {
   FREE: 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10',
@@ -45,7 +73,13 @@ const ACCESS_BADGE: Record<string, string> = {
 };
 
 // ─── Inline MatrixRain (canvas-based) ────────────────────────────────
-function MatrixRainCanvas({ color = '#3b82f6', opacity = 0.07 }: { color?: string; opacity?: number }) {
+function MatrixRainCanvas({
+  color = '#3b82f6',
+  opacity = 0.07,
+}: {
+  color?: string;
+  opacity?: number;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // Static SVG noise pattern as lightweight alternative
   return (
@@ -65,7 +99,13 @@ function MatrixRainCanvas({ color = '#3b82f6', opacity = 0.07 }: { color?: strin
 }
 
 // ─── Preview Hero (exact copy of frontend CourseDetailHero layout) ───
-function PreviewHero({ course, topicCount }: { course: AdminCourse; topicCount: number }) {
+function PreviewHero({
+  course,
+  topicCount,
+}: {
+  course: AdminCourse;
+  topicCount: number;
+}) {
   const col = (course.color ?? 'blue').toLowerCase();
   const imgSrc = course.image ?? course.thumbnail;
   const stripeClass = STRIPE_CLASS[col] ?? 'bg-blue-500';
@@ -78,13 +118,18 @@ function PreviewHero({ course, topicCount }: { course: AdminCourse; topicCount: 
   const statusBadge = course.isNew
     ? { label: 'New', cls: 'bg-amber-500 text-white' }
     : comingSoon
-    ? { label: 'Coming Soon', cls: 'bg-zinc-600/80 border border-white/10 text-white' }
-    : null;
+      ? {
+          label: 'Coming Soon',
+          cls: 'bg-zinc-600/80 border border-white/10 text-white',
+        }
+      : null;
 
   return (
     <section className='relative overflow-hidden border-b border-white/8 bg-zinc-950'>
       {/* Top stripe */}
-      <div className={cn('absolute inset-x-0 top-0 z-[3] h-[3px]', stripeClass)} />
+      <div
+        className={cn('absolute inset-x-0 top-0 z-[3] h-[3px]', stripeClass)}
+      />
 
       {/* Matrix pattern */}
       <MatrixRainCanvas color={MATRIX_COLOR[col]} opacity={0.07} />
@@ -103,7 +148,9 @@ function PreviewHero({ course, topicCount }: { course: AdminCourse; topicCount: 
         <div className='py-6'>
           {/* Breadcrumb */}
           <nav className='mb-4 flex items-center gap-1 text-[11px] text-white/35'>
-            <span className='transition-colors hover:text-white/70'>Courses</span>
+            <span className='transition-colors hover:text-white/70'>
+              Courses
+            </span>
             <ChevronRight className='h-3 w-3 shrink-0' />
             <span className='truncate text-white/65'>{course.title}</span>
           </nav>
@@ -115,10 +162,23 @@ function PreviewHero({ course, topicCount }: { course: AdminCourse; topicCount: 
               <div className='hidden sm:block shrink-0'>
                 <div className='h-14 w-14 shrink-0 overflow-hidden rounded-2xl ring-1 ring-white/10'>
                   {imgSrc ? (
-                    <img src={imgSrc} alt={course.title ?? ''} className='h-full w-full object-cover' />
+                    <img
+                      src={imgSrc}
+                      alt={course.title ?? ''}
+                      className='h-full w-full object-cover'
+                    />
                   ) : (
-                    <div className={cn('h-full w-full flex items-center justify-center bg-gradient-to-br border', fallbackBg, 'border-white/10')}>
-                      <p className={cn('text-[10px] font-black text-center px-1.5 leading-tight', textColor)}>
+                    <div
+                      className={cn(
+                        'h-full w-full flex items-center justify-center bg-gradient-to-br border',
+                        fallbackBg,
+                        'border-white/10',
+                      )}>
+                      <p
+                        className={cn(
+                          'text-[10px] font-black text-center px-1.5 leading-tight',
+                          textColor,
+                        )}>
                         {course.title}
                       </p>
                     </div>
@@ -130,18 +190,35 @@ function PreviewHero({ course, topicCount }: { course: AdminCourse; topicCount: 
               <div className='min-w-0 flex-1 space-y-2'>
                 {/* Badges */}
                 <div className='flex flex-wrap items-center gap-1.5'>
-                  <Badge variant='outline' className={cn('rounded-full text-[11px] font-bold gap-1', accessBadge)}>
-                    {course.access === 'FREE' ? <Unlock className='h-2.5 w-2.5' /> : <Crown className='h-2.5 w-2.5' />}
+                  <Badge
+                    variant='outline'
+                    className={cn(
+                      'rounded-full text-[11px] font-bold gap-1',
+                      accessBadge,
+                    )}>
+                    {course.access === 'FREE' ? (
+                      <Unlock className='h-2.5 w-2.5' />
+                    ) : (
+                      <Crown className='h-2.5 w-2.5' />
+                    )}
                     {course.access}
                   </Badge>
-                  <Badge variant='outline' className='rounded-full border-white/20 text-[11px] text-white/65 gap-1'>
+                  <Badge
+                    variant='outline'
+                    className='rounded-full border-white/20 text-[11px] text-white/65 gap-1'>
                     <Shield className='h-2.5 w-2.5' /> {course.difficulty}
                   </Badge>
-                  <Badge variant='outline' className='rounded-full border-white/15 text-[11px] text-white/50'>
+                  <Badge
+                    variant='outline'
+                    className='rounded-full border-white/15 text-[11px] text-white/50'>
                     {course.category?.replace(/_/g, ' ')}
                   </Badge>
                   {statusBadge && (
-                    <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold', statusBadge.cls)}>
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold',
+                        statusBadge.cls,
+                      )}>
                       {statusBadge.label}
                     </span>
                   )}
@@ -154,12 +231,16 @@ function PreviewHero({ course, topicCount }: { course: AdminCourse; topicCount: 
 
                 {/* AR Title */}
                 {course.ar_title && (
-                  <p className='text-base text-white/50' dir='rtl'>{course.ar_title}</p>
+                  <p className='text-base text-white/50' dir='rtl'>
+                    {course.ar_title}
+                  </p>
                 )}
 
                 {/* Description */}
                 {course.description && (
-                  <p className='mt-2 max-w-2xl text-sm leading-relaxed text-white/60'>{course.description}</p>
+                  <p className='mt-2 max-w-2xl text-sm leading-relaxed text-white/60'>
+                    {course.description}
+                  </p>
                 )}
               </div>
             </div>
@@ -171,35 +252,51 @@ function PreviewHero({ course, topicCount }: { course: AdminCourse; topicCount: 
           {/* Stats */}
           <div className='flex flex-wrap items-center gap-x-5 gap-y-1.5'>
             <div className='flex items-center gap-1.5 text-xs'>
-              <span className={textColor}><BookOpen className='h-3.5 w-3.5' /></span>
+              <span className={textColor}>
+                <BookOpen className='h-3.5 w-3.5' />
+              </span>
               <span className='font-bold text-white'>{topicCount}</span>
               <span className='text-white/45'>Topics</span>
             </div>
             {course.estimatedHours != null && (
               <div className='flex items-center gap-1.5 text-xs'>
-                <span className={textColor}><Clock className='h-3.5 w-3.5' /></span>
-                <span className='font-bold text-white'>{course.estimatedHours}h</span>
+                <span className={textColor}>
+                  <Clock className='h-3.5 w-3.5' />
+                </span>
+                <span className='font-bold text-white'>
+                  {course.estimatedHours}h
+                </span>
                 <span className='text-white/45'>est.</span>
               </div>
             )}
             {(course.enrollmentCount ?? 0) > 0 && (
               <div className='flex items-center gap-1.5 text-xs'>
-                <span className={textColor}><Users className='h-3.5 w-3.5' /></span>
-                <span className='font-bold text-white'>{course.enrollmentCount?.toLocaleString()}</span>
+                <span className={textColor}>
+                  <Users className='h-3.5 w-3.5' />
+                </span>
+                <span className='font-bold text-white'>
+                  {course.enrollmentCount?.toLocaleString()}
+                </span>
                 <span className='text-white/45'>enrolled</span>
               </div>
             )}
             {(course.labSlugs?.length ?? 0) > 0 && (
               <div className='flex items-center gap-1.5 text-xs'>
-                <span className={textColor}><FlaskConical className='h-3.5 w-3.5' /></span>
-                <span className='font-bold text-white'>{course.labSlugs?.length}</span>
+                <span className={textColor}>
+                  <FlaskConical className='h-3.5 w-3.5' />
+                </span>
+                <span className='font-bold text-white'>
+                  {course.labSlugs?.length}
+                </span>
                 <span className='text-white/45'>Labs</span>
               </div>
             )}
             {(course.averageRating ?? 0) > 0 && (
               <div className='flex items-center gap-1.5 text-xs'>
                 <Star className='h-3.5 w-3.5 fill-yellow-500 text-yellow-500' />
-                <span className='font-bold text-white'>{course.averageRating}</span>
+                <span className='font-bold text-white'>
+                  {course.averageRating}
+                </span>
                 <span className='text-white/45'>({course.reviewCount})</span>
               </div>
             )}
@@ -217,9 +314,15 @@ function PreviewHero({ course, topicCount }: { course: AdminCourse; topicCount: 
             ) : (
               <button className='inline-flex items-center gap-1.5 rounded-lg bg-primary px-5 py-1.5 text-xs font-semibold text-primary-foreground'>
                 {course.access === 'FREE' ? (
-                  <><Zap className='h-3.5 w-3.5' /> Start Free <ChevronRight className='h-3.5 w-3.5' /></>
+                  <>
+                    <Zap className='h-3.5 w-3.5' /> Start Free{' '}
+                    <ChevronRight className='h-3.5 w-3.5' />
+                  </>
                 ) : (
-                  <><Crown className='h-3.5 w-3.5' /> Upgrade to {course.access} <ChevronRight className='h-3.5 w-3.5' /></>
+                  <>
+                    <Crown className='h-3.5 w-3.5' /> Upgrade to {course.access}{' '}
+                    <ChevronRight className='h-3.5 w-3.5' />
+                  </>
                 )}
               </button>
             )}
@@ -249,11 +352,14 @@ function MetaSection({ course }: { course: AdminCourse }) {
       {hasSkills && (
         <div className='space-y-2'>
           <p className='text-sm font-semibold flex items-center gap-2'>
-            <GraduationCap className='h-4 w-4 text-muted-foreground' /> Skills you'll gain
+            <GraduationCap className='h-4 w-4 text-muted-foreground' /> Skills
+            you'll gain
           </p>
           <div className='flex flex-wrap gap-2'>
             {course.skills.map((s) => (
-              <Badge key={s} variant='secondary' className='text-xs'>{s}</Badge>
+              <Badge key={s} variant='secondary' className='text-xs'>
+                {s}
+              </Badge>
             ))}
           </div>
         </div>
@@ -262,7 +368,9 @@ function MetaSection({ course }: { course: AdminCourse }) {
         <div className='flex flex-wrap items-center gap-2'>
           <Tag className='h-3.5 w-3.5 text-muted-foreground/60' />
           {course.tags.map((t) => (
-            <Badge key={t} variant='outline' className='text-[10px] opacity-70'>{t}</Badge>
+            <Badge key={t} variant='outline' className='text-[10px] opacity-70'>
+              {t}
+            </Badge>
           ))}
         </div>
       )}
@@ -280,7 +388,9 @@ function LabsSection({ course }: { course: AdminCourse }) {
       <h2 className='text-xl font-bold mb-4'>Labs in this Course</h2>
       <div className='grid gap-3 sm:grid-cols-2'>
         {course.labSlugs.map((slug) => (
-          <div key={slug} className='flex items-center gap-3 rounded-xl border border-border/50 bg-muted/20 px-4 py-3'>
+          <div
+            key={slug}
+            className='flex items-center gap-3 rounded-xl border border-border/50 bg-muted/20 px-4 py-3'>
             <div className='flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10'>
               <FlaskConical className={cn('h-5 w-5', accent)} />
             </div>
@@ -298,13 +408,16 @@ function LabsSection({ course }: { course: AdminCourse }) {
 // ─── Open Preview Window ─────────────────────────────────────────────
 function buildPreviewHTML(course: AdminCourse, curriculumData: any): string {
   // This renders as a full standalone HTML page injected into a new window
-  const sections: PreviewSection[] = (curriculumData?.topics ?? []).map((t: any) => ({
-    id: t.id ?? String(Math.random()),
-    title: typeof t.title === 'object' ? (t.title?.en ?? '') : (t.title ?? ''),
-    ar_title: typeof t.title === 'object' ? t.title?.ar : t.ar_title,
-    order: t.order,
-    elements: Array.isArray(t.elements) ? t.elements : [],
-  }));
+  const sections: PreviewSection[] = (curriculumData?.topics ?? []).map(
+    (t: any) => ({
+      id: t.id ?? String(Math.random()),
+      title:
+        typeof t.title === 'object' ? (t.title?.en ?? '') : (t.title ?? ''),
+      ar_title: typeof t.title === 'object' ? t.title?.ar : t.ar_title,
+      order: t.order,
+      elements: Array.isArray(t.elements) ? t.elements : [],
+    }),
+  );
 
   return JSON.stringify({ course, sections });
 }
@@ -321,40 +434,63 @@ export function CoursePlatformPreviewTab({ course }: Props) {
   });
 
   // Map curriculum topics → PreviewSection[]
-  const sections: PreviewSection[] = (curriculumData?.topics ?? []).map((t: any) => ({
-    id: t.id ?? String(Math.random()),
-    title: typeof t.title === 'object' ? (t.title?.en ?? '') : (t.title ?? ''),
-    ar_title: typeof t.title === 'object' ? t.title?.ar : t.ar_title,
-    order: t.order,
-    elements: Array.isArray(t.elements) ? t.elements : [],
-  }));
+  const sections: PreviewSection[] = (curriculumData?.topics ?? []).map(
+    (t: any) => ({
+      id: t.id ?? String(Math.random()),
+      title:
+        typeof t.title === 'object' ? (t.title?.en ?? '') : (t.title ?? ''),
+      ar_title: typeof t.title === 'object' ? t.title?.ar : t.ar_title,
+      order: t.order,
+      elements: Array.isArray(t.elements) ? t.elements : [],
+    }),
+  );
 
   const topicCount = sections.length;
 
   const handleOpenPreviewWindow = () => {
-    const win = window.open('', '_blank', 'width=1280,height=900,scrollbars=yes,resizable=yes');
+    const win = window.open(
+      '',
+      '_blank',
+      'width=1280,height=900,scrollbars=yes,resizable=yes',
+    );
     if (!win) return;
 
     const col = (course.color ?? 'blue').toLowerCase();
     const matrixColor = MATRIX_COLOR[col] ?? '#3b82f6';
-    const stripeColor = {
-      emerald: '#10b981', blue: '#3b82f6', violet: '#8b5cf6',
-      rose: '#f43f5e', orange: '#f97316', cyan: '#06b6d4',
-    }[col] ?? '#3b82f6';
+    const stripeColor =
+      {
+        emerald: '#10b981',
+        blue: '#3b82f6',
+        violet: '#8b5cf6',
+        rose: '#f43f5e',
+        orange: '#f97316',
+        cyan: '#06b6d4',
+      }[col] ?? '#3b82f6';
     const imgSrc = course.image ?? course.thumbnail ?? '';
-    const fallbackBg = {
-      emerald: '#0a2e1e', blue: '#0a1628', violet: '#1a0a2e',
-      orange: '#2e1a0a', rose: '#2e0a14', cyan: '#0a2228',
-    }[col] ?? '#0a1628';
-    const accentColor = {
-      emerald: '#10b981', blue: '#3b82f6', violet: '#8b5cf6',
-      rose: '#f43f5e', orange: '#f97316', cyan: '#06b6d4',
-    }[col] ?? '#3b82f6';
+    const fallbackBg =
+      {
+        emerald: '#0a2e1e',
+        blue: '#0a1628',
+        violet: '#1a0a2e',
+        orange: '#2e1a0a',
+        rose: '#2e0a14',
+        cyan: '#0a2228',
+      }[col] ?? '#0a1628';
+    const accentColor =
+      {
+        emerald: '#10b981',
+        blue: '#3b82f6',
+        violet: '#8b5cf6',
+        rose: '#f43f5e',
+        orange: '#f97316',
+        cyan: '#06b6d4',
+      }[col] ?? '#3b82f6';
 
-    const sectionsHTML = sections.map((s, idx) => {
-      const num = String(idx + 1).padStart(2, '0');
-      const elCount = s.elements?.length ?? 0;
-      return `
+    const sectionsHTML = sections
+      .map((s, idx) => {
+        const num = String(idx + 1).padStart(2, '0');
+        const elCount = s.elements?.length ?? 0;
+        return `
         <li style="position:relative;display:flex;gap:16px;margin-bottom:8px;">
           <div style="display:flex;flex-direction:column;align-items:center;">
             <div style="width:50px;height:50px;border-radius:50%;border:2px solid ${accentColor}40;background:${accentColor}15;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:${accentColor};flex-shrink:0;">${num}</div>
@@ -374,9 +510,12 @@ export function CoursePlatformPreviewTab({ course }: Props) {
             </div>
           </div>
         </li>`;
-    }).join('');
+      })
+      .join('');
 
-    const accessColor = { FREE: '#10b981', PRO: '#3b82f6', PREMIUM: '#8b5cf6' }[course.access] ?? '#10b981';
+    const accessColor =
+      { FREE: '#10b981', PRO: '#3b82f6', PREMIUM: '#8b5cf6' }[course.access] ??
+      '#10b981';
     const accessIcon = course.access === 'FREE' ? '🔓' : '👑';
 
     win.document.write(`<!DOCTYPE html>
@@ -428,9 +567,10 @@ export function CoursePlatformPreviewTab({ course }: Props) {
       <div style="display:flex;align-items:flex-start;gap:16px;">
         <!-- Thumbnail -->
         <div style="width:56px;height:56px;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);flex-shrink:0;">
-          ${imgSrc
-            ? `<img src="${imgSrc}" style="width:100%;height:100%;object-fit:cover;" alt="" />`
-            : `<div style="width:100%;height:100%;background:linear-gradient(135deg,${fallbackBg},${fallbackBg}cc);display:flex;align-items:center;justify-content:center;"><span style="font-size:9px;font-weight:900;color:${accentColor};text-align:center;padding:4px;">${course.title}</span></div>`
+          ${
+            imgSrc
+              ? `<img src="${imgSrc}" style="width:100%;height:100%;object-fit:cover;" alt="" />`
+              : `<div style="width:100%;height:100%;background:linear-gradient(135deg,${fallbackBg},${fallbackBg}cc);display:flex;align-items:center;justify-content:center;"><span style="font-size:9px;font-weight:900;color:${accentColor};text-align:center;padding:4px;">${course.title}</span></div>`
           }
         </div>
         <!-- Text -->
@@ -472,18 +612,26 @@ export function CoursePlatformPreviewTab({ course }: Props) {
 <!-- CONTENT -->
 <div class="container" style="padding-top:40px;padding-bottom:80px;">
 
-  ${course.longDescription ? `
+  ${
+    course.longDescription
+      ? `
   <div style="margin-bottom:32px;padding:20px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);">
     <p style="font-size:13px;line-height:1.75;color:rgba(244,244,245,0.7);">${course.longDescription}</p>
-  </div>` : ''}
+  </div>`
+      : ''
+  }
 
-  ${(course.skills?.length ?? 0) > 0 ? `
+  ${
+    (course.skills?.length ?? 0) > 0
+      ? `
   <div style="margin-bottom:32px;">
     <p style="font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;margin-bottom:8px;">🎓 Skills you'll gain</p>
     <div style="display:flex;flex-wrap:wrap;gap:8px;">
       ${course.skills.map((s) => `<span style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:3px 10px;font-size:12px;">${s}</span>`).join('')}
     </div>
-  </div>` : ''}
+  </div>`
+      : ''
+  }
 
   <!-- CURRICULUM -->
   <div style="margin-bottom:32px;">
@@ -502,23 +650,32 @@ export function CoursePlatformPreviewTab({ course }: Props) {
       </div>
     </div>
 
-    ${sections.length === 0
-      ? '<p style="font-size:13px;color:#71717a;font-style:italic;padding:16px 0;">Curriculum not available yet.</p>'
-      : `<div style="position:relative;"><div style="position:absolute;top:20px;bottom:20px;left:25px;width:1px;background:rgba(255,255,255,0.08);"></div><ol style="list-style:none;">${sectionsHTML}</ol></div>`
+    ${
+      sections.length === 0
+        ? '<p style="font-size:13px;color:#71717a;font-style:italic;padding:16px 0;">Curriculum not available yet.</p>'
+        : `<div style="position:relative;"><div style="position:absolute;top:20px;bottom:20px;left:25px;width:1px;background:rgba(255,255,255,0.08);"></div><ol style="list-style:none;">${sectionsHTML}</ol></div>`
     }
   </div>
 
-  ${(course.labSlugs?.length ?? 0) > 0 ? `
+  ${
+    (course.labSlugs?.length ?? 0) > 0
+      ? `
   <div id="course-labs-section" style="margin-top:40px;">
     <h2 style="font-size:22px;font-weight:700;margin-bottom:16px;">Labs in this Course</h2>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;">
-      ${course.labSlugs.map((slug) => `
+      ${course.labSlugs
+        .map(
+          (slug) => `
       <div style="display:flex;align-items:center;gap:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);padding:12px 16px;">
         <div style="width:36px;height:36px;border-radius:8px;background:${accentColor}10;display:flex;align-items:center;justify-content:center;flex-shrink:0;">🧪</div>
         <div><p style="font-size:13px;font-weight:500;font-family:monospace;">${slug}</p><p style="font-size:11px;color:#71717a;">Lab</p></div>
-      </div>`).join('')}
+      </div>`,
+        )
+        .join('')}
     </div>
-  </div>` : ''}
+  </div>`
+      : ''
+  }
 
 </div>
 </body>
@@ -532,9 +689,12 @@ export function CoursePlatformPreviewTab({ course }: Props) {
       <div className='flex items-center gap-2 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-2'>
         <Eye className='h-4 w-4 text-yellow-400 shrink-0' />
         <p className='text-xs text-yellow-300'>
-          هذا preview دقيق لكيفية ظهور الكورس على المنصة. اضغط &quot;Open in New Window&quot; لمشاهدة العرض الكامل.
+          هذا preview دقيق لكيفية ظهور الكورس على المنصة. اضغط &quot;Open in New
+          Window&quot; لمشاهدة العرض الكامل.
         </p>
-        <Badge variant='outline' className='ml-auto shrink-0 border-yellow-500/40 text-yellow-400 text-xs'>
+        <Badge
+          variant='outline'
+          className='ml-auto shrink-0 border-yellow-500/40 text-yellow-400 text-xs'>
           {course.state}
         </Badge>
       </div>
@@ -544,8 +704,7 @@ export function CoursePlatformPreviewTab({ course }: Props) {
         <Button
           size='lg'
           className='gap-2.5 min-w-[220px] font-semibold'
-          onClick={handleOpenPreviewWindow}
-        >
+          onClick={handleOpenPreviewWindow}>
           <ExternalLink className='h-5 w-5' />
           Open Preview Window
         </Button>
@@ -559,7 +718,8 @@ export function CoursePlatformPreviewTab({ course }: Props) {
       {/* ── Curriculum Preview ── */}
       <div>
         <h3 className='text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4'>
-          Curriculum Preview ({curriculumData?.totalTopics ?? sections.length} topics)
+          Curriculum Preview ({curriculumData?.totalTopics ?? sections.length}{' '}
+          topics)
         </h3>
         {isLoading ? (
           <div className='space-y-2'>
@@ -575,7 +735,9 @@ export function CoursePlatformPreviewTab({ course }: Props) {
         ) : (
           <div className='rounded-xl border border-border/40 bg-muted/20 p-6 text-center'>
             <BookOpen className='h-8 w-8 text-muted-foreground/40 mx-auto mb-2' />
-            <p className='text-sm text-muted-foreground'>No curriculum data yet.</p>
+            <p className='text-sm text-muted-foreground'>
+              No curriculum data yet.
+            </p>
             <p className='text-xs text-muted-foreground/60 mt-1'>
               Add topics in the Content Writer tab to see them here.
             </p>
@@ -584,9 +746,7 @@ export function CoursePlatformPreviewTab({ course }: Props) {
       </div>
 
       {/* ── Labs ── */}
-      {(course.labSlugs?.length ?? 0) > 0 && (
-        <LabsSection course={course} />
-      )}
+      {(course.labSlugs?.length ?? 0) > 0 && <LabsSection course={course} />}
 
       {/* ── Skills & Tags ── */}
       <MetaSection course={course} />
