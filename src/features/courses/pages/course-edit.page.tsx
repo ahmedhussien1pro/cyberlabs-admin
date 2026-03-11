@@ -16,6 +16,7 @@ import { adminCoursesApi } from '../services/admin-courses.api';
 import { CourseCardInfoTab } from '../components/edit-tabs/course-card-info-tab';
 import { CourseHeroInfoTab } from '../components/edit-tabs/course-hero-info-tab';
 import { CurriculumPlatformEditor } from '../components/curriculum-platform-editor';
+import { ROUTES } from '@/shared/constants';
 
 type EditTab = 'card' | 'hero' | 'curriculum';
 
@@ -26,22 +27,23 @@ const TABS: { key: EditTab; label: string; icon: React.ElementType }[] = [
 ];
 
 export default function CourseEditPage() {
-  const { id } = useParams<{ id: string }>();
+  // Route is /courses/:slug/edit — param is named 'slug' in routes.tsx
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<EditTab>('card');
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['admin', 'courses', 'detail', id],
-    queryFn: () => adminCoursesApi.getById(id!),
-    enabled: !!id,
+    queryKey: ['admin', 'courses', 'detail', slug],
+    queryFn: () => adminCoursesApi.getBySlug ? adminCoursesApi.getBySlug(slug!) : adminCoursesApi.getById(slug!),
+    enabled: !!slug,
   });
 
   const course = (data as any)?.data ?? data;
 
   const { mutate: togglePublish, isPending: isToggling } = useMutation({
     mutationFn: (action: 'publish' | 'unpublish') =>
-      action === 'publish' ? adminCoursesApi.publish(id!) : adminCoursesApi.unpublish(id!),
+      action === 'publish' ? adminCoursesApi.publish(course?.id!) : adminCoursesApi.unpublish(course?.id!),
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
       toast.success(updated.isPublished ? 'Course published ✅' : 'Course unpublished');
@@ -50,21 +52,21 @@ export default function CourseEditPage() {
   });
 
   const { mutate: duplicate, isPending: isDuplicating } = useMutation({
-    mutationFn: () => adminCoursesApi.duplicate(id!),
+    mutationFn: () => adminCoursesApi.duplicate(course?.id!),
     onSuccess: (newCourse) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
       toast.success('Course duplicated — opening new course');
-      navigate(`/courses/${newCourse.id}`);
+      navigate(ROUTES.COURSE_EDIT(newCourse.slug ?? newCourse.id));
     },
     onError: () => toast.error('Failed to duplicate course'),
   });
 
   const { mutate: deleteCourse, isPending: isDeleting } = useMutation({
-    mutationFn: () => adminCoursesApi.delete(id!),
+    mutationFn: () => adminCoursesApi.delete(course?.id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
       toast.success('Course deleted');
-      navigate('/courses');
+      navigate(ROUTES.COURSES);
     },
     onError: () => toast.error('Failed to delete course'),
   });
@@ -83,7 +85,7 @@ export default function CourseEditPage() {
     return (
       <div className='flex flex-col items-center justify-center gap-4 p-12 text-center'>
         <p className='text-lg font-semibold'>Course not found</p>
-        <Button variant='outline' onClick={() => navigate('/courses')} className='gap-2'>
+        <Button variant='outline' onClick={() => navigate(ROUTES.COURSES)} className='gap-2'>
           <ArrowLeft className='h-4 w-4' /> Back to Courses
         </Button>
       </div>
@@ -97,7 +99,7 @@ export default function CourseEditPage() {
       {/* ── Header ── */}
       <div className='flex items-start justify-between gap-4 flex-wrap'>
         <div className='flex items-center gap-3'>
-          <Button variant='ghost' size='icon' onClick={() => navigate('/courses')}>
+          <Button variant='ghost' size='icon' onClick={() => navigate(ROUTES.COURSES)}>
             <ArrowLeft className='h-4 w-4' />
           </Button>
           <div>
@@ -122,19 +124,17 @@ export default function CourseEditPage() {
 
         {/* Action buttons */}
         <div className='flex items-center gap-2 flex-wrap'>
-          {/* Preview */}
           <Button
             variant='outline'
             size='sm'
             className='gap-1.5 h-9'
             onClick={() => {
-              const base = import.meta.env.VITE_FRONTEND_URL ?? 'http://localhost:5173';
+              const base = import.meta.env.VITE_FRONTEND_URL ?? 'https://test.cyber-labs.tech';
               window.open(`${base}/courses/${course.slug}`, '_blank');
             }}>
             <Globe className='h-3.5 w-3.5' /> Preview
           </Button>
 
-          {/* Duplicate */}
           <Button
             variant='outline'
             size='sm'
@@ -145,7 +145,6 @@ export default function CourseEditPage() {
             Duplicate
           </Button>
 
-          {/* Publish toggle */}
           {isPublished ? (
             <Button
               size='sm'
@@ -167,7 +166,6 @@ export default function CourseEditPage() {
             </Button>
           )}
 
-          {/* Delete */}
           <Button
             size='sm'
             variant='destructive'

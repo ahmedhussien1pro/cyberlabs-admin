@@ -1,6 +1,7 @@
 // src/features/courses/components/curriculum-platform-editor.tsx
 // Full platform-style curriculum editor — same look as frontend CourseCurriculum + fully editable
-import { useState, useEffect } from 'react';
+// Features: Preview/Edit toggle | Topic reorder (↑/↓) | Inline element edit | Add Topic | JSON import
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminCoursesApi } from '../services/admin-courses.api';
@@ -14,6 +15,7 @@ import { toast } from 'sonner';
 import {
   BookOpen, ChevronDown, Plus, Trash2, Save, X,
   GripVertical, Pencil, Eye, Edit3, ArrowUp, ArrowDown,
+  Upload, FileJson, AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -522,6 +524,105 @@ function CurriculumSkeleton() {
   );
 }
 
+// ── JSON Import Panel ─────────────────────────────────────────────────
+function JsonImportPanel({
+  onImport,
+  onClose,
+}: {
+  onImport: (topics: Topic[]) => void;
+  onClose: () => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [raw, setRaw] = useState('');
+  const [parseError, setParseError] = useState('');
+
+  const tryParse = (text: string) => {
+    try {
+      const parsed = JSON.parse(text);
+      // Accept either array of topics directly, or { topics: [...] }
+      const topics: Topic[] = Array.isArray(parsed)
+        ? parsed
+        : Array.isArray(parsed?.topics)
+        ? parsed.topics
+        : null;
+      if (!topics) throw new Error('Expected array of topics or { topics: [...] }');
+      // Ensure each topic has required shape
+      const normalized = topics.map((t: any, i: number) => ({
+        id: t.id ?? `imported-${Date.now()}-${i}`,
+        title: typeof t.title === 'object' ? t.title : { en: String(t.title ?? ''), ar: '' },
+        elements: Array.isArray(t.elements) ? t.elements : [],
+      }));
+      onImport(normalized);
+      toast.success(`Imported ${normalized.length} topics — click Save to persist`);
+      onClose();
+    } catch (e: any) {
+      setParseError(e.message ?? 'Invalid JSON');
+    }
+  };
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      setRaw(text);
+      setParseError('');
+    };
+    reader.readAsText(file);
+  };
+
+  return (
+    <div className='rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3'>
+      <div className='flex items-center justify-between'>
+        <div className='flex items-center gap-2'>
+          <FileJson className='h-4 w-4 text-primary' />
+          <span className='text-sm font-semibold'>Import Curriculum from JSON</span>
+        </div>
+        <button onClick={onClose} className='text-muted-foreground hover:text-foreground'>
+          <X className='h-4 w-4' />
+        </button>
+      </div>
+
+      <p className='text-xs text-muted-foreground'>
+        Upload a <code className='text-primary'>.json</code> file or paste JSON directly.
+        Expected format: <code className='text-primary'>{'[{id, title:{en,ar}, elements:[...]}]'}</code>
+      </p>
+
+      {/* File picker */}
+      <div>
+        <input ref={fileRef} type='file' accept='.json,application/json' className='hidden' onChange={handleFile} />
+        <Button variant='outline' size='sm' className='gap-1.5 h-8' onClick={() => fileRef.current?.click()}>
+          <Upload className='h-3.5 w-3.5' /> Choose JSON file
+        </Button>
+      </div>
+
+      {/* Paste area */}
+      <Textarea
+        rows={6}
+        placeholder='Or paste JSON here...'
+        value={raw}
+        onChange={(e) => { setRaw(e.target.value); setParseError(''); }}
+        className='font-mono text-xs resize-none'
+      />
+
+      {parseError && (
+        <div className='flex items-center gap-2 text-xs text-destructive'>
+          <AlertTriangle className='h-3.5 w-3.5 shrink-0' />
+          {parseError}
+        </div>
+      )}
+
+      <div className='flex gap-2'>
+        <Button size='sm' className='gap-1.5 h-8' onClick={() => tryParse(raw)} disabled={!raw.trim()}>
+          <FileJson className='h-3.5 w-3.5' /> Parse & Replace
+        </Button>
+        <Button size='sm' variant='ghost' className='h-8' onClick={onClose}>Cancel</Button>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Export ──────────────────────────────────────────────────────
 interface Props {
   courseId: string;
@@ -533,6 +634,7 @@ export function CurriculumPlatformEditor({ courseId, courseSlug }: Props) {
   const [editMode, setEditMode] = useState(false);
   const [localTopics, setLocalTopics] = useState<Topic[] | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [showImport, setShowImport] = useState(false);
 
   const { data, isLoading } = useQuery<{ topics: Topic[] }>({
     queryKey: ['admin', 'curriculum', courseSlug],
@@ -555,7 +657,7 @@ export function CurriculumPlatformEditor({ courseId, courseSlug }: Props) {
     mutationFn: () => adminCoursesApi.saveCurriculum(courseId, topics),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'curriculum', courseSlug] });
-      toast.success('Curriculum saved!');
+      toast.success('Curriculum saved! Changes will appear on the platform after refresh.');
       setEditMode(false);
     },
     onError: () => toast.error('Failed to save curriculum'),
@@ -586,6 +688,12 @@ export function CurriculumPlatformEditor({ courseId, courseSlug }: Props) {
     setLocalTopics(arr);
   };
 
+  const handleJsonImport = (imported: Topic[]) => {
+    setLocalTopics(imported);
+    if (imported.length > 0) setOpenId(imported[0].id);
+    setEditMode(true); // auto-enter edit mode so user can review before saving
+  };
+
   if (isLoading) return <CurriculumSkeleton />;
 
   return (
@@ -601,6 +709,17 @@ export function CurriculumPlatformEditor({ courseId, courseSlug }: Props) {
 
         {/* Toolbar */}
         <div className='flex items-center gap-2 flex-wrap'>
+          {/* JSON Import button */}
+          <Button
+            variant='outline'
+            size='sm'
+            className='gap-1.5 h-8 border-primary/30 text-primary hover:bg-primary/10'
+            onClick={() => setShowImport((v) => !v)}
+          >
+            <FileJson className='h-3.5 w-3.5' />
+            {showImport ? 'Close Import' : 'Import JSON'}
+          </Button>
+
           {/* View / Edit toggle */}
           <div className='flex items-center gap-0.5 rounded-lg border border-border/50 bg-muted/30 p-0.5'>
             <button
@@ -643,13 +762,36 @@ export function CurriculumPlatformEditor({ courseId, courseSlug }: Props) {
         </div>
       </div>
 
+      {/* ── JSON Import Panel ── */}
+      <AnimatePresence>
+        {showImport && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25 }}
+            className='overflow-hidden'
+          >
+            <JsonImportPanel
+              onImport={handleJsonImport}
+              onClose={() => setShowImport(false)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── Topics list ── */}
       {topics.length === 0 ? (
         <div className='flex flex-col items-center justify-center gap-3 py-16 text-center border border-dashed rounded-xl'>
           <p className='text-muted-foreground text-sm'>No topics yet.</p>
-          <Button variant='outline' size='sm' onClick={() => { setEditMode(true); addTopic(); }} className='gap-1.5'>
-            <Plus className='h-3.5 w-3.5' /> Add First Topic
-          </Button>
+          <div className='flex gap-2'>
+            <Button variant='outline' size='sm' onClick={() => { setEditMode(true); addTopic(); }} className='gap-1.5'>
+              <Plus className='h-3.5 w-3.5' /> Add First Topic
+            </Button>
+            <Button variant='outline' size='sm' onClick={() => setShowImport(true)} className='gap-1.5 border-primary/30 text-primary'>
+              <FileJson className='h-3.5 w-3.5' /> Import JSON
+            </Button>
+          </div>
         </div>
       ) : (
         <div className='relative'>

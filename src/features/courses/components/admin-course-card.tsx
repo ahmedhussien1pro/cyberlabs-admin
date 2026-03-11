@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { adminCoursesApi } from '../services/admin-courses.api';
+import { ROUTES } from '@/shared/constants';
 import type { AdminCourse } from '../types/admin-course.types';
 
 const FALLBACK_BG: Record<string, string> = {
@@ -88,14 +89,14 @@ export function AdminCourseCard({ course, index = 0 }: AdminCourseCardProps) {
     onSuccess: (newCourse) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
       toast.success('Duplicated — opening new course');
-      navigate(`/courses/${newCourse.id}`);
+      // Use slug-based route for the duplicated course
+      navigate(ROUTES.COURSE_EDIT(newCourse.slug ?? newCourse.id));
     },
     onError: () => toast.error('Failed to duplicate'),
   });
 
   const { mutate: deleteCourse, isPending: deleting } = useMutation({
     mutationFn: () => adminCoursesApi.delete(course.id),
-    // Optimistic: remove immediately
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: ['admin', 'courses', 'list'] });
       const prev = queryClient.getQueryData(['admin', 'courses', 'list']);
@@ -105,7 +106,7 @@ export function AdminCourseCard({ course, index = 0 }: AdminCourseCardProps) {
       });
       return { prev };
     },
-    onError: (_e, _v, ctx: any) => {
+    onError: (_e: unknown, _v: unknown, ctx: any) => {
       if (ctx?.prev) queryClient.setQueryData(['admin', 'courses', 'list'], ctx.prev);
       toast.error('Failed to delete');
     },
@@ -176,14 +177,14 @@ export function AdminCourseCard({ course, index = 0 }: AdminCourseCardProps) {
           <div className='flex gap-2'>
             <Button size='sm' variant='secondary'
               className='h-8 gap-1.5 text-xs'
-              onClick={(e) => { e.stopPropagation(); navigate(`/courses/${course.id}`); }}>
+              onClick={(e) => { e.stopPropagation(); navigate(ROUTES.COURSE_EDIT(course.slug)); }}>
               <Pencil className='h-3.5 w-3.5' /> Edit
             </Button>
             <Button size='sm' variant='secondary'
               className='h-8 gap-1.5 text-xs'
               onClick={(e) => {
                 e.stopPropagation();
-                const base = import.meta.env.VITE_FRONTEND_URL ?? 'http://localhost:5173';
+                const base = import.meta.env.VITE_FRONTEND_URL ?? 'https://test.cyber-labs.tech';
                 window.open(`${base}/courses/${course.slug}`, '_blank');
               }}>
               <Eye className='h-3.5 w-3.5' /> Preview
