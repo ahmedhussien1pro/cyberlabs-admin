@@ -79,7 +79,7 @@ export function AdminCourseCard({ course, index = 0 }: AdminCourseCardProps) {
       action === 'publish' ? adminCoursesApi.publish(course.id) : adminCoursesApi.unpublish(course.id),
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
-      toast.success(updated.isPublished ? 'Published ✅' : 'Unpublished');
+      toast.success((updated as any).isPublished ? 'Published ✅' : 'Unpublished');
     },
     onError: () => toast.error('Failed to update publish state'),
   });
@@ -89,7 +89,6 @@ export function AdminCourseCard({ course, index = 0 }: AdminCourseCardProps) {
     onSuccess: (newCourse) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
       toast.success('Duplicated — opening new course');
-      // Use slug-based route for the duplicated course
       navigate(ROUTES.COURSE_EDIT(newCourse.slug ?? newCourse.id));
     },
     onError: () => toast.error('Failed to duplicate'),
@@ -220,7 +219,7 @@ export function AdminCourseCard({ course, index = 0 }: AdminCourseCardProps) {
               title='Delete'
               onClick={(e) => {
                 e.stopPropagation();
-                if (confirm(`Delete "${course.title}"?`)) deleteCourse();
+                if (confirm(`Delete "${course.title}"?`)) deleteCourse(undefined as any);
               }}>
               {deleting ? <Loader2 className='h-3.5 w-3.5 animate-spin' /> : <Trash2 className='h-3.5 w-3.5' />}
             </Button>

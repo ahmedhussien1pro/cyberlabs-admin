@@ -9,11 +9,11 @@ import { cn } from '@/lib/utils';
 import { ImageLightbox } from './image-lightbox';
 
 type Lang = 'en' | 'ar';
-type TranslatedText = { en: string; ar: string };
+type TranslatedText = { en: string; ar?: string | null };
 type I18nArray = { en: string[]; ar: string[] };
 type NoteVariant = 'info' | 'warning' | 'danger' | 'success';
 
-const tl = (v: TranslatedText, l: Lang) => (l === 'ar' ? v.ar : v.en) ?? '';
+const tl = (v: TranslatedText, l: Lang) => (l === 'ar' ? (v.ar ?? v.en) : v.en) ?? '';
 
 function resolveArray(arr: TranslatedText[] | I18nArray | undefined, lang: Lang): string[] {
   if (!arr) return [];
@@ -69,7 +69,7 @@ export default function CourseElementRenderer({ elements, lang = 'en', imageMap 
   const getText = (v: TranslatedText | string | undefined): string => {
     if (!v) return '';
     if (typeof v === 'string') return v;
-    return lang === 'ar' ? v.ar : v.en;
+    return lang === 'ar' ? (v.ar ?? v.en) : v.en;
   };
 
   return (
@@ -217,8 +217,8 @@ export default function CourseElementRenderer({ elements, lang = 'en', imageMap 
                     <span className={cfg.text}>{getText(el.value as TranslatedText)}</span>
                     {el.link && (
                       <a href={el.link as string} target='_blank' rel='noopener noreferrer'
-                        className='ms-1.5 inline-flex items-center gap-1 underline underline-offset-2 text-primary hover:text-primary/80'>
-                        Read more <ExternalLink className='h-3 w-3' />
+                        className='ms-1.5 inline-flex items-center gap-1 text-blue-400 hover:underline text-xs'>
+                        Learn more <ExternalLink className='h-3 w-3' />
                       </a>
                     )}
                   </div>
@@ -226,66 +226,18 @@ export default function CourseElementRenderer({ elements, lang = 'en', imageMap 
               );
             }
 
-            case 'table': {
-              const headers = resolveArray(el.headers as TranslatedText[] | I18nArray, lang);
-              return (
-                <div key={idx} className='my-6 overflow-x-auto rounded-xl border border-border'>
-                  {el.title && (
-                    <div className='px-4 py-2 bg-muted/40 border-b border-border'>
-                      <p className='text-sm font-semibold'>{getText(el.title)}</p>
-                    </div>
-                  )}
-                  <table className='w-full text-sm'>
-                    <thead className='bg-muted/30'>
-                      <tr>
-                        {headers.map((h, i) => (
-                          <th key={i} className='px-4 py-2.5 text-start font-semibold text-foreground/80 border-b border-border'>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(el.rows ?? []).map((row, ri) => {
-                        const cells = resolveArray(row as TranslatedText[] | I18nArray, lang);
-                        return (
-                          <tr key={ri} className='border-b border-border/50 last:border-0 hover:bg-muted/20 transition-colors'>
-                            {cells.map((cell, ci) => (
-                              <td key={ci} className='px-4 py-2.5 text-foreground/80'>{cell}</td>
-                            ))}
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              );
-            }
-
-            case 'hr':
-              return <hr key={idx} className='my-8 border-border/40' />;
-
-            case 'button':
-              return (
-                <div key={idx} className='my-4'>
-                  <a href={el.href as string} target={el.newTab ? '_blank' : '_self'} rel='noopener noreferrer'
-                    className='inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors'>
-                    {getText(el.label as TranslatedText)}
-                    {el.newTab && <ExternalLink className='h-3.5 w-3.5' />}
-                  </a>
-                </div>
-              );
-
             default:
               return null;
           }
         })}
       </div>
-
-      <ImageLightbox
-        src={lightbox?.src ?? ''}
-        alt={lightbox?.alt}
-        isOpen={!!lightbox}
-        onClose={() => setLightbox(null)}
-      />
+      {lightbox && (
+        <ImageLightbox
+          src={lightbox.src}
+          alt={lightbox.alt}
+          onClose={() => setLightbox(null)}
+        />
+      )}
     </>
   );
 }

@@ -9,10 +9,10 @@ import { Input }         from '@/components/ui/input';
 import { Label }         from '@/components/ui/label';
 import { Textarea }      from '@/components/ui/textarea';
 import { Badge }         from '@/components/ui/badge';
-import { adminCoursesApi } from '../../services/admin-courses.api';
-import type { AdminCourse } from '../../types/admin-course.types';
+import { coursesApi }    from '../../services/courses.api';
+import type { Course }   from '../../types/course.types';
 
-interface Props { course: AdminCourse; onSaved: () => void; }
+interface Props { course: Course; onSaved: () => void; }
 
 function TagsInput({
   label, value, onChange,
@@ -62,15 +62,15 @@ export function HeroInfoTab({ course, onSaved }: Props) {
     tags:               [...(course.tags               ?? [])],
   });
 
-  const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
+  const set  = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
 
   const mut = useMutation({
-    mutationFn: () => adminCoursesApi.update(course.id, {
-      image:              form.image              || undefined,
-      thumbnail:          form.thumbnail          || undefined,
-      longDescription:    form.longDescription    || undefined,
-      ar_longDescription: form.ar_longDescription || undefined,
-      labsLink:           form.labsLink           || undefined,
+    mutationFn: () => coursesApi.update(course.id, {
+      image:              form.image              || null,
+      thumbnail:          form.thumbnail          || null,
+      longDescription:    form.longDescription    || null,
+      ar_longDescription: form.ar_longDescription || null,
+      labsLink:           form.labsLink           || null,
       skills:             form.skills,
       ar_skills:          form.ar_skills,
       topics:             form.topics,

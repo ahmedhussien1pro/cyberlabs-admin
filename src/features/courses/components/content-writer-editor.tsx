@@ -248,7 +248,8 @@ function TopicContentRow({
                   <div className='flex items-center gap-2 px-3 py-2 border-b border-border/40 bg-muted/30'>
                     <Badge className={cn('text-[11px] border', EL_COLORS[el.type] ?? 'bg-muted')}>{el.type}</Badge>
                     <div className='flex-1' />
-                    <button onClick={() => setEditingEl(editingEl === el.id ? null : el.id)}
+                    <button
+                      onClick={() => setEditingEl(editingEl === el.id ? null : (el.id ?? null))}
                       className='text-xs text-muted-foreground hover:text-primary flex items-center gap-1'>
                       <Pencil className='h-3 w-3' />
                       {editingEl === el.id ? 'Close' : 'Edit'}
@@ -309,7 +310,6 @@ export function ContentWriterEditor({ courseId, courseSlug }: Props) {
     queryFn: () => adminCoursesApi.getCurriculum(courseSlug) as any,
   });
 
-  // Sync localTopics when data loads (only if not yet set)
   useEffect(() => {
     if (data?.topics && localTopics === null) {
       setLocalTopics(data.topics);
