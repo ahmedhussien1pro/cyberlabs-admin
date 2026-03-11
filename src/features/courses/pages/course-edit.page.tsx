@@ -1,28 +1,35 @@
 // src/features/courses/pages/course-edit.page.tsx
-// Step 2 — Edit page: 3 tabs (Card Info | Hero Info | Curriculum Editor)
-import { useState }      from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery }      from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
-import { Button }        from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Skeleton }      from '@/components/ui/skeleton';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { coursesApi }    from '../services/courses.api';
-import { ROUTES }        from '@/shared/constants';
-import { CardInfoTab }   from '../components/edit-tabs/card-info-tab';
-import { HeroInfoTab }   from '../components/edit-tabs/hero-info-tab';
-import { CurriculumTab } from '../components/edit-tabs/curriculum-tab';
+import { coursesApi } from '../services/courses.api';
+import { ROUTES } from '@/shared/constants';
+import { CardInfoTab } from '../components/edit-tabs/card-info-tab';
+import { HeroInfoTab } from '../components/edit-tabs/hero-info-tab';
+import { CurriculumPlatformEditor } from '../components/curriculum-platform-editor';
+import { CoursePlatformPreviewTab } from '../components/course-preview-tab';
+import type { Course } from '../types/course.types';
+import type { AdminCourse } from '../types/admin-course.types';
+
+// Course and AdminCourse are structurally identical — safe cast
+function toAdminCourse(c: Course): AdminCourse {
+  return c as unknown as AdminCourse;
+}
 
 export default function CourseEditPage() {
-  const { slug }   = useParams<{ slug: string }>();
-  const navigate   = useNavigate();
+  const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
   const [tab, setTab] = useState('card');
 
   const { data: course, isLoading, error, refetch } = useQuery({
     queryKey: ['courses', 'detail', slug],
-    queryFn:  () => coursesApi.getBySlug(slug!),
-    enabled:  !!slug,
+    queryFn: () => coursesApi.getBySlug(slug!),
+    enabled: !!slug,
     retry: false,
   });
 
@@ -63,9 +70,11 @@ export default function CourseEditPage() {
         </div>
         <span className={[
           'rounded-full px-3 py-1 text-xs font-semibold border',
-          course.state === 'PUBLISHED' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-          : course.state === 'COMING_SOON' ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
-          : 'bg-zinc-500/10 border-zinc-500/30 text-zinc-400',
+          course.state === 'PUBLISHED'
+            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+            : course.state === 'COMING_SOON'
+            ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+            : 'bg-zinc-500/10 border-zinc-500/30 text-zinc-400',
         ].join(' ')}>
           {course.state.replace('_', ' ')}
         </span>
@@ -73,10 +82,11 @@ export default function CourseEditPage() {
 
       {/* ── Tabs ── */}
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className='grid w-full grid-cols-3 max-w-md'>
+        <TabsList className='grid w-full grid-cols-4 max-w-lg'>
           <TabsTrigger value='card'>Card Info</TabsTrigger>
           <TabsTrigger value='hero'>Hero Info</TabsTrigger>
           <TabsTrigger value='curriculum'>Curriculum</TabsTrigger>
+          <TabsTrigger value='preview'>Preview</TabsTrigger>
         </TabsList>
 
         <TabsContent value='card' className='mt-6'>
@@ -88,7 +98,11 @@ export default function CourseEditPage() {
         </TabsContent>
 
         <TabsContent value='curriculum' className='mt-6'>
-          <CurriculumTab course={course} />
+          <CurriculumPlatformEditor courseId={course.id} courseSlug={course.slug} />
+        </TabsContent>
+
+        <TabsContent value='preview' className='mt-6'>
+          <CoursePlatformPreviewTab course={toAdminCourse(course)} />
         </TabsContent>
       </Tabs>
     </div>
