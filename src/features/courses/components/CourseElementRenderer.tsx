@@ -1,5 +1,4 @@
 // src/features/courses/components/CourseElementRenderer.tsx
-// ✅ Exact copy of frontend renderer — supports all element types
 import { useState } from 'react';
 import {
   Info, AlertTriangle, AlertOctagon, CheckCircle,
@@ -64,13 +63,19 @@ interface Props {
 }
 
 export default function CourseElementRenderer({ elements, lang = 'en', imageMap = {} }: Props) {
-  const [lightbox, setLightbox] = useState<{ src: string; alt?: string } | null>(null);
+  const [lightbox, setLightbox] = useState<{ src: string; alt?: string; isOpen: boolean } | null>(null);
 
   const getText = (v: TranslatedText | string | undefined): string => {
     if (!v) return '';
     if (typeof v === 'string') return v;
     return lang === 'ar' ? (v.ar ?? v.en) : v.en;
   };
+
+  const openLightbox = (src: string, alt?: string) =>
+    setLightbox({ src, alt, isOpen: true });
+
+  const closeLightbox = () =>
+    setLightbox((prev) => (prev ? { ...prev, isOpen: false } : null));
 
   return (
     <>
@@ -108,7 +113,7 @@ export default function CourseElementRenderer({ elements, lang = 'en', imageMap 
                   <img
                     src={src} alt={alt}
                     className='rounded-xl border border-border shadow-md w-full h-auto object-cover cursor-zoom-in'
-                    onClick={() => setLightbox({ src, alt })}
+                    onClick={() => openLightbox(src, alt)}
                   />
                   {el.alt && <figcaption className='mt-2 text-xs text-muted-foreground text-center'>{alt}</figcaption>}
                 </figure>
@@ -235,7 +240,8 @@ export default function CourseElementRenderer({ elements, lang = 'en', imageMap 
         <ImageLightbox
           src={lightbox.src}
           alt={lightbox.alt}
-          onClose={() => setLightbox(null)}
+          isOpen={lightbox.isOpen}
+          onClose={closeLightbox}
         />
       )}
     </>

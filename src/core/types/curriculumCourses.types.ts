@@ -1,4 +1,4 @@
-// src/core/types/curriculumCourses.types.ts — copied from cyberlabs-frontend
+// src/core/types/curriculumCourses.types.ts
 export type TranslatedText = { en: string; ar?: string | null };
 
 export type ElementType =
@@ -19,6 +19,8 @@ export type ElementType =
 export interface BaseElement {
   id?: string | number;
   type: ElementType;
+  // index signature — required for compatibility with CourseElementRenderer
+  [key: string]: unknown;
 }
 
 export interface TitleElement extends BaseElement {
