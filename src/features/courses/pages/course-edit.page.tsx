@@ -1,213 +1,96 @@
 // src/features/courses/pages/course-edit.page.tsx
-// Full edit page: 3 tabs — Card Info | Hero Info | Curriculum Editor
-import { useState } from 'react';
+// Step 2 — Edit page: 3 tabs (Card Info | Hero Info | Curriculum Editor)
+import { useState }      from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import {
-  ArrowLeft, LayoutDashboard, Image as ImageIcon,
-  BookOpen, Loader2, Globe, EyeOff, Copy, Trash2,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
-import { adminCoursesApi } from '../services/admin-courses.api';
-import { CourseCardInfoTab } from '../components/edit-tabs/course-card-info-tab';
-import { CourseHeroInfoTab } from '../components/edit-tabs/course-hero-info-tab';
-import { CurriculumPlatformEditor } from '../components/curriculum-platform-editor';
-import { ROUTES } from '@/shared/constants';
-
-type EditTab = 'card' | 'hero' | 'curriculum';
-
-const TABS: { key: EditTab; label: string; icon: React.ElementType }[] = [
-  { key: 'card',       label: 'Card Info',         icon: LayoutDashboard },
-  { key: 'hero',       label: 'Hero Info',          icon: ImageIcon       },
-  { key: 'curriculum', label: 'Curriculum Editor',  icon: BookOpen        },
-];
+import { useQuery }      from '@tanstack/react-query';
+import { ArrowLeft, AlertCircle } from 'lucide-react';
+import { Button }        from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton }      from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { coursesApi }    from '../services/courses.api';
+import { ROUTES }        from '@/shared/constants';
+import { CardInfoTab }   from '../components/edit-tabs/card-info-tab';
+import { HeroInfoTab }   from '../components/edit-tabs/hero-info-tab';
+import { CurriculumTab } from '../components/edit-tabs/curriculum-tab';
 
 export default function CourseEditPage() {
-  // Route is /courses/:slug/edit — param is named 'slug' in routes.tsx
-  const { slug } = useParams<{ slug: string }>();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<EditTab>('card');
+  const { slug }   = useParams<{ slug: string }>();
+  const navigate   = useNavigate();
+  const [tab, setTab] = useState('card');
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['admin', 'courses', 'detail', slug],
-    queryFn: () => adminCoursesApi.getBySlug ? adminCoursesApi.getBySlug(slug!) : adminCoursesApi.getById(slug!),
-    enabled: !!slug,
-  });
-
-  const course = (data as any)?.data ?? data;
-
-  const { mutate: togglePublish, isPending: isToggling } = useMutation({
-    mutationFn: (action: 'publish' | 'unpublish') =>
-      action === 'publish' ? adminCoursesApi.publish(course?.id!) : adminCoursesApi.unpublish(course?.id!),
-    onSuccess: (updated) => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
-      toast.success(updated.isPublished ? 'Course published ✅' : 'Course unpublished');
-    },
-    onError: () => toast.error('Failed to update publish state'),
-  });
-
-  const { mutate: duplicate, isPending: isDuplicating } = useMutation({
-    mutationFn: () => adminCoursesApi.duplicate(course?.id!),
-    onSuccess: (newCourse) => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
-      toast.success('Course duplicated — opening new course');
-      navigate(ROUTES.COURSE_EDIT(newCourse.slug ?? newCourse.id));
-    },
-    onError: () => toast.error('Failed to duplicate course'),
-  });
-
-  const { mutate: deleteCourse, isPending: isDeleting } = useMutation({
-    mutationFn: () => adminCoursesApi.delete(course?.id!),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
-      toast.success('Course deleted');
-      navigate(ROUTES.COURSES);
-    },
-    onError: () => toast.error('Failed to delete course'),
+  const { data: course, isLoading, error, refetch } = useQuery({
+    queryKey: ['courses', 'detail', slug],
+    queryFn:  () => coursesApi.getBySlug(slug!),
+    enabled:  !!slug,
+    retry: false,
   });
 
   if (isLoading) {
     return (
       <div className='space-y-4 p-6'>
-        <Skeleton className='h-8 w-64' />
+        <Skeleton className='h-8 w-48' />
         <Skeleton className='h-12 w-full' />
-        <Skeleton className='h-96 w-full' />
+        <Skeleton className='h-96 w-full rounded-xl' />
       </div>
     );
   }
 
   if (error || !course) {
     return (
-      <div className='flex flex-col items-center justify-center gap-4 p-12 text-center'>
-        <p className='text-lg font-semibold'>Course not found</p>
-        <Button variant='outline' onClick={() => navigate(ROUTES.COURSES)} className='gap-2'>
-          <ArrowLeft className='h-4 w-4' /> Back to Courses
-        </Button>
+      <div className='flex h-full items-center justify-center p-6'>
+        <Alert variant='destructive' className='max-w-md'>
+          <AlertCircle className='h-4 w-4' />
+          <AlertDescription>
+            Course not found: <code className='font-mono text-xs'>{slug}</code>
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
 
-  const isPublished = course.isPublished ?? false;
-
   return (
-    <div className='flex flex-col gap-6'>
+    <div className='space-y-6'>
       {/* ── Header ── */}
-      <div className='flex items-start justify-between gap-4 flex-wrap'>
-        <div className='flex items-center gap-3'>
-          <Button variant='ghost' size='icon' onClick={() => navigate(ROUTES.COURSES)}>
-            <ArrowLeft className='h-4 w-4' />
-          </Button>
-          <div>
-            <div className='flex items-center gap-2 flex-wrap'>
-              <h1 className='text-xl font-bold'>{course.title}</h1>
-              <Badge
-                variant='outline'
-                className={cn(
-                  'text-xs font-semibold',
-                  isPublished
-                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                    : 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30',
-                )}>
-                {isPublished ? 'Published' : 'Draft'}
-              </Badge>
-            </div>
-            <p className='text-xs text-muted-foreground font-mono mt-0.5'>
-              /courses/{course.slug}
-            </p>
-          </div>
+      <div className='flex items-center gap-4'>
+        <Button variant='ghost' size='sm' className='gap-2'
+          onClick={() => navigate(ROUTES.COURSES)}>
+          <ArrowLeft className='h-4 w-4' /> Back
+        </Button>
+        <div className='flex-1 min-w-0'>
+          <h1 className='text-xl font-bold truncate'>{course.title}</h1>
+          <p className='text-xs text-muted-foreground font-mono'>{course.slug}</p>
         </div>
-
-        {/* Action buttons */}
-        <div className='flex items-center gap-2 flex-wrap'>
-          <Button
-            variant='outline'
-            size='sm'
-            className='gap-1.5 h-9'
-            onClick={() => {
-              const base = import.meta.env.VITE_FRONTEND_URL ?? 'https://test.cyber-labs.tech';
-              window.open(`${base}/courses/${course.slug}`, '_blank');
-            }}>
-            <Globe className='h-3.5 w-3.5' /> Preview
-          </Button>
-
-          <Button
-            variant='outline'
-            size='sm'
-            className='gap-1.5 h-9'
-            disabled={isDuplicating}
-            onClick={() => duplicate()}>
-            {isDuplicating ? <Loader2 className='h-3.5 w-3.5 animate-spin' /> : <Copy className='h-3.5 w-3.5' />}
-            Duplicate
-          </Button>
-
-          {isPublished ? (
-            <Button
-              size='sm'
-              variant='outline'
-              className='gap-1.5 h-9 text-zinc-400 border-zinc-500/40'
-              disabled={isToggling}
-              onClick={() => togglePublish('unpublish')}>
-              {isToggling ? <Loader2 className='h-3.5 w-3.5 animate-spin' /> : <EyeOff className='h-3.5 w-3.5' />}
-              Unpublish
-            </Button>
-          ) : (
-            <Button
-              size='sm'
-              className='gap-1.5 h-9 bg-emerald-600 hover:bg-emerald-700 text-white'
-              disabled={isToggling}
-              onClick={() => togglePublish('publish')}>
-              {isToggling ? <Loader2 className='h-3.5 w-3.5 animate-spin' /> : <Globe className='h-3.5 w-3.5' />}
-              Publish
-            </Button>
-          )}
-
-          <Button
-            size='sm'
-            variant='destructive'
-            className='gap-1.5 h-9'
-            disabled={isDeleting}
-            onClick={() => {
-              if (confirm(`Delete "${course.title}"? This cannot be undone.`)) {
-                deleteCourse();
-              }
-            }}>
-            {isDeleting ? <Loader2 className='h-3.5 w-3.5 animate-spin' /> : <Trash2 className='h-3.5 w-3.5' />}
-            Delete
-          </Button>
-        </div>
+        <span className={[
+          'rounded-full px-3 py-1 text-xs font-semibold border',
+          course.state === 'PUBLISHED' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+          : course.state === 'COMING_SOON' ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+          : 'bg-zinc-500/10 border-zinc-500/30 text-zinc-400',
+        ].join(' ')}>
+          {course.state.replace('_', ' ')}
+        </span>
       </div>
 
       {/* ── Tabs ── */}
-      <div className='flex gap-1 border-b border-border/50 overflow-x-auto'>
-        {TABS.map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            onClick={() => setActiveTab(key)}
-            className={cn(
-              'flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors whitespace-nowrap',
-              activeTab === key
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground',
-            )}>
-            <Icon className='h-3.5 w-3.5' />
-            {label}
-          </button>
-        ))}
-      </div>
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList className='grid w-full grid-cols-3 max-w-md'>
+          <TabsTrigger value='card'>Card Info</TabsTrigger>
+          <TabsTrigger value='hero'>Hero Info</TabsTrigger>
+          <TabsTrigger value='curriculum'>Curriculum</TabsTrigger>
+        </TabsList>
 
-      {/* ── Tab Content ── */}
-      <div>
-        {activeTab === 'card'       && <CourseCardInfoTab course={course} />}
-        {activeTab === 'hero'       && <CourseHeroInfoTab course={course} />}
-        {activeTab === 'curriculum' && (
-          <CurriculumPlatformEditor courseId={course.id} courseSlug={course.slug} />
-        )}
-      </div>
+        <TabsContent value='card' className='mt-6'>
+          <CardInfoTab course={course} onSaved={refetch} />
+        </TabsContent>
+
+        <TabsContent value='hero' className='mt-6'>
+          <HeroInfoTab course={course} onSaved={refetch} />
+        </TabsContent>
+
+        <TabsContent value='curriculum' className='mt-6'>
+          <CurriculumTab course={course} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

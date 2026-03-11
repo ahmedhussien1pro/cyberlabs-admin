@@ -1,33 +1,33 @@
 // src/features/courses/pages/courses-list.page.tsx
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
-import { adminCoursesApi } from '../services/admin-courses.api';
-import { AdminCourseCard } from '../components/admin-course-card';
-import { CoursesTable } from '../components/courses-table';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+// Step 1 — List Page: يعرض الكورسات بنفس الكارد من الـ frontend + AdminOverlay
+import { useState }      from 'react';
+import { useNavigate }   from 'react-router-dom';
+import { useQuery }      from '@tanstack/react-query';
+import {
+  BookOpen, Plus, Globe, EyeOff, Clock, AlertCircle,
+  LayoutGrid, List, ChevronLeft, ChevronRight, Search, FileJson,
+} from 'lucide-react';
+import { Card }          from '@/components/ui/card';
+import { Button }        from '@/components/ui/button';
+import { Input }         from '@/components/ui/input';
 import {
   Select, SelectContent, SelectItem,
   SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton }      from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import {
-  BookOpen, Plus, FileJson, Globe, EyeOff,
-  Clock, AlertCircle, LayoutGrid, List,
-  ChevronLeft, ChevronRight, Search,
-} from 'lucide-react';
-import { ROUTES } from '@/shared/constants';
-import { cn } from '@/lib/utils';
-import type { CourseState } from '../types/admin-course.types';
+import { cn }            from '@/lib/utils';
+import { coursesApi }    from '../services/courses.api';
+import { CourseCard }    from '../components/course-card';
+import { CoursesTable }  from '../components/courses-table';
+import { ROUTES }        from '@/shared/constants';
+import type { CourseState } from '../types/course.types';
 
 const STAT_CARDS = [
-  { key: 'total'     as const, label: 'Total Courses', icon: BookOpen, color: 'text-primary',      bg: 'bg-primary/10 border-primary/20'             },
-  { key: 'published' as const, label: 'Published',     icon: Globe,    color: 'text-emerald-400',  bg: 'bg-emerald-500/10 border-emerald-500/20'     },
-  { key: 'draft'     as const, label: 'Draft',          icon: EyeOff,   color: 'text-amber-400',    bg: 'bg-amber-500/10 border-amber-500/20'         },
-  { key: 'comingSoon'as const, label: 'Coming Soon',   icon: Clock,    color: 'text-blue-400',     bg: 'bg-blue-500/10 border-blue-500/20'           },
+  { key: 'total'      as const, label: 'Total',       icon: BookOpen,  color: 'text-primary',     bg: 'bg-primary/10 border-primary/20'         },
+  { key: 'published'  as const, label: 'Published',   icon: Globe,     color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+  { key: 'draft'      as const, label: 'Draft',        icon: EyeOff,    color: 'text-amber-400',   bg: 'bg-amber-500/10 border-amber-500/20'     },
+  { key: 'comingSoon' as const, label: 'Coming Soon', icon: Clock,     color: 'text-blue-400',    bg: 'bg-blue-500/10 border-blue-500/20'       },
 ];
 
 type StateFilter = CourseState | 'all';
@@ -35,30 +35,28 @@ type DiffFilter  = 'ALL' | 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT';
 
 export default function CoursesListPage() {
   const navigate = useNavigate();
-  const [page,             setPage]            = useState(1);
-  const [search,           setSearch]          = useState('');
-  const [diffFilter,       setDiffFilter]      = useState<DiffFilter>('ALL');
-  const [stateFilter,      setStateFilter]     = useState<StateFilter>('all');
-  const [viewMode,         setViewMode]        = useState<'grid' | 'table'>('grid');
+  const [page,        setPage]        = useState(1);
+  const [search,      setSearch]      = useState('');
+  const [diff,        setDiff]        = useState<DiffFilter>('ALL');
+  const [state,       setState]       = useState<StateFilter>('all');
+  const [view,        setView]        = useState<'grid' | 'table'>('grid');
   const limit = 20;
 
   const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ['admin', 'courses', 'stats'],
-    queryFn: adminCoursesApi.getStats,
+    queryKey: ['courses', 'stats'],
+    queryFn:  coursesApi.getStats,
   });
 
-  const { data: coursesData, isLoading, error, refetch } = useQuery({
-    queryKey: ['admin', 'courses', 'list', page, search, diffFilter, stateFilter],
-    queryFn: () => adminCoursesApi.list({
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['courses', 'list', page, search, diff, state],
+    queryFn:  () => coursesApi.list({
       page,
       limit,
       search:     search || undefined,
-      difficulty: diffFilter !== 'ALL' ? diffFilter : undefined,
-      state:      stateFilter,
+      difficulty: diff !== 'ALL' ? diff : undefined,
+      state,
     }),
   });
-
-  const handleSearch = (val: string) => { setSearch(val); setPage(1); };
 
   if (error) {
     return (
@@ -80,12 +78,13 @@ export default function CoursesListPage() {
           <p className='mt-1 text-sm text-muted-foreground'>Manage and publish platform courses</p>
         </div>
         <div className='flex shrink-0 items-center gap-2'>
-          <Button variant='outline' size='sm' className='h-9 gap-2' onClick={() => navigate(ROUTES.COURSE_IMPORT ?? '/courses/import')}>
+          <Button variant='outline' size='sm' className='h-9 gap-2'
+            onClick={() => navigate('/courses/import')}>
             <FileJson className='h-4 w-4' />
             <span className='hidden sm:inline'>Import JSON</span>
-            <span className='sm:hidden'>Import</span>
           </Button>
-          <Button size='sm' className='h-9 gap-2' onClick={() => navigate(ROUTES.COURSE_CREATE ?? '/courses/new')}>
+          <Button size='sm' className='h-9 gap-2'
+            onClick={() => navigate(ROUTES.COURSE_CREATE)}>
             <Plus className='h-4 w-4' /> New Course
           </Button>
         </div>
@@ -96,7 +95,7 @@ export default function CoursesListPage() {
         {statsLoading
           ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className='h-24 rounded-xl' />)
           : STAT_CARDS.map(({ key, label, icon: Icon, color, bg }) => (
-              <Card key={key} className='flex items-center gap-4 p-4 transition-colors hover:bg-muted/30'>
+              <Card key={key} className='flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors'>
                 <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border', bg)}>
                   <Icon className={cn('h-5 w-5', color)} />
                 </div>
@@ -108,22 +107,19 @@ export default function CoursesListPage() {
             ))}
       </div>
 
-      {/* ── Search + Filters + View toggle ── */}
+      {/* ── Filters ── */}
       <div className='flex items-center gap-2 flex-wrap'>
         <div className='relative flex-1 min-w-[180px]'>
           <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
           <Input
-            placeholder='Search by title or slug...'
+            placeholder='Search courses...'
             value={search}
-            onChange={(e) => handleSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className='h-9 pl-9 bg-background'
           />
         </div>
-
-        <Select value={stateFilter} onValueChange={(v) => { setStateFilter(v as StateFilter); setPage(1); }}>
-          <SelectTrigger className='h-9 w-36 bg-background'>
-            <SelectValue placeholder='All Status' />
-          </SelectTrigger>
+        <Select value={state} onValueChange={(v) => { setState(v as StateFilter); setPage(1); }}>
+          <SelectTrigger className='h-9 w-36 bg-background'><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value='all'>All Status</SelectItem>
             <SelectItem value='PUBLISHED'>Published</SelectItem>
@@ -131,11 +127,8 @@ export default function CoursesListPage() {
             <SelectItem value='COMING_SOON'>Coming Soon</SelectItem>
           </SelectContent>
         </Select>
-
-        <Select value={diffFilter} onValueChange={(v) => { setDiffFilter(v as DiffFilter); setPage(1); }}>
-          <SelectTrigger className='h-9 w-36 bg-background'>
-            <SelectValue placeholder='All Levels' />
-          </SelectTrigger>
+        <Select value={diff} onValueChange={(v) => { setDiff(v as DiffFilter); setPage(1); }}>
+          <SelectTrigger className='h-9 w-36 bg-background'><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value='ALL'>All Levels</SelectItem>
             <SelectItem value='BEGINNER'>Beginner</SelectItem>
@@ -144,16 +137,13 @@ export default function CoursesListPage() {
             <SelectItem value='EXPERT'>Expert</SelectItem>
           </SelectContent>
         </Select>
-
-        <div className='flex shrink-0 items-center gap-0.5 rounded-lg border border-border/50 bg-muted/30 p-0.5'>
-          <Button
-            variant={viewMode === 'grid' ? 'default' : 'ghost'} size='sm'
-            className='h-8 w-8 p-0' onClick={() => setViewMode('grid')} title='Grid view'>
+        <div className='flex items-center gap-0.5 rounded-lg border border-border/50 bg-muted/30 p-0.5'>
+          <Button variant={view === 'grid' ? 'default' : 'ghost'} size='sm'
+            className='h-8 w-8 p-0' onClick={() => setView('grid')}>
             <LayoutGrid className='h-3.5 w-3.5' />
           </Button>
-          <Button
-            variant={viewMode === 'table' ? 'default' : 'ghost'} size='sm'
-            className='h-8 w-8 p-0' onClick={() => setViewMode('table')} title='Table view'>
+          <Button variant={view === 'table' ? 'default' : 'ghost'} size='sm'
+            className='h-8 w-8 p-0' onClick={() => setView('table')}>
             <List className='h-3.5 w-3.5' />
           </Button>
         </div>
@@ -161,7 +151,7 @@ export default function CoursesListPage() {
 
       {/* ── Content ── */}
       {isLoading ? (
-        viewMode === 'grid' ? (
+        view === 'grid' ? (
           <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
             {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className='h-80 rounded-2xl' />)}
           </div>
@@ -172,34 +162,28 @@ export default function CoursesListPage() {
             </div>
           </Card>
         )
-      ) : viewMode === 'grid' ? (
+      ) : view === 'grid' ? (
         <>
-          {(coursesData?.data ?? []).length === 0 ? (
+          {(data?.data ?? []).length === 0 ? (
             <Card className='flex flex-col items-center justify-center gap-3 p-16 text-center'>
-              <div className='flex h-12 w-12 items-center justify-center rounded-full bg-muted'>
-                <BookOpen className='h-5 w-5 text-muted-foreground' />
-              </div>
+              <BookOpen className='h-8 w-8 text-muted-foreground' />
               <p className='font-medium'>No courses found</p>
-              <p className='text-sm text-muted-foreground'>Try adjusting your filters or create a new course.</p>
+              <p className='text-sm text-muted-foreground'>Adjust filters or create a new course.</p>
             </Card>
           ) : (
             <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
-              {(coursesData?.data ?? []).map((course, i) => (
-                <AdminCourseCard key={course.id} course={course} index={i} />
+              {(data?.data ?? []).map((course, i) => (
+                <CourseCard key={course.id} course={course} index={i} />
               ))}
             </div>
           )}
 
           {/* Pagination */}
-          {coursesData?.meta && coursesData.meta.totalPages > 1 && (
+          {data?.meta && data.meta.totalPages > 1 && (
             <div className='flex items-center justify-between border-t pt-4'>
               <p className='text-xs text-muted-foreground'>
-                Showing{' '}
-                <span className='font-semibold text-foreground'>
-                  {(page - 1) * limit + 1}–{Math.min(page * limit, coursesData.meta.total)}
-                </span>
-                {' '}of{' '}
-                <span className='font-semibold text-foreground'>{coursesData.meta.total}</span>
+                Showing <span className='font-semibold text-foreground'>{(page - 1) * limit + 1}–{Math.min(page * limit, data.meta.total)}</span> of{' '}
+                <span className='font-semibold text-foreground'>{data.meta.total}</span>
               </p>
               <div className='flex items-center gap-1'>
                 <Button variant='outline' size='sm' className='h-8 gap-1 px-3 text-xs'
@@ -210,7 +194,7 @@ export default function CoursesListPage() {
                   {page}
                 </div>
                 <Button variant='outline' size='sm' className='h-8 gap-1 px-3 text-xs'
-                  onClick={() => setPage((p) => p + 1)} disabled={page === coursesData.meta.totalPages}>
+                  onClick={() => setPage((p) => p + 1)} disabled={page === data.meta.totalPages}>
                   Next <ChevronRight className='h-3.5 w-3.5' />
                 </Button>
               </div>
@@ -219,8 +203,8 @@ export default function CoursesListPage() {
         </>
       ) : (
         <CoursesTable
-          data={coursesData?.data ?? []}
-          meta={coursesData?.meta}
+          data={data?.data ?? []}
+          meta={data?.meta}
           page={page}
           onPageChange={setPage}
           onRefetch={refetch}
