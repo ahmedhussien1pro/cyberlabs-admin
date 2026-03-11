@@ -17,9 +17,8 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { AdminOverlay } from './admin-overlay';
-import type { Course } from '../types/course.types';
+import type { AdminCourse } from '../types/admin-course.types';
 
-// ── Color maps (مطابق للـ frontend) ───────────────────────────────────
 const COLOR = (c: string) => c.toLowerCase();
 
 const FALLBACK_BG: Record<string, string> = {
@@ -56,15 +55,13 @@ const ACCESS_ICON: Record<string, React.ElementType> = {
   PRO: Crown,
   PREMIUM: Gem,
 };
-const CONTENT_ICON: Record<string, { Icon: React.ElementType; label: string }> =
-  {
-    PRACTICAL: { Icon: FlaskConical, label: 'Practical' },
-    THEORETICAL: { Icon: BookMarked, label: 'Theory' },
-    MIXED: { Icon: BookOpen, label: 'Mixed' },
-  };
+const CONTENT_ICON: Record<string, { Icon: React.ElementType; label: string }> = {
+  PRACTICAL:   { Icon: FlaskConical, label: 'Practical' },
+  THEORETICAL: { Icon: BookMarked,   label: 'Theory'    },
+  MIXED:       { Icon: BookOpen,     label: 'Mixed'     },
+};
 
-// ── State badge ────────────────────────────────────────────────────────
-function StateBadge({ state }: { state: Course['state'] }) {
+function StateBadge({ state }: { state: AdminCourse['state'] }) {
   if (state === 'PUBLISHED')
     return (
       <span className='flex items-center gap-1 rounded-full bg-emerald-500/90 px-2 py-0.5 text-[10px] font-bold text-white'>
@@ -84,8 +81,7 @@ function StateBadge({ state }: { state: Course['state'] }) {
   );
 }
 
-// ── Thumbnail (مطابق للـ frontend) ────────────────────────────────────
-function Thumbnail({ course }: { course: Course }) {
+function Thumbnail({ course }: { course: AdminCourse }) {
   const img = course.image ?? course.thumbnail;
   const color = COLOR(course.color ?? 'blue');
   if (img)
@@ -114,9 +110,8 @@ function Thumbnail({ course }: { course: Course }) {
   );
 }
 
-// ═══ CourseCard ════════════════════════════════════════════════════════
 interface Props {
-  course: Course;
+  course: AdminCourse;
   index?: number;
 }
 
@@ -136,22 +131,16 @@ export function CourseCard({ course, index = 0 }: Props) {
         HOVER_RING[color] ?? 'hover:ring-primary/20',
         'hover:shadow-xl hover:-translate-y-0.5',
       )}>
-      {/* ── AdminOverlay — يظهر عند hover ── */}
       <AdminOverlay course={course} />
 
-      {/* ── Thumbnail ── */}
       <div className='relative aspect-video overflow-hidden bg-muted'>
         <Thumbnail course={course} />
-
-        {/* State badge على الـ thumbnail */}
         <div className='absolute top-2 start-2'>
           <StateBadge state={course.state} />
         </div>
       </div>
 
-      {/* ── Body ── */}
       <div className='flex flex-col flex-1 p-4 gap-2.5'>
-        {/* Title + Category */}
         <div className='flex items-start justify-between gap-2'>
           <h3 className='text-sm font-bold text-foreground leading-snug line-clamp-2 flex-1'>
             {course.title}
@@ -163,51 +152,36 @@ export function CourseCard({ course, index = 0 }: Props) {
           )}
         </div>
 
-        {/* Description */}
         {course.description && (
           <p className='text-xs text-muted-foreground leading-relaxed line-clamp-2'>
             {course.description}
           </p>
         )}
 
-        {/* Badges */}
         <div className='flex flex-wrap items-center gap-1.5'>
           {course.difficulty && (
-            <Badge
-              variant='outline'
-              className='gap-1 text-[10px] font-semibold border-border/60 bg-muted/40'>
+            <Badge variant='outline' className='gap-1 text-[10px] font-semibold border-border/60 bg-muted/40'>
               <BarChart3 className='h-3 w-3' />
-              {course.difficulty.charAt(0) +
-                course.difficulty.slice(1).toLowerCase()}
+              {course.difficulty.charAt(0) + course.difficulty.slice(1).toLowerCase()}
             </Badge>
           )}
           {course.access && (
-            <Badge
-              variant='outline'
-              className={cn(
-                'gap-1 text-[10px] font-bold',
-                ACCESS_BADGE[course.access],
-              )}>
+            <Badge variant='outline' className={cn('gap-1 text-[10px] font-bold', ACCESS_BADGE[course.access])}>
               <AccessIcon className='h-3 w-3' /> {course.access}
             </Badge>
           )}
           {(course.totalTopics ?? 0) > 0 && (
-            <Badge
-              variant='outline'
-              className='gap-1 text-[10px] font-semibold text-primary border-primary/30 bg-primary/5'>
+            <Badge variant='outline' className='gap-1 text-[10px] font-semibold text-primary border-primary/30 bg-primary/5'>
               <Clock className='h-3 w-3' /> {course.totalTopics} Topics
             </Badge>
           )}
           {ct && (
-            <Badge
-              variant='outline'
-              className='gap-1 text-[10px] text-muted-foreground border-border/40'>
+            <Badge variant='outline' className='gap-1 text-[10px] text-muted-foreground border-border/40'>
               <ct.Icon className='h-3 w-3' /> {ct.label}
             </Badge>
           )}
         </div>
 
-        {/* Enrollment count */}
         <div className='mt-auto flex items-center gap-1 text-[11px] text-muted-foreground border-t border-border/40 pt-2.5'>
           <Zap className='h-3 w-3' />
           <span>{course.enrollmentCount ?? 0} enrolled</span>

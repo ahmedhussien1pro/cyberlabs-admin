@@ -2,17 +2,17 @@
 import { useState }      from 'react';
 import { useMutation }   from '@tanstack/react-query';
 import { toast }         from 'sonner';
-import { Save, Plus, X } from 'lucide-react';
+import { Save, X }       from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button }        from '@/components/ui/button';
 import { Input }         from '@/components/ui/input';
 import { Label }         from '@/components/ui/label';
 import { Textarea }      from '@/components/ui/textarea';
 import { Badge }         from '@/components/ui/badge';
-import { coursesApi }    from '../../services/courses.api';
-import type { Course }   from '../../types/course.types';
+import { adminCoursesApi } from '../../services/admin-courses.api';
+import type { AdminCourse } from '../../types/admin-course.types';
 
-interface Props { course: Course; onSaved: () => void; }
+interface Props { course: AdminCourse; onSaved: () => void; }
 
 function TagsInput({
   label, value, onChange,
@@ -62,15 +62,15 @@ export function HeroInfoTab({ course, onSaved }: Props) {
     tags:               [...(course.tags               ?? [])],
   });
 
-  const set  = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
 
   const mut = useMutation({
-    mutationFn: () => coursesApi.update(course.id, {
-      image:              form.image              || null,
-      thumbnail:          form.thumbnail          || null,
-      longDescription:    form.longDescription    || null,
-      ar_longDescription: form.ar_longDescription || null,
-      labsLink:           form.labsLink           || null,
+    mutationFn: () => adminCoursesApi.update(course.id, {
+      image:              form.image              || undefined,
+      thumbnail:          form.thumbnail          || undefined,
+      longDescription:    form.longDescription    || undefined,
+      ar_longDescription: form.ar_longDescription || undefined,
+      labsLink:           form.labsLink           || undefined,
       skills:             form.skills,
       ar_skills:          form.ar_skills,
       topics:             form.topics,

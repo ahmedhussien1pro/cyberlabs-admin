@@ -7,19 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { coursesApi } from '../services/courses.api';
+import { adminCoursesApi } from '../services/admin-courses.api';
 import { ROUTES } from '@/shared/constants';
 import { CardInfoTab } from '../components/edit-tabs/card-info-tab';
 import { HeroInfoTab } from '../components/edit-tabs/hero-info-tab';
 import { CurriculumPlatformEditor } from '../components/curriculum-platform-editor';
 import { CoursePlatformPreviewTab } from '../components/course-preview-tab';
-import type { Course } from '../types/course.types';
-import type { AdminCourse } from '../types/admin-course.types';
-
-// Course and AdminCourse are structurally identical — safe cast
-function toAdminCourse(c: Course): AdminCourse {
-  return c as unknown as AdminCourse;
-}
 
 export default function CourseEditPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -32,8 +25,8 @@ export default function CourseEditPage() {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['courses', 'detail', slug],
-    queryFn: () => coursesApi.getBySlug(slug!),
+    queryKey: ['admin', 'course', 'slug', slug],
+    queryFn: () => adminCoursesApi.getBySlug(slug!),
     enabled: !!slug,
     retry: false,
   });
@@ -116,7 +109,7 @@ export default function CourseEditPage() {
         </TabsContent>
 
         <TabsContent value='preview' className='mt-6'>
-          <CoursePlatformPreviewTab course={toAdminCourse(course)} />
+          <CoursePlatformPreviewTab course={course} />
         </TabsContent>
       </Tabs>
     </div>

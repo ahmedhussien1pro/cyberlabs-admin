@@ -4,12 +4,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast }          from 'sonner';
 import { Edit2, Eye, Globe, EyeOff, Copy, Trash2 } from 'lucide-react';
 import { cn }             from '@/lib/utils';
-import { coursesApi }     from '../services/courses.api';
+import { adminCoursesApi } from '../services/admin-courses.api';
 import { ROUTES }         from '@/shared/constants';
-import type { Course }    from '../types/course.types';
+import type { AdminCourse } from '../types/admin-course.types';
 
 interface Props {
-  course: Course;
+  course: AdminCourse;
 }
 
 export function AdminOverlay({ course }: Props) {
@@ -17,13 +17,13 @@ export function AdminOverlay({ course }: Props) {
   const queryClient   = useQueryClient();
 
   const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: ['courses'] });
+    queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
 
   const publishMut = useMutation({
     mutationFn: () =>
       course.state === 'PUBLISHED'
-        ? coursesApi.unpublish(course.id)
-        : coursesApi.publish(course.id),
+        ? adminCoursesApi.unpublish(course.id)
+        : adminCoursesApi.publish(course.id),
     onSuccess: () => {
       toast.success(
         course.state === 'PUBLISHED' ? 'Course unpublished' : 'Course published',
@@ -34,7 +34,7 @@ export function AdminOverlay({ course }: Props) {
   });
 
   const dupMut = useMutation({
-    mutationFn: () => coursesApi.duplicate(course.id),
+    mutationFn: () => adminCoursesApi.duplicate(course.id),
     onSuccess: (newCourse) => {
       toast.success('Course duplicated');
       invalidate();
@@ -44,7 +44,7 @@ export function AdminOverlay({ course }: Props) {
   });
 
   const deleteMut = useMutation({
-    mutationFn: () => coursesApi.delete(course.id),
+    mutationFn: () => adminCoursesApi.delete(course.id),
     onSuccess: () => {
       toast.success('Course deleted');
       invalidate();
@@ -100,7 +100,7 @@ export function AdminOverlay({ course }: Props) {
       className: 'bg-destructive/90 text-white hover:bg-destructive',
       onClick: (e: React.MouseEvent) => {
         e.preventDefault(); e.stopPropagation();
-        if (confirm(`Delete "${course.title}"?`)) deleteMut.mutate();
+        deleteMut.mutate();
       },
       loading: deleteMut.isPending,
     },

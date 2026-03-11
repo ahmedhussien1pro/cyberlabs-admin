@@ -13,10 +13,10 @@ import {
   SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Switch }        from '@/components/ui/switch';
-import { coursesApi }    from '../../services/courses.api';
-import type { Course }   from '../../types/course.types';
+import { adminCoursesApi } from '../../services/admin-courses.api';
+import type { AdminCourse } from '../../types/admin-course.types';
 
-interface Props { course: Course; onSaved: () => void; }
+interface Props { course: AdminCourse; onSaved: () => void; }
 
 export function CardInfoTab({ course, onSaved }: Props) {
   const [form, setForm] = useState({
@@ -35,16 +35,16 @@ export function CardInfoTab({ course, onSaved }: Props) {
   });
 
   const mut = useMutation({
-    mutationFn: () => coursesApi.update(course.id, {
+    mutationFn: () => adminCoursesApi.update(course.id, {
       title:          form.title,
-      ar_title:       form.ar_title       || null,
-      description:    form.description    || null,
-      ar_description: form.ar_description || null,
-      color:          form.color          as Course['color'],
-      access:         form.access         as Course['access'],
-      difficulty:     form.difficulty     as Course['difficulty'],
-      category:       form.category       as Course['category'],
-      contentType:    form.contentType    as Course['contentType'],
+      ar_title:       form.ar_title       || undefined,
+      description:    form.description    || undefined,
+      ar_description: form.ar_description || undefined,
+      color:          form.color          as AdminCourse['color'],
+      access:         form.access         as AdminCourse['access'],
+      difficulty:     form.difficulty     as AdminCourse['difficulty'],
+      category:       form.category       as AdminCourse['category'],
+      contentType:    form.contentType    as AdminCourse['contentType'],
       estimatedHours: Number(form.estimatedHours),
       isFeatured:     form.isFeatured,
       isNew:          form.isNew,

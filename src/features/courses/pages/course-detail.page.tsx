@@ -1,5 +1,5 @@
 // src/features/courses/pages/course-detail.page.tsx
-// Detail page: loads course by :id and renders all info + quick actions
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -7,7 +7,7 @@ import {
   ArrowLeft, Edit, Copy,
   AlertCircle, BookOpen, Clock, Users,
   FlaskConical, Crown, Unlock, Shield,
-  CheckCircle2, Globe, Star, Trash2, Loader2,
+  CheckCircle2, Globe, Star, Trash2, Loader2, BookText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -15,6 +15,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { adminCoursesApi } from '../services/admin-courses.api';
 import { ROUTES } from '@/shared/constants';
 import type { AdminCourse } from '../types/admin-course.types';
@@ -50,6 +61,7 @@ export default function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const { data: course, isLoading, error } = useQuery({
     queryKey: ['admin', 'course', id],
@@ -62,7 +74,7 @@ export default function CourseDetailPage() {
     mutationFn: () => adminCoursesApi.delete(id!),
     onSuccess: () => {
       toast.success('Course deleted');
-      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
       navigate(ROUTES.COURSES);
     },
     onError: () => toast.error('Failed to delete course'),
@@ -72,7 +84,7 @@ export default function CourseDetailPage() {
     mutationFn: () => adminCoursesApi.duplicate(id!),
     onSuccess: (dup: AdminCourse) => {
       toast.success(`Duplicated as "${dup.title}"`);
-      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
       navigate(`/courses/${dup.slug}/edit`);
     },
     onError: () => toast.error('Failed to duplicate'),
@@ -85,7 +97,7 @@ export default function CourseDetailPage() {
         : adminCoursesApi.publish(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'course', id] });
-      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
       toast.success('State updated');
     },
     onError: () => toast.error('Failed to update state'),
@@ -164,6 +176,12 @@ export default function CourseDetailPage() {
             Duplicate
           </Button>
           <Button
+            variant='outline' size='sm' className='gap-2'
+            onClick={() => navigate(`/courses/${course.slug}/edit?tab=curriculum`)}
+          >
+            <BookText className='h-4 w-4' /> Curriculum
+          </Button>
+          <Button
             size='sm' className='gap-2'
             onClick={() => navigate(`/courses/${course.slug}/edit`)}
           >
@@ -218,10 +236,10 @@ export default function CourseDetailPage() {
 
       {/* Stats */}
       <div className='grid grid-cols-2 gap-3 sm:grid-cols-4'>
-        <StatCard label='Topics'    value={course.totalTopics ?? 0}                       icon={BookOpen}     />
-        <StatCard label='Est. Hours' value={`${course.estimatedHours ?? 0}h`}             icon={Clock}        />
-        <StatCard label='Enrolled'  value={(course.enrollmentCount ?? 0).toLocaleString()} icon={Users}        />
-        <StatCard label='Labs'      value={course.labSlugs?.length ?? 0}                  icon={FlaskConical}  />
+        <StatCard label='Topics'     value={course.totalTopics ?? 0}                        icon={BookOpen}    />
+        <StatCard label='Est. Hours' value={`${course.estimatedHours ?? 0}h`}              icon={Clock}       />
+        <StatCard label='Enrolled'   value={(course.enrollmentCount ?? 0).toLocaleString()} icon={Users}       />
+        <StatCard label='Labs'       value={course.labSlugs?.length ?? 0}                   icon={FlaskConical} />
       </div>
 
       {/* Skills & Tags */}
@@ -278,19 +296,31 @@ export default function CourseDetailPage() {
         <p className='text-xs text-muted-foreground mb-3'>
           Deleting this course is irreversible. All curriculum data will be lost.
         </p>
-        <Button
-          variant='destructive' size='sm' className='gap-2'
-          disabled={deleting}
-          onClick={() => {
-            if (window.confirm(`Delete "${course.title}"? This cannot be undone.`)) {
-              deleteCourse();
-            }
-          }}
-        >
-          {deleting
-            ? <><Loader2 className='h-4 w-4 animate-spin' /> Deleting...</>
-            : <><Trash2 className='h-4 w-4' /> Delete Course</>}
-        </Button>
+        <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+          <AlertDialogTrigger asChild>
+            <Button variant='destructive' size='sm' className='gap-2' disabled={deleting}>
+              {deleting
+                ? <><Loader2 className='h-4 w-4 animate-spin' /> Deleting...</>
+                : <><Trash2 className='h-4 w-4' /> Delete Course</>}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete "{course.title}"?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. The course and all its curriculum data will be permanently deleted.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deleteCourse()}
+                className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
+                Delete Course
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

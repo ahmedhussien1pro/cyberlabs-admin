@@ -1,5 +1,4 @@
 // src/features/courses/pages/courses-list.page.tsx
-// Step 1 — List Page: يعرض الكورسات بنفس الكارد من الـ frontend + AdminOverlay
 import { useState }      from 'react';
 import { useNavigate }   from 'react-router-dom';
 import { useQuery }      from '@tanstack/react-query';
@@ -17,7 +16,7 @@ import {
 import { Skeleton }      from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn }            from '@/lib/utils';
-import { coursesApi }    from '../services/courses.api';
+import { adminCoursesApi } from '../services/admin-courses.api';
 import { CourseCard }    from '../components/course-card';
 import { CoursesTable }  from '../components/courses-table';
 import { ROUTES }        from '@/shared/constants';
@@ -43,13 +42,13 @@ export default function CoursesListPage() {
   const limit = 20;
 
   const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ['courses', 'stats'],
-    queryFn:  coursesApi.getStats,
+    queryKey: ['admin', 'courses', 'stats'],
+    queryFn:  adminCoursesApi.getStats,
   });
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['courses', 'list', page, search, diff, state],
-    queryFn:  () => coursesApi.list({
+    queryKey: ['admin', 'courses', 'list', page, search, diff, state],
+    queryFn:  () => adminCoursesApi.list({
       page,
       limit,
       search:     search || undefined,
@@ -173,7 +172,7 @@ export default function CoursesListPage() {
           ) : (
             <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
               {(data?.data ?? []).map((course, i) => (
-                <CourseCard key={course.id} course={course} index={i} />
+                <CourseCard key={course.id} course={course as any} index={i} />
               ))}
             </div>
           )}
@@ -203,7 +202,7 @@ export default function CoursesListPage() {
         </>
       ) : (
         <CoursesTable
-          data={data?.data ?? []}
+          data={data?.data as any ?? []}
           meta={data?.meta}
           page={page}
           onPageChange={setPage}
