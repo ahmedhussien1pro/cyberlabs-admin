@@ -18,18 +18,56 @@ export interface AdminCourseListParams {
   difficulty?: string;
 }
 
-// Backend returns { data: T } for single items and { data: T[], meta: {...} } for lists.
+/**
+ * Axios interceptor returns the full AxiosResponse.
+ * Backend wraps single items as { data: <item> }.
+ * So the chain is: AxiosResponse.data = { data: item }
+ *
+ * unwrapItem drills through any number of { data: ... } wrappers
+ * until it finds an object that looks like a real entity (has an `id` field)
+ * or until there is nothing left to unwrap.
+ */
 function unwrapItem<T>(res: any): T {
-  const payload = res?.data ?? res;
-  return (payload?.data ?? payload) as T;
+  // Start from AxiosResponse.data
+  let val = res?.data ?? res;
+
+  // Keep unwrapping { data: ... } as long as the current value doesn't look
+  // like a real entity (i.e. it has a `data` key but no `id` key).
+  for (let i = 0; i < 5; i++) {
+    if (val && typeof val === 'object' && 'data' in val && !('id' in val)) {
+      val = val.data;
+    } else {
+      break;
+    }
+  }
+
+  return val as T;
 }
 
 function unwrapList<T>(res: any): T {
-  const payload = res?.data ?? res;
+  // AxiosResponse.data
+  const axiosData = res?.data ?? res;
+
+  // Backend returns { data: [...], meta: {...} }
+  // axiosData might already be that shape, or wrapped one more time.
+  let payload = axiosData;
+  if (payload && typeof payload === 'object' && 'data' in payload && !Array.isArray(payload.data)) {
+    // could be { data: { data: [...], meta: {...} } }
+    const inner = payload.data;
+    if (inner && typeof inner === 'object' && Array.isArray(inner.data)) {
+      payload = inner;
+    }
+  }
+
   if (payload?.data !== undefined && payload?.meta !== undefined) {
     return payload as T;
   }
-  const arr = Array.isArray(payload?.data) ? payload.data : Array.isArray(payload) ? payload : [];
+
+  const arr = Array.isArray(payload?.data)
+    ? payload.data
+    : Array.isArray(payload)
+      ? payload
+      : [];
   return { data: arr, meta: { total: arr.length, page: 1, limit: 20, totalPages: 1 } } as T;
 }
 
@@ -73,42 +111,20 @@ export const adminCoursesApi = {
     return unwrapItem<AdminCourseStats>(res);
   },
 
-  /** Fetch a course by its UUID id */
   getById: async (id: string): Promise<AdminCourse> => {
     const res = await adminApiClient.get(`/admin/courses/${id}`);
     return normalizeArrays(unwrapItem<AdminCourse>(res));
   },
 
-  /**
-   * Fetch a course by slug (or id).
-   * Backend findOne now accepts both UUID id and slug, so we call it directly.
-   * If the direct call fails (404/400) we fall back to list-search.
-   */
   getBySlug: async (slug: string): Promise<AdminCourse> => {
-    // 1️⃣ Direct call — backend now handles both id and slug
-    try {
-      const res = await adminApiClient.get(`/admin/courses/${encodeURIComponent(slug)}`);
-      const candidate = unwrapItem<AdminCourse>(res);
-      if (candidate && typeof candidate === 'object' && 'id' in candidate) {
-        return normalizeArrays(candidate);
-      }
-    } catch (err: any) {
-      const status = err?.response?.status ?? err?.status;
-      // Only fall through on 404 / 400; re-throw auth / server errors
-      if (status !== 404 && status !== 400) throw err;
+    const res = await adminApiClient.get(`/admin/courses/${encodeURIComponent(slug)}`);
+    const course = unwrapItem<AdminCourse>(res);
+
+    if (!course || typeof course !== 'object' || !('id' in course)) {
+      throw new Error(`Course not found: ${slug}`);
     }
 
-    // 2️⃣ Fallback: search list for an exact slug match
-    const listRes = await adminCoursesApi.list({ search: slug, limit: 50 });
-    const match = (listRes.data ?? []).find((c) => c.slug === slug || c.id === slug);
-    if (!match) {
-      const notFound: any = new Error(`Course not found: ${slug}`);
-      notFound.statusCode = 404;
-      throw notFound;
-    }
-
-    // 3️⃣ Fetch full details by id
-    return adminCoursesApi.getById(match.id);
+    return normalizeArrays(course);
   },
 
   create: async (data: AdminCourseCreateDto): Promise<AdminCourse> => {
