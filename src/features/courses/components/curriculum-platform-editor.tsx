@@ -1,6 +1,4 @@
-// src/features/courses/components/curriculum-platform-editor.tsx
-// Full platform-style curriculum editor — same look as frontend CourseCurriculum + fully editable
-// Features: Preview/Edit toggle | Topic reorder (↑/↓) | Inline element edit | Add Topic | JSON import
+
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -10,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import {
   BookOpen, ChevronDown, Plus, Trash2, Save, X,

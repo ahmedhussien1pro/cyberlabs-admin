@@ -26,7 +26,12 @@ export default function CourseEditPage() {
   const navigate = useNavigate();
   const [tab, setTab] = useState('card');
 
-  const { data: course, isLoading, error, refetch } = useQuery({
+  const {
+    data: course,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ['courses', 'detail', slug],
     queryFn: () => coursesApi.getBySlug(slug!),
     enabled: !!slug,
@@ -60,22 +65,28 @@ export default function CourseEditPage() {
     <div className='space-y-6'>
       {/* ── Header ── */}
       <div className='flex items-center gap-4'>
-        <Button variant='ghost' size='sm' className='gap-2'
+        <Button
+          variant='ghost'
+          size='sm'
+          className='gap-2'
           onClick={() => navigate(ROUTES.COURSES)}>
           <ArrowLeft className='h-4 w-4' /> Back
         </Button>
         <div className='flex-1 min-w-0'>
           <h1 className='text-xl font-bold truncate'>{course.title}</h1>
-          <p className='text-xs text-muted-foreground font-mono'>{course.slug}</p>
+          <p className='text-xs text-muted-foreground font-mono'>
+            {course.slug}
+          </p>
         </div>
-        <span className={[
-          'rounded-full px-3 py-1 text-xs font-semibold border',
-          course.state === 'PUBLISHED'
-            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-            : course.state === 'COMING_SOON'
-            ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
-            : 'bg-zinc-500/10 border-zinc-500/30 text-zinc-400',
-        ].join(' ')}>
+        <span
+          className={[
+            'rounded-full px-3 py-1 text-xs font-semibold border',
+            course.state === 'PUBLISHED'
+              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+              : course.state === 'COMING_SOON'
+                ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+                : 'bg-zinc-500/10 border-zinc-500/30 text-zinc-400',
+          ].join(' ')}>
           {course.state.replace('_', ' ')}
         </span>
       </div>
@@ -98,7 +109,10 @@ export default function CourseEditPage() {
         </TabsContent>
 
         <TabsContent value='curriculum' className='mt-6'>
-          <CurriculumPlatformEditor courseId={course.id} courseSlug={course.slug} />
+          <CurriculumPlatformEditor
+            courseId={course.id}
+            courseSlug={course.slug}
+          />
         </TabsContent>
 
         <TabsContent value='preview' className='mt-6'>
