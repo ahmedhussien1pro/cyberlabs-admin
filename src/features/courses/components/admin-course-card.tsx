@@ -1,5 +1,5 @@
 // src/features/courses/components/admin-course-card.tsx
-// ✅ Identical to frontend SharedCourseCard (FullCard) + admin overlay: Edit / Preview / PublishToggle
+// Platform-identical card + EN/AR toggle + Edit / Preview / Publish / Duplicate / Delete
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -7,9 +7,8 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import {
   BookOpen, FlaskConical, BookMarked, BarChart3,
-  Clock, ArrowRight, Unlock, Crown, Gem,
-  Sparkles, CheckCircle2, Pencil, Eye,
-  Globe, EyeOff, Loader2,
+  Clock, Unlock, Crown, Gem, Sparkles,
+  Pencil, Eye, Globe, EyeOff, Loader2, Copy, Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -17,33 +16,30 @@ import { Button } from '@/components/ui/button';
 import { adminCoursesApi } from '../services/admin-courses.api';
 import type { AdminCourse } from '../types/admin-course.types';
 
-// ── Constants (mirror of frontend) ────────────────────────────────
 const FALLBACK_BG: Record<string, string> = {
-  emerald: 'from-emerald-950 to-emerald-900 border-emerald-800/50',
-  blue:    'from-blue-950    to-blue-900    border-blue-800/50',
-  violet:  'from-violet-950  to-violet-900  border-violet-800/50',
-  orange:  'from-orange-950  to-orange-900  border-orange-800/50',
-  rose:    'from-rose-950    to-rose-900    border-rose-800/50',
-  cyan:    'from-cyan-950    to-cyan-900    border-cyan-800/50',
+  EMERALD: 'from-emerald-950 to-emerald-900 border-emerald-800/50',
+  BLUE:    'from-blue-950    to-blue-900    border-blue-800/50',
+  VIOLET:  'from-violet-950  to-violet-900  border-violet-800/50',
+  ORANGE:  'from-orange-950  to-orange-900  border-orange-800/50',
+  ROSE:    'from-rose-950    to-rose-900    border-rose-800/50',
+  CYAN:    'from-cyan-950    to-cyan-900    border-cyan-800/50',
 };
 const FALLBACK_TEXT: Record<string, string> = {
-  emerald: 'text-emerald-400', blue: 'text-blue-400',
-  violet:  'text-violet-400',  orange: 'text-orange-400',
-  rose:    'text-rose-400',    cyan: 'text-cyan-400',
+  EMERALD: 'text-emerald-400', BLUE: 'text-blue-400',
+  VIOLET:  'text-violet-400',  ORANGE: 'text-orange-400',
+  ROSE:    'text-rose-400',    CYAN: 'text-cyan-400',
 };
 const HOVER_RING: Record<string, string> = {
-  emerald: 'hover:ring-emerald-500/30', blue:   'hover:ring-blue-500/30',
-  violet:  'hover:ring-violet-500/30',  orange: 'hover:ring-orange-500/30',
-  rose:    'hover:ring-rose-500/30',    cyan:   'hover:ring-cyan-500/30',
+  EMERALD: 'hover:ring-emerald-500/30', BLUE: 'hover:ring-blue-500/30',
+  VIOLET:  'hover:ring-violet-500/30',  ORANGE: 'hover:ring-orange-500/30',
+  ROSE:    'hover:ring-rose-500/30',    CYAN: 'hover:ring-cyan-500/30',
 };
 const ACCESS_BADGE: Record<string, string> = {
   FREE:    'border-emerald-500/40 text-emerald-400 bg-emerald-500/10',
   PRO:     'border-blue-500/40    text-blue-400    bg-blue-500/10',
   PREMIUM: 'border-violet-500/40  text-violet-400  bg-violet-500/10',
 };
-const ACCESS_ICON: Record<string, React.ElementType> = {
-  FREE: Unlock, PRO: Crown, PREMIUM: Gem,
-};
+const ACCESS_ICON: Record<string, React.ElementType> = { FREE: Unlock, PRO: Crown, PREMIUM: Gem };
 const CONTENT_ICON: Record<string, { Icon: React.ElementType; label: string }> = {
   PRACTICAL:   { Icon: FlaskConical, label: 'Practical' },
   THEORETICAL: { Icon: BookMarked,   label: 'Theory'    },
@@ -56,82 +52,70 @@ function normalizeDiff(d?: string | null) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-// ── Thumbnail ────────────────────────────────────────────────────────
-function CourseThumbnail({ course }: { course: AdminCourse }) {
-  const img = (course as any).image ?? course.thumbnail;
-  const color = (course as any).color ?? 'blue';
-  if (img) {
-    return (
-      <img
-        src={img} alt={course.title} loading='lazy'
-        className='w-full h-full object-cover transition-transform duration-500 group-hover:scale-105'
-      />
-    );
-  }
-  return (
-    <div className={cn(
-      'w-full h-full flex items-center justify-center bg-gradient-to-br border',
-      FALLBACK_BG[color] ?? 'from-zinc-900 to-zinc-800 border-zinc-700',
-    )}>
-      <p className={cn('font-black text-center px-3 leading-tight text-lg', FALLBACK_TEXT[color] ?? 'text-zinc-400')}>
-        {course.title}
-      </p>
-    </div>
-  );
-}
-
-// ── Main Card ─────────────────────────────────────────────────────────
 export interface AdminCourseCardProps {
   course: AdminCourse;
   index?: number;
 }
 
 export function AdminCourseCard({ course, index = 0 }: AdminCourseCardProps) {
-  const navigate = useNavigate();
+  const navigate    = useNavigate();
   const queryClient = useQueryClient();
   const [lang, setLang] = useState<'en' | 'ar'>('en');
 
-  const color       = (course as any).color ?? 'blue';
-  const comingSoon  = (course as any).state === 'COMING_SOON';
-  const isPublished = course.isPublished ?? false;
+  const colorKey   = (course.color ?? 'BLUE').toUpperCase();
+  const comingSoon = course.state === 'COMING_SOON';
+  const isPublished = (course as any).isPublished ?? false;
 
-  // ─ i18n display values ─
-  const title = lang === 'ar' && (course as any).ar_title ? (course as any).ar_title : course.title;
-  const desc  = lang === 'ar' && (course as any).ar_description
-    ? (course as any).ar_description
-    : course.description;
-  const diff  = normalizeDiff(
-    lang === 'ar' && (course as any).ar_difficulty
-      ? (course as any).ar_difficulty
-      : course.difficulty,
-  );
-  const cat   = lang === 'ar' ? (course as any).ar_category : (course as any).category;
-  const ct    = CONTENT_ICON[(course as any).contentType ?? 'MIXED'];
+  const title = lang === 'ar' && course.ar_title ? course.ar_title : course.title;
+  const desc  = lang === 'ar' && course.ar_description ? course.ar_description : course.description;
+  const diff  = normalizeDiff(course.difficulty);
+  const ct    = CONTENT_ICON[course.contentType ?? 'MIXED'];
   const AccessIcon = ACCESS_ICON[course.access ?? 'FREE'] ?? Unlock;
 
-  // ─ Publish toggle mutation ─
+  // ── mutations ─────────────────────────────────────────────
   const { mutate: togglePublish, isPending: toggling } = useMutation({
     mutationFn: (action: 'publish' | 'unpublish') =>
       action === 'publish' ? adminCoursesApi.publish(course.id) : adminCoursesApi.unpublish(course.id),
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
-      toast.success(updated.isPublished ? 'Course published ✅' : 'Course unpublished');
+      toast.success(updated.isPublished ? 'Published ✅' : 'Unpublished');
     },
     onError: () => toast.error('Failed to update publish state'),
   });
 
-  // ─ Preview: open frontend URL in new tab ─
-  const handlePreview = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const frontendBase = import.meta.env.VITE_FRONTEND_URL ?? 'http://localhost:5173';
-    window.open(`${frontendBase}/courses/${course.slug}`, '_blank');
-  };
+  const { mutate: duplicate, isPending: duplicating } = useMutation({
+    mutationFn: () => adminCoursesApi.duplicate(course.id),
+    onSuccess: (newCourse) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
+      toast.success('Duplicated — opening new course');
+      navigate(`/courses/${newCourse.id}`);
+    },
+    onError: () => toast.error('Failed to duplicate'),
+  });
 
-  // ─ Edit: go to detail page ─
-  const handleEdit = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigate(`/courses/${course.id}`);
-  };
+  const { mutate: deleteCourse, isPending: deleting } = useMutation({
+    mutationFn: () => adminCoursesApi.delete(course.id),
+    // Optimistic: remove immediately
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['admin', 'courses', 'list'] });
+      const prev = queryClient.getQueryData(['admin', 'courses', 'list']);
+      queryClient.setQueryData(['admin', 'courses', 'list'], (old: any) => {
+        if (!old?.data) return old;
+        return { ...old, data: old.data.filter((c: AdminCourse) => c.id !== course.id) };
+      });
+      return { prev };
+    },
+    onError: (_e, _v, ctx: any) => {
+      if (ctx?.prev) queryClient.setQueryData(['admin', 'courses', 'list'], ctx.prev);
+      toast.error('Failed to delete');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
+      toast.success('Course deleted');
+    },
+  });
+
+  const img = (course as any).image ?? course.thumbnail;
 
   return (
     <motion.div
@@ -141,13 +125,26 @@ export function AdminCourseCard({ course, index = 0 }: AdminCourseCardProps) {
       className={cn(
         'group relative flex flex-col rounded-2xl border bg-card overflow-hidden',
         'transition-all duration-300 ring-1 ring-transparent',
-        HOVER_RING[color] ?? 'hover:ring-primary/20',
+        HOVER_RING[colorKey] ?? 'hover:ring-primary/20',
         'hover:shadow-xl hover:-translate-y-0.5',
       )}>
 
       {/* ── Thumbnail ── */}
       <div className='relative aspect-video overflow-hidden bg-muted'>
-        <CourseThumbnail course={course} />
+        {img ? (
+          <img src={img} alt={course.title} loading='lazy'
+            className='w-full h-full object-cover transition-transform duration-500 group-hover:scale-105' />
+        ) : (
+          <div className={cn(
+            'w-full h-full flex items-center justify-center bg-gradient-to-br border',
+            FALLBACK_BG[colorKey] ?? 'from-zinc-900 to-zinc-800 border-zinc-700',
+          )}>
+            <p className={cn('font-black text-center px-3 leading-tight text-lg',
+              FALLBACK_TEXT[colorKey] ?? 'text-zinc-400')}>
+              {title}
+            </p>
+          </div>
+        )}
 
         {/* Coming Soon overlay */}
         {comingSoon && (
@@ -158,7 +155,7 @@ export function AdminCourseCard({ course, index = 0 }: AdminCourseCardProps) {
           </div>
         )}
 
-        {/* Published indicator */}
+        {/* Published / Draft badge */}
         {!comingSoon && (
           <div className='absolute top-3 start-3'>
             {isPublished ? (
@@ -173,30 +170,87 @@ export function AdminCourseCard({ course, index = 0 }: AdminCourseCardProps) {
           </div>
         )}
 
-        {/* ── Admin action overlay (top-right) ── */}
-        <div className='absolute top-2 end-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity'>
+        {/* Admin overlay — shows on hover */}
+        <div className='absolute inset-0 bg-black/70 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-3'>
+          {/* Row 1: Edit + Preview */}
+          <div className='flex gap-2'>
+            <Button size='sm' variant='secondary'
+              className='h-8 gap-1.5 text-xs'
+              onClick={(e) => { e.stopPropagation(); navigate(`/courses/${course.id}`); }}>
+              <Pencil className='h-3.5 w-3.5' /> Edit
+            </Button>
+            <Button size='sm' variant='secondary'
+              className='h-8 gap-1.5 text-xs'
+              onClick={(e) => {
+                e.stopPropagation();
+                const base = import.meta.env.VITE_FRONTEND_URL ?? 'http://localhost:5173';
+                window.open(`${base}/courses/${course.slug}`, '_blank');
+              }}>
+              <Eye className='h-3.5 w-3.5' /> Preview
+            </Button>
+          </div>
+          {/* Row 2: Publish + Duplicate + Delete */}
+          <div className='flex gap-2'>
+            <Button size='sm' variant='outline'
+              className={cn(
+                'h-8 gap-1.5 text-xs',
+                isPublished
+                  ? 'border-zinc-500/50 text-zinc-300 hover:bg-zinc-800'
+                  : 'border-emerald-500/50 text-emerald-400 hover:bg-emerald-950',
+              )}
+              disabled={toggling}
+              onClick={(e) => { e.stopPropagation(); togglePublish(isPublished ? 'unpublish' : 'publish'); }}>
+              {toggling
+                ? <Loader2 className='h-3.5 w-3.5 animate-spin' />
+                : isPublished
+                  ? <><EyeOff className='h-3.5 w-3.5' /> Unpublish</>
+                  : <><Globe className='h-3.5 w-3.5' /> Publish</>}
+            </Button>
+            <Button size='sm' variant='outline'
+              className='h-8 w-8 p-0 border-blue-500/40 text-blue-400 hover:bg-blue-950'
+              disabled={duplicating}
+              title='Duplicate'
+              onClick={(e) => { e.stopPropagation(); duplicate(); }}>
+              {duplicating ? <Loader2 className='h-3.5 w-3.5 animate-spin' /> : <Copy className='h-3.5 w-3.5' />}
+            </Button>
+            <Button size='sm' variant='outline'
+              className='h-8 w-8 p-0 border-red-500/40 text-red-400 hover:bg-red-950'
+              disabled={deleting}
+              title='Delete'
+              onClick={(e) => {
+                e.stopPropagation();
+                if (confirm(`Delete "${course.title}"?`)) deleteCourse();
+              }}>
+              {deleting ? <Loader2 className='h-3.5 w-3.5 animate-spin' /> : <Trash2 className='h-3.5 w-3.5' />}
+            </Button>
+          </div>
           {/* Lang toggle */}
           <button
             onClick={(e) => { e.stopPropagation(); setLang((l) => l === 'en' ? 'ar' : 'en'); }}
-            className='h-7 px-2 rounded-full bg-background/80 backdrop-blur-sm border border-border/60 text-[10px] font-bold text-foreground hover:bg-background transition-colors'>
-            {lang === 'en' ? 'AR' : 'EN'}
+            className='mt-1 h-6 px-2 rounded-full bg-background/20 border border-white/20 text-[10px] font-bold text-white/70 hover:bg-background/40 transition-colors'>
+            {lang === 'en' ? 'عربي' : 'English'}
           </button>
         </div>
       </div>
 
-      {/* ── Body (identical to frontend FullCard) ── */}
+      {/* ── Body ── */}
       <div className='flex flex-col flex-1 p-4 gap-3'>
         <div className='flex items-start justify-between gap-2'>
-          <h3 className={cn('text-sm font-bold text-foreground leading-snug line-clamp-2 flex-1', lang === 'ar' && 'text-right')} dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          <h3
+            className={cn('text-sm font-bold text-foreground leading-snug line-clamp-2 flex-1', lang === 'ar' && 'text-right')}
+            dir={lang === 'ar' ? 'rtl' : 'ltr'}>
             {title}
           </h3>
-          {cat && (
-            <span className='text-[11px] text-muted-foreground shrink-0'>{cat}</span>
+          {(course as any).category && (
+            <span className='text-[11px] text-muted-foreground shrink-0'>
+              {(course as any).category?.replace(/_/g, ' ')}
+            </span>
           )}
         </div>
 
         {desc && (
-          <p className={cn('text-xs text-muted-foreground leading-relaxed line-clamp-2', lang === 'ar' && 'text-right')} dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          <p className={cn('text-xs text-muted-foreground leading-relaxed line-clamp-2', lang === 'ar' && 'text-right')}
+            dir={lang === 'ar' ? 'rtl' : 'ltr'}>
             {desc}
           </p>
         )}
@@ -212,9 +266,9 @@ export function AdminCourseCard({ course, index = 0 }: AdminCourseCardProps) {
               <AccessIcon className='h-3 w-3' /> {course.access}
             </Badge>
           )}
-          {((course as any).totalTopics ?? 0) > 0 && (
+          {(course.totalTopics ?? 0) > 0 && (
             <Badge variant='outline' className='gap-1 text-[10px] font-semibold text-primary border-primary/30 bg-primary/5'>
-              <Clock className='h-3 w-3' /> {(course as any).totalTopics} Topics
+              <Clock className='h-3 w-3' /> {course.totalTopics} Topics
             </Badge>
           )}
           {ct && (
@@ -222,53 +276,6 @@ export function AdminCourseCard({ course, index = 0 }: AdminCourseCardProps) {
               <ct.Icon className='h-3 w-3' /> {ct.label}
             </Badge>
           )}
-          {(course as any).estimatedHours && (
-            <Badge variant='outline' className='gap-1 text-[10px] text-muted-foreground border-border/40'>
-              <Clock className='h-3 w-3' /> {(course as any).estimatedHours}h
-            </Badge>
-          )}
-        </div>
-
-        {/* ── Admin CTA Row ── */}
-        <div className='flex gap-2 mt-auto pt-1'>
-          {/* Edit button */}
-          <Button
-            variant='outline'
-            size='sm'
-            className='flex-1 h-9 text-xs border-border/60 hover:bg-muted gap-1.5'
-            onClick={handleEdit}>
-            <Pencil className='h-3.5 w-3.5' /> Edit
-          </Button>
-
-          {/* Preview button */}
-          <Button
-            variant='outline'
-            size='sm'
-            className='h-9 w-9 p-0 border-border/60 hover:bg-muted shrink-0'
-            onClick={handlePreview}
-            title='Preview on platform (new tab)'>
-            <Eye className='h-3.5 w-3.5' />
-          </Button>
-
-          {/* Publish toggle */}
-          <Button
-            size='sm'
-            variant='outline'
-            className={cn(
-              'h-9 w-9 p-0 shrink-0 transition-colors',
-              isPublished
-                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
-                : 'border-zinc-500/40 bg-zinc-500/10 text-zinc-400 hover:bg-zinc-500/20',
-            )}
-            disabled={toggling}
-            onClick={(e) => { e.stopPropagation(); togglePublish(isPublished ? 'unpublish' : 'publish'); }}
-            title={isPublished ? 'Unpublish' : 'Publish'}>
-            {toggling
-              ? <Loader2 className='h-3.5 w-3.5 animate-spin' />
-              : isPublished
-                ? <Globe className='h-3.5 w-3.5' />
-                : <EyeOff className='h-3.5 w-3.5' />}
-          </Button>
         </div>
       </div>
     </motion.div>

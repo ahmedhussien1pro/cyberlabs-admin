@@ -1,87 +1,75 @@
 // src/features/courses/pages/course-edit.page.tsx
-// ✅ Full rebuild: Metadata | Content Writer | Curriculum JSON | Preview
+// Full edit page: 3 tabs — Card Info | Hero Info | Curriculum Editor
 import { useState } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { adminCoursesApi } from '../services/admin-courses.api';
-import { CourseMetadataForm } from '../components/course-metadata-form';
-import { ContentWriterEditor } from '../components/content-writer-editor';
-import { CourseCurriculumEditor } from '../components/course-curriculum-editor';
-import { CoursePathRelations } from '../components/course-path-relations';
-import { CoursePlatformPreviewTab } from '../components/course-preview-tab';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, BookOpen, GitBranch, Eye,
-  Pencil, Globe, FileEdit, Loader2, Clock,
-  PenLine,
+  ArrowLeft, LayoutDashboard, Image as ImageIcon,
+  BookOpen, Loader2, Globe, EyeOff, Copy, Trash2,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import type { CourseState } from '../types/admin-course.types';
+import { adminCoursesApi } from '../services/admin-courses.api';
+import { CourseCardInfoTab } from '../components/edit-tabs/course-card-info-tab';
+import { CourseHeroInfoTab } from '../components/edit-tabs/course-hero-info-tab';
+import { CurriculumPlatformEditor } from '../components/curriculum-platform-editor';
 
-type Tab = 'metadata' | 'content' | 'curriculum' | 'paths' | 'preview';
+type EditTab = 'card' | 'hero' | 'curriculum';
 
-const TABS: { key: Tab; label: string; icon: any; description: string }[] = [
-  { key: 'metadata',   label: 'Info',           icon: Pencil,   description: 'Card metadata & settings' },
-  { key: 'content',    label: 'Content Writer',  icon: PenLine,  description: 'Write & preview topics' },
-  { key: 'curriculum', label: 'Curriculum JSON', icon: BookOpen, description: 'Raw JSON editor' },
-  { key: 'paths',      label: 'Path Relations',  icon: GitBranch,description: 'Link to learning paths' },
-  { key: 'preview',    label: 'Platform Preview',icon: Eye,      description: 'Exact platform view' },
+const TABS: { key: EditTab; label: string; icon: React.ElementType }[] = [
+  { key: 'card',       label: 'Card Info',         icon: LayoutDashboard },
+  { key: 'hero',       label: 'Hero Info',          icon: ImageIcon       },
+  { key: 'curriculum', label: 'Curriculum Editor',  icon: BookOpen        },
 ];
 
-const STATE_STYLES: Record<
-  CourseState,
-  { label: string; badge: string; next: CourseState; nextLabel: string; nextIcon: any; btnClass: string }
-> = {
-  DRAFT: {
-    label: 'Draft', badge: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30',
-    next: 'PUBLISHED', nextLabel: 'Publish', nextIcon: Globe, btnClass: 'bg-emerald-600 hover:bg-emerald-700 text-white',
-  },
-  PUBLISHED: {
-    label: 'Published', badge: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-    next: 'DRAFT', nextLabel: 'Unpublish', nextIcon: FileEdit, btnClass: 'bg-zinc-600 hover:bg-zinc-700 text-white',
-  },
-  COMING_SOON: {
-    label: 'Coming Soon', badge: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
-    next: 'PUBLISHED', nextLabel: 'Publish', nextIcon: Globe, btnClass: 'bg-emerald-600 hover:bg-emerald-700 text-white',
-  },
-};
-
 export default function CourseEditPage() {
-  const { slug } = useParams<{ slug: string }>();
-  const [searchParams] = useSearchParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<EditTab>('card');
 
-  const initialTab = (searchParams.get('tab') as Tab) ?? 'metadata';
-  const [activeTab, setActiveTab] = useState<Tab>(
-    TABS.find((t) => t.key === initialTab) ? initialTab : 'metadata',
-  );
-  const [localState, setLocalState] = useState<CourseState | null>(null);
-
-  const { data: course, isLoading, error } = useQuery({
-    queryKey: ['admin', 'courses', 'slug', slug],
-    queryFn: () => adminCoursesApi.getBySlug(slug!),
-    enabled: !!slug,
-    retry: (failCount, err: any) => {
-      const status = err?.statusCode ?? err?.response?.status;
-      return status !== 404 && failCount < 2;
-    },
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['admin', 'courses', 'detail', id],
+    queryFn: () => adminCoursesApi.getById(id!),
+    enabled: !!id,
   });
 
-  const { mutate: toggleState, isPending: isToggling } = useMutation({
-    mutationFn: (state: CourseState) => adminCoursesApi.setState(course!.id, state),
-    onMutate: (state) => setLocalState(state),
-    onSuccess: (_, state) => {
+  const course = (data as any)?.data ?? data;
+
+  const { mutate: togglePublish, isPending: isToggling } = useMutation({
+    mutationFn: (action: 'publish' | 'unpublish') =>
+      action === 'publish' ? adminCoursesApi.publish(id!) : adminCoursesApi.unpublish(id!),
+    onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
-      toast.success(`Course is now ${STATE_STYLES[state].label}`);
+      toast.success(updated.isPublished ? 'Course published ✅' : 'Course unpublished');
     },
-    onError: () => { setLocalState(null); toast.error('Failed to update course state'); },
+    onError: () => toast.error('Failed to update publish state'),
   });
 
-  if (isLoading)
+  const { mutate: duplicate, isPending: isDuplicating } = useMutation({
+    mutationFn: () => adminCoursesApi.duplicate(id!),
+    onSuccess: (newCourse) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
+      toast.success('Course duplicated — opening new course');
+      navigate(`/courses/${newCourse.id}`);
+    },
+    onError: () => toast.error('Failed to duplicate course'),
+  });
+
+  const { mutate: deleteCourse, isPending: isDeleting } = useMutation({
+    mutationFn: () => adminCoursesApi.delete(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
+      toast.success('Course deleted');
+      navigate('/courses');
+    },
+    onError: () => toast.error('Failed to delete course'),
+  });
+
+  if (isLoading) {
     return (
       <div className='space-y-4 p-6'>
         <Skeleton className='h-8 w-64' />
@@ -89,99 +77,138 @@ export default function CourseEditPage() {
         <Skeleton className='h-96 w-full' />
       </div>
     );
+  }
 
   if (error || !course) {
-    const errMsg = (error as any)?.message ?? 'Course not found';
     return (
       <div className='flex flex-col items-center justify-center gap-4 p-12 text-center'>
-        <div className='rounded-full bg-destructive/10 p-4'>
-          <FileEdit className='h-8 w-8 text-destructive' />
-        </div>
-        <div>
-          <p className='text-lg font-semibold'>Failed to load course</p>
-          <p className='text-sm text-muted-foreground mt-1'>{errMsg}</p>
-          <p className='text-xs text-muted-foreground/60 mt-1 font-mono'>identifier: {slug}</p>
-        </div>
-        <Button variant='outline' onClick={() => navigate(-1)} className='gap-2'>
-          <ArrowLeft className='h-4 w-4' /> Go Back
+        <p className='text-lg font-semibold'>Course not found</p>
+        <Button variant='outline' onClick={() => navigate('/courses')} className='gap-2'>
+          <ArrowLeft className='h-4 w-4' /> Back to Courses
         </Button>
       </div>
     );
   }
 
-  const displayState = localState ?? course.state;
-  const stateStyle = STATE_STYLES[displayState];
-  const NextIcon = stateStyle.nextIcon;
+  const isPublished = course.isPublished ?? false;
 
   return (
     <div className='flex flex-col gap-6'>
-      {/* Header */}
+      {/* ── Header ── */}
       <div className='flex items-start justify-between gap-4 flex-wrap'>
         <div className='flex items-center gap-3'>
-          <Button variant='ghost' size='icon' onClick={() => navigate(-1)}>
+          <Button variant='ghost' size='icon' onClick={() => navigate('/courses')}>
             <ArrowLeft className='h-4 w-4' />
           </Button>
           <div>
-            <div className='flex items-center gap-2'>
+            <div className='flex items-center gap-2 flex-wrap'>
               <h1 className='text-xl font-bold'>{course.title}</h1>
-              <Badge variant='outline' className={cn('text-xs font-semibold', stateStyle.badge)}>
-                {stateStyle.label}
+              <Badge
+                variant='outline'
+                className={cn(
+                  'text-xs font-semibold',
+                  isPublished
+                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                    : 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30',
+                )}>
+                {isPublished ? 'Published' : 'Draft'}
               </Badge>
             </div>
-            <p className='text-xs text-muted-foreground font-mono mt-0.5'>/courses/{course.slug}</p>
+            <p className='text-xs text-muted-foreground font-mono mt-0.5'>
+              /courses/{course.slug}
+            </p>
           </div>
         </div>
-        <div className='flex items-center gap-2'>
-          {displayState !== 'COMING_SOON' && (
-            <Button variant='outline' size='sm'
-              className='gap-1.5 text-yellow-400 border-yellow-500/40 hover:bg-yellow-500/10'
-              disabled={isToggling} onClick={() => toggleState('COMING_SOON')}>
-              <Clock className='h-3.5 w-3.5' /> Coming Soon
+
+        {/* Action buttons */}
+        <div className='flex items-center gap-2 flex-wrap'>
+          {/* Preview */}
+          <Button
+            variant='outline'
+            size='sm'
+            className='gap-1.5 h-9'
+            onClick={() => {
+              const base = import.meta.env.VITE_FRONTEND_URL ?? 'http://localhost:5173';
+              window.open(`${base}/courses/${course.slug}`, '_blank');
+            }}>
+            <Globe className='h-3.5 w-3.5' /> Preview
+          </Button>
+
+          {/* Duplicate */}
+          <Button
+            variant='outline'
+            size='sm'
+            className='gap-1.5 h-9'
+            disabled={isDuplicating}
+            onClick={() => duplicate()}>
+            {isDuplicating ? <Loader2 className='h-3.5 w-3.5 animate-spin' /> : <Copy className='h-3.5 w-3.5' />}
+            Duplicate
+          </Button>
+
+          {/* Publish toggle */}
+          {isPublished ? (
+            <Button
+              size='sm'
+              variant='outline'
+              className='gap-1.5 h-9 text-zinc-400 border-zinc-500/40'
+              disabled={isToggling}
+              onClick={() => togglePublish('unpublish')}>
+              {isToggling ? <Loader2 className='h-3.5 w-3.5 animate-spin' /> : <EyeOff className='h-3.5 w-3.5' />}
+              Unpublish
+            </Button>
+          ) : (
+            <Button
+              size='sm'
+              className='gap-1.5 h-9 bg-emerald-600 hover:bg-emerald-700 text-white'
+              disabled={isToggling}
+              onClick={() => togglePublish('publish')}>
+              {isToggling ? <Loader2 className='h-3.5 w-3.5 animate-spin' /> : <Globe className='h-3.5 w-3.5' />}
+              Publish
             </Button>
           )}
-          <Button size='sm' className={cn('gap-1.5 min-w-[110px]', stateStyle.btnClass)}
-            disabled={isToggling} onClick={() => toggleState(stateStyle.next)}>
-            {isToggling ? <Loader2 className='h-3.5 w-3.5 animate-spin' /> : <NextIcon className='h-3.5 w-3.5' />}
-            {isToggling ? 'Saving...' : stateStyle.nextLabel}
+
+          {/* Delete */}
+          <Button
+            size='sm'
+            variant='destructive'
+            className='gap-1.5 h-9'
+            disabled={isDeleting}
+            onClick={() => {
+              if (confirm(`Delete "${course.title}"? This cannot be undone.`)) {
+                deleteCourse();
+              }
+            }}>
+            {isDeleting ? <Loader2 className='h-3.5 w-3.5 animate-spin' /> : <Trash2 className='h-3.5 w-3.5' />}
+            Delete
           </Button>
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* ── Tabs ── */}
       <div className='flex gap-1 border-b border-border/50 overflow-x-auto'>
-        {TABS.map(({ key, label, icon: Icon, description }) => (
+        {TABS.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
             onClick={() => setActiveTab(key)}
-            title={description}
             className={cn(
               'flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors whitespace-nowrap',
               activeTab === key
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground',
             )}>
-            <Icon className='h-3.5 w-3.5' /> {label}
+            <Icon className='h-3.5 w-3.5' />
+            {label}
           </button>
         ))}
       </div>
 
-      {/* Tab Content */}
+      {/* ── Tab Content ── */}
       <div>
-        {activeTab === 'metadata' && <CourseMetadataForm course={course} />}
-
-        {activeTab === 'content' && (
-          <ContentWriterEditor courseId={course.id} courseSlug={course.slug} />
-        )}
-
+        {activeTab === 'card'       && <CourseCardInfoTab course={course} />}
+        {activeTab === 'hero'       && <CourseHeroInfoTab course={course} />}
         {activeTab === 'curriculum' && (
-          <CourseCurriculumEditor courseId={course.id} courseSlug={course.slug} />
+          <CurriculumPlatformEditor courseId={course.id} courseSlug={course.slug} />
         )}
-
-        {activeTab === 'paths' && (
-          <CoursePathRelations courseId={course.id} courseTitle={course.title} />
-        )}
-
-        {activeTab === 'preview' && <CoursePlatformPreviewTab course={course} />}
       </div>
     </div>
   );
