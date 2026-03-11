@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminCoursesApi } from '../services/admin-courses.api';
-import { ContentWriterEditor } from '../components/content-writer-editor';
+import { CurriculumPlatformEditor } from '../components/curriculum-platform-editor';
 import { CourseLabsPanel } from '../components/course-labs-panel';
 import { CoursePlatformPreviewTab } from '../components/course-preview-tab';
 import { CourseMetadataForm } from '../components/course-metadata-form';
@@ -28,10 +28,10 @@ import { cn } from '@/lib/utils';
 type Tab = 'overview' | 'curriculum' | 'labs' | 'preview';
 
 const TABS: { key: Tab; label: string; icon: any }[] = [
-  { key: 'overview',    label: 'Overview',    icon: Pencil     },
-  { key: 'curriculum',  label: 'Curriculum',  icon: BookOpen   },
+  { key: 'overview',    label: 'Overview',    icon: Pencil      },
+  { key: 'curriculum',  label: 'Curriculum',  icon: BookOpen    },
   { key: 'labs',        label: 'Labs',        icon: FlaskConical },
-  { key: 'preview',     label: 'Preview',     icon: Eye        },
+  { key: 'preview',     label: 'Preview',     icon: Eye         },
 ];
 
 export default function CourseDetailPage() {
@@ -88,7 +88,7 @@ export default function CourseDetailPage() {
 
   return (
     <div className='flex flex-col gap-6'>
-      {/* Header */}
+      {/* ── Header ── */}
       <div className='flex items-start justify-between gap-4 flex-wrap'>
         <div className='flex items-center gap-3'>
           <Button variant='ghost' size='icon' onClick={() => navigate(-1)}>
@@ -145,13 +145,13 @@ export default function CourseDetailPage() {
         </div>
       </div>
 
-      {/* Stats Row */}
+      {/* ── Stats ── */}
       <div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
         {[
           { label: 'Enrollments', value: enrollments,   icon: Users    },
           { label: 'Topics',      value: sectionsCount, icon: Layers   },
           { label: 'Level',       value: course.difficulty ?? course.level ?? '—', icon: BookOpen },
-          { label: 'Access',      value: course.access ?? '—',  icon: Globe    },
+          { label: 'Access',      value: course.access ?? '—', icon: Globe },
         ].map(({ label, value, icon: Icon }) => (
           <div key={label} className='rounded-lg border bg-card px-4 py-3 flex items-center gap-3'>
             <div className='rounded-md bg-primary/10 p-2'>
@@ -165,7 +165,7 @@ export default function CourseDetailPage() {
         ))}
       </div>
 
-      {/* Tabs */}
+      {/* ── Tabs ── */}
       <div className='flex gap-1 border-b border-border/50 overflow-x-auto'>
         {TABS.map(({ key, label, icon: Icon }) => (
           <button
@@ -183,11 +183,11 @@ export default function CourseDetailPage() {
         ))}
       </div>
 
-      {/* Tab Content */}
+      {/* ── Tab Content ── */}
       <div>
         {activeTab === 'overview'   && <CourseMetadataForm course={course} />}
         {activeTab === 'curriculum' && (
-          <ContentWriterEditor courseId={course.id} courseSlug={course.slug} />
+          <CurriculumPlatformEditor courseId={course.id} courseSlug={course.slug} />
         )}
         {activeTab === 'labs'    && <CourseLabsPanel courseId={course.id} />}
         {activeTab === 'preview' && <CoursePlatformPreviewTab course={course} />}
