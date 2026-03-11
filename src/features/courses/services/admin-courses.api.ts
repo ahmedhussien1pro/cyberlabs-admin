@@ -19,7 +19,6 @@ export interface AdminCourseListParams {
 }
 
 // Backend returns { data: T } for single items and { data: T[], meta: {...} } for lists.
-// adminApiClient is axios — res.data = backend payload.
 function unwrapItem<T>(res: any): T {
   const payload = res?.data ?? res;
   return (payload?.data ?? payload) as T;
@@ -27,7 +26,6 @@ function unwrapItem<T>(res: any): T {
 
 function unwrapList<T>(res: any): T {
   const payload = res?.data ?? res;
-  // payload should be { data: T[], meta: {...} }
   if (payload?.data !== undefined && payload?.meta !== undefined) {
     return payload as T;
   }
@@ -49,7 +47,6 @@ function normalizeArrays(course: AdminCourse): AdminCourse {
   };
 }
 
-// Map frontend CourseState ('PUBLISHED' | 'DRAFT' | 'COMING_SOON') to backend isPublished boolean
 function stateToIsPublished(state?: CourseState | 'all'): boolean | undefined {
   if (!state || state === 'all') return undefined;
   if (state === 'PUBLISHED') return true;
@@ -65,11 +62,8 @@ export const adminCoursesApi = {
     };
     if (params.search)     query.search     = params.search;
     if (params.difficulty) query.difficulty = params.difficulty;
-
-    // Backend expects isPublished (boolean) not state (string)
     const isPublished = stateToIsPublished(params.state);
     if (isPublished !== undefined) query.isPublished = isPublished;
-
     const res = await adminApiClient.get('/admin/courses', { params: query });
     return unwrapList<AdminCoursesListResponse>(res);
   },
@@ -79,29 +73,41 @@ export const adminCoursesApi = {
     return unwrapItem<AdminCourseStats>(res);
   },
 
+  /** Fetch a course by its UUID id */
   getById: async (id: string): Promise<AdminCourse> => {
     const res = await adminApiClient.get(`/admin/courses/${id}`);
     return normalizeArrays(unwrapItem<AdminCourse>(res));
   },
 
+  /**
+   * Fetch a course by slug (or id).
+   * Backend findOne now accepts both UUID id and slug, so we call it directly.
+   * If the direct call fails (404/400) we fall back to list-search.
+   */
   getBySlug: async (slug: string): Promise<AdminCourse> => {
+    // 1️⃣ Direct call — backend now handles both id and slug
     try {
-      const res = await adminApiClient.get(`/admin/courses/${slug}`);
+      const res = await adminApiClient.get(`/admin/courses/${encodeURIComponent(slug)}`);
       const candidate = unwrapItem<AdminCourse>(res);
       if (candidate && typeof candidate === 'object' && 'id' in candidate) {
         return normalizeArrays(candidate);
       }
     } catch (err: any) {
       const status = err?.response?.status ?? err?.status;
+      // Only fall through on 404 / 400; re-throw auth / server errors
       if (status !== 404 && status !== 400) throw err;
     }
+
+    // 2️⃣ Fallback: search list for an exact slug match
     const listRes = await adminCoursesApi.list({ search: slug, limit: 50 });
     const match = (listRes.data ?? []).find((c) => c.slug === slug || c.id === slug);
     if (!match) {
-      const err: any = new Error(`Course not found: ${slug}`);
-      err.statusCode = 404;
-      throw err;
+      const notFound: any = new Error(`Course not found: ${slug}`);
+      notFound.statusCode = 404;
+      throw notFound;
     }
+
+    // 3️⃣ Fetch full details by id
     return adminCoursesApi.getById(match.id);
   },
 
@@ -162,9 +168,7 @@ export const adminCoursesApi = {
 
   addToPath: async (pathId: string, courseId: string, order: number): Promise<any> => {
     const res = await adminApiClient.post(`/admin/paths/${pathId}/modules`, {
-      type: 'COURSE',
-      courseId,
-      order,
+      type: 'COURSE', courseId, order,
     });
     return unwrapItem(res);
   },
