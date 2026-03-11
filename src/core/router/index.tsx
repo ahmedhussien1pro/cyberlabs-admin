@@ -1,4 +1,8 @@
-import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
+import {
+  createBrowserRouter,
+  RouterProvider,
+  Navigate,
+} from 'react-router-dom';
 import { Suspense } from 'react';
 import { ROUTES } from '@/shared/constants';
 import ProtectedRoute from './protected-route';
@@ -19,7 +23,9 @@ const router = createBrowserRouter([
     path: ROUTES.LOGIN,
     element: (
       <PublicRoute>
-        <S><Pages.LoginPage /></S>
+        <S>
+          <Pages.LoginPage />
+        </S>
       </PublicRoute>
     ),
   },
@@ -38,44 +44,201 @@ const router = createBrowserRouter([
       // ── Dashboard ──
       {
         index: true,
-        element: <S><Pages.DashboardPage /></S>,
+        element: (
+          <S>
+            <Pages.DashboardPage />
+          </S>
+        ),
       },
 
       // ── Users ──
-      { path: 'users',     element: <S><Pages.UsersListPage /></S> },
-      { path: 'users/:id', element: <S><Pages.UserDetailPage /></S> },
+      {
+        path: 'users',
+        element: (
+          <S>
+            <Pages.UsersListPage />
+          </S>
+        ),
+      },
+      {
+        path: 'users/:id',
+        element: (
+          <S>
+            <Pages.UserDetailPage />
+          </S>
+        ),
+      },
+      {
+        path: 'users/:id/activity',
+        element: (
+          <S>
+            <Pages.UserActivityPage />
+          </S>
+        ),
+      },
 
       // ── Courses ──
-      { path: 'courses',              element: <S><Pages.CoursesListPage /></S> },
-      { path: 'courses/new',          element: <S><Pages.CourseCreatePage /></S> },
-      { path: 'courses/import',       element: <S><Pages.CourseImportPage /></S> },
-      { path: 'courses/:id/edit',     element: <S><Pages.CourseEditPage /></S> },
+      {
+        path: 'courses',
+        element: (
+          <S>
+            <Pages.CoursesListPage />
+          </S>
+        ),
+      },
+      {
+        path: 'courses/new',
+        element: (
+          <S>
+            <Pages.CourseCreatePage />
+          </S>
+        ),
+      },
+      {
+        path: 'courses/import',
+        element: (
+          <S>
+            <Pages.CourseImportPage />
+          </S>
+        ),
+      },
+      {
+        path: 'courses/:id/edit',
+        element: (
+          <S>
+            <Pages.CourseEditPage />
+          </S>
+        ),
+      },
+      {
+        path: 'courses/:id/detail',
+        element: (
+          <S>
+            <Pages.CourseDetailPage />
+          </S>
+        ),
+      },
       // Redirect /courses/:slug/detail → edit?tab=preview
-      { path: 'courses/:slug/detail', element: <Navigate to='../edit?tab=preview' replace /> },
+      {
+        path: 'courses/:slug/detail',
+        element: <Navigate to='../edit?tab=preview' replace />,
+      },
 
       // ── Labs ──
-      { path: 'labs',          element: <S><Pages.LabsListPage /></S> },
-      { path: 'labs/new',      element: <S><Pages.LabCreatePage /></S> },
-      { path: 'labs/:id',      element: <S><Pages.LabDetailPage /></S> },
-      { path: 'labs/:id/edit', element: <S><Pages.LabEditPage /></S> },
+      {
+        path: 'labs',
+        element: (
+          <S>
+            <Pages.LabsListPage />
+          </S>
+        ),
+      },
+      {
+        path: 'labs/new',
+        element: (
+          <S>
+            <Pages.LabCreatePage />
+          </S>
+        ),
+      },
+      {
+        path: 'labs/:id',
+        element: (
+          <S>
+            <Pages.LabDetailPage />
+          </S>
+        ),
+      },
+      {
+        path: 'labs/:id/edit',
+        element: (
+          <S>
+            <Pages.LabEditPage />
+          </S>
+        ),
+      },
 
       // ── Paths ──
-      { path: 'paths',          element: <S><Pages.PathsListPage /></S> },
-      { path: 'paths/create',   element: <S><Pages.PathCreatePage /></S> },
-      { path: 'paths/:id',      element: <S><Pages.PathDetailPage /></S> },
-      { path: 'paths/:id/edit', element: <S><Pages.PathEditPage /></S> },
+      {
+        path: 'paths',
+        element: (
+          <S>
+            <Pages.PathsListPage />
+          </S>
+        ),
+      },
+      {
+        path: 'paths/create',
+        element: (
+          <S>
+            <Pages.PathCreatePage />
+          </S>
+        ),
+      },
+      {
+        path: 'paths/:id',
+        element: (
+          <S>
+            <Pages.PathDetailPage />
+          </S>
+        ),
+      },
+      {
+        path: 'paths/:id/edit',
+        element: (
+          <S>
+            <Pages.PathEditPage />
+          </S>
+        ),
+      },
 
       // ── Content Map ──
-      { path: 'map', element: <S><Pages.ContentMapPage /></S> },
+      {
+        path: 'map',
+        element: (
+          <S>
+            <Pages.ContentMapPage />
+          </S>
+        ),
+      },
 
       // ── Badges ──
-      { path: 'badges', element: <S><Pages.BadgesListPage /></S> },
+      {
+        path: 'badges',
+        element: (
+          <S>
+            <Pages.BadgesListPage />
+          </S>
+        ),
+      },
 
       // ── Notifications ──
-      { path: 'notifications', element: <S><Pages.NotificationsPage /></S> },
+      {
+        path: 'notifications',
+        element: (
+          <S>
+            <Pages.NotificationsPage />
+          </S>
+        ),
+      },
 
       // ── Settings ──
-      { path: 'settings', element: <S><Pages.SettingsPage /></S> },
+      {
+        path: 'settings',
+        element: (
+          <S>
+            <Pages.SettingsPage />
+          </S>
+        ),
+      },
+      {
+        path: 'referrals',
+        element: (
+          <S>
+            <Pages.ReferralLinksPage />
+          </S>
+        ),
+      },
     ],
   },
 ]);
