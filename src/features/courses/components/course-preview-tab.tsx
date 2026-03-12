@@ -1,11 +1,12 @@
 // course-preview-tab.tsx
 // نسخة مطابقة للمنصة الأساسية داخل الأدمن
-// Hero + Curriculum بنفس التصميم تماماً + زر Open in New Window للأدمن preview page
+// Hero + Curriculum بنفس التصميم تماماً
+// "Open in New Window" يفتح ?tab=preview في تاب جديد داخل الأدمن
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   ExternalLink, BookOpen, Clock, Users, Star, Crown, Unlock,
-  Shield, FlaskConical, Zap, Heart, Rocket, ChevronDown,
+  Shield, FlaskConical, Heart, Rocket, ChevronDown,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,9 +14,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { adminCoursesApi } from '../services/admin-courses.api';
 import CourseElementRenderer from './CourseElementRenderer';
-import type { AdminCourse } from '../types/admin-course.types';
+import type { AdminCourse, CurriculumTopic } from '../types/admin-course.types';
 
-// ── color maps (مطابق للمنصة) ──────────────────────────────────────────
+// ── color maps (مطابق للمنصة) ─────────────────────────────────────────
 const MATRIX_COLOR: Record<string, string> = {
   emerald: '#10b981', blue: '#3b82f6', violet: '#8b5cf6',
   rose: '#f43f5e', orange: '#f97316', cyan: '#06b6d4',
@@ -42,7 +43,33 @@ const ACCESS_BADGE: Record<string, string> = {
   PREMIUM: 'border-violet-500/40  text-violet-400  bg-violet-500/10',
 };
 
-// ── Skeleton ─────────────────────────────────────────────────────────────
+// ── normalize topic title من الـ API ─────────────────────────────────
+// API بتجيب title كـ: string | { en, ar } | { title: { en, ar } } | undefined
+function normalizeTitleField(raw: unknown): { en: string; ar: string } {
+  if (!raw) return { en: '', ar: '' };
+  if (typeof raw === 'string') return { en: raw, ar: '' };
+  if (typeof raw === 'object' && raw !== null) {
+    const r = raw as Record<string, unknown>;
+    // { en, ar }
+    if (typeof r['en'] === 'string' || typeof r['ar'] === 'string') {
+      return { en: String(r['en'] ?? ''), ar: String(r['ar'] ?? '') };
+    }
+    // { title: { en, ar } } — nested
+    if (r['title']) return normalizeTitleField(r['title']);
+  }
+  return { en: '', ar: '' };
+}
+
+function normalizeTopic(raw: unknown, idx: number): CurriculumTopic {
+  const t = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id:       String(t['id'] ?? `topic-${idx}`),
+    title:    normalizeTitleField(t['title']),
+    elements: Array.isArray(t['elements']) ? t['elements'] : [],
+  };
+}
+
+// ── Skeletons ─────────────────────────────────────────────────────────
 function TopicSkeleton() {
   return (
     <div className='space-y-5 animate-pulse'>
@@ -53,10 +80,6 @@ function TopicSkeleton() {
         <Skeleton className='h-4 w-5/6' />
       </div>
       <Skeleton className='h-48 w-full rounded-xl' />
-      <div className='space-y-3'>
-        <Skeleton className='h-4 w-full' />
-        <Skeleton className='h-4 w-4/5' />
-      </div>
     </div>
   );
 }
@@ -74,23 +97,22 @@ function CurriculumSkeleton() {
   );
 }
 
-// ── Topic Row — نسخة مطابقة لـ frontend lesson-page + course-detail ──────
+// ── Topic Row — مطابق لـ frontend course-detail + lesson-page ─────────
 interface TopicRowProps {
-  topic: { id: string; title: { en: string; ar: string }; elements: any[] };
+  topic: CurriculumTopic;
   idx: number;
   total: number;
   isOpen: boolean;
   onToggle: () => void;
-  textColor: string;
   lang: 'en' | 'ar';
 }
 
-function TopicRow({ topic, idx, total, isOpen, onToggle, textColor, lang }: TopicRowProps) {
-  const topicNum = String(idx + 1).padStart(2, '0');
-  const isLast = idx === total - 1;
+function TopicRow({ topic, idx, total, isOpen, onToggle, lang }: TopicRowProps) {
+  const topicNum  = String(idx + 1).padStart(2, '0');
+  const isLast    = idx === total - 1;
   const titleText = lang === 'ar'
-    ? (topic.title.ar || topic.title.en || 'Untitled Topic')
-    : (topic.title.en || 'Untitled Topic');
+    ? (topic.title.ar  || topic.title.en  || 'Untitled Topic')
+    : (topic.title.en  || topic.title.ar  || 'Untitled Topic');
 
   return (
     <li className='relative flex gap-4'>
@@ -141,11 +163,6 @@ function TopicRow({ topic, idx, total, isOpen, onToggle, textColor, lang }: Topi
             </span>
             <p className='text-sm font-semibold leading-snug text-foreground'>
               {titleText}
-              {lang === 'en' && topic.title.ar && (
-                <span className='ms-2 text-xs text-muted-foreground/60 font-normal' dir='rtl'>
-                  {topic.title.ar}
-                </span>
-              )}
             </p>
           </div>
 
@@ -160,7 +177,7 @@ function TopicRow({ topic, idx, total, isOpen, onToggle, textColor, lang }: Topi
           </div>
         </button>
 
-        {/* Body — animated expand */}
+        {/* Expanded content */}
         {isOpen && (
           <div className='border-t border-border/40 px-5 pb-5 pt-4 space-y-4'>
             {topic.elements.length === 0 ? (
@@ -175,40 +192,36 @@ function TopicRow({ topic, idx, total, isOpen, onToggle, textColor, lang }: Topi
   );
 }
 
-// ── Main Component ──────────────────────────────────────────────────────
+// ── Main Component ────────────────────────────────────────────────────
 interface Props { course: AdminCourse; }
 
 export function CoursePlatformPreviewTab({ course }: Props) {
-  const [lang, setLang] = useState<'en' | 'ar'>('en');
+  const [lang, setLang]   = useState<'en' | 'ar'>('en');
   const [openId, setOpenId] = useState<string | null>(null);
 
-  const col        = course.color?.toLowerCase() ?? 'blue';
-  const matrixHex  = MATRIX_COLOR[col] ?? '#3b82f6';
-  const textCls    = TEXT_COLOR[col]   ?? 'text-blue-400';
-  const imgSrc     = course.image ?? course.thumbnail;
+  const col       = course.color?.toLowerCase() ?? 'blue';
+  const matrixHex = MATRIX_COLOR[col] ?? '#3b82f6';
+  const textCls   = TEXT_COLOR[col]   ?? 'text-blue-400';
+  const imgSrc    = course.image ?? course.thumbnail;
   const comingSoon = course.state === 'COMING_SOON';
 
-  const title = lang === 'ar' ? (course.ar_title || course.title) : course.title;
+  const title = lang === 'ar' ? (course.ar_title       || course.title)       : course.title;
   const desc  = lang === 'ar' ? (course.ar_description || course.description) : course.description;
 
   // Fetch curriculum
   const { data: curriculumData, isLoading: currLoading } = useQuery({
-    queryKey: ['admin', 'curriculum', course.slug],
+    queryKey: ['admin', 'curriculum-preview', course.id],
     queryFn:  () => adminCoursesApi.getCurriculum(course.slug),
     staleTime: 1000 * 60 * 5,
   });
 
-  const rawTopics: any[] = (curriculumData as any)?.topics ?? [];
-  const topics = rawTopics.map((t: any, i: number) => ({
-    id:       t?.id ?? `t-${i}`,
-    title: {
-      en: typeof t?.title === 'string' ? t.title : (t?.title?.en ?? ''),
-      ar: typeof t?.title === 'object' ? (t?.title?.ar ?? '') : '',
-    },
-    elements: Array.isArray(t?.elements) ? t.elements : [],
-  }));
+  // deep-normalize كل topic عشان نضمن title.en/ar مهما كان شكل الـ API response
+  const topics: CurriculumTopic[] = ((curriculumData as any)?.topics ?? []).map(
+    (t: unknown, i: number) => normalizeTopic(t, i),
+  );
 
-  const previewUrl = `/courses/${course.slug}/preview`;
+  // "Open in New Window" يفتح نفس صفحة الـ edit بـ ?tab=preview في تاب جديد
+  const previewUrl = `${window.location.origin}/courses/${course.slug}/edit?tab=preview`;
 
   return (
     <div className='space-y-4'>
@@ -242,16 +255,19 @@ export function CoursePlatformPreviewTab({ course }: Props) {
       </div>
 
       {/* ── Platform-identical preview ── */}
-      <div className='rounded-2xl overflow-hidden border border-border/50 bg-background' dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+      <div
+        className='rounded-2xl overflow-hidden border border-border/50 bg-background'
+        dir={lang === 'ar' ? 'rtl' : 'ltr'}>
 
-        {/* ── Colour stripe (top) ── */}
+        {/* Colour stripe */}
         <div className={cn('h-1 w-full', STRIPE[col] ?? 'bg-blue-500')} />
 
-        {/* ── Hero — نسخة مطابقة تماماً لـ DetailPageHero في المنصة ── */}
-        <div
-          className={cn('relative px-6 py-8 overflow-hidden bg-gradient-to-br', FALLBACK_BG[col] ?? 'from-blue-950 to-blue-900')}
-        >
-          {/* Matrix rain lines */}
+        {/* ── Hero — مطابق للمنصة تماماً ── */}
+        <div className={cn(
+          'relative px-6 py-8 overflow-hidden bg-gradient-to-br',
+          FALLBACK_BG[col] ?? 'from-blue-950 to-blue-900',
+        )}>
+          {/* Matrix rain */}
           <div
             aria-hidden
             className='pointer-events-none absolute inset-0 overflow-hidden opacity-[0.07]'
@@ -262,7 +278,10 @@ export function CoursePlatformPreviewTab({ course }: Props) {
           {/* Bloom glow */}
           <div
             aria-hidden
-            className={cn('pointer-events-none absolute -top-24 -start-24 h-72 w-72 rounded-full opacity-20 blur-3xl', STRIPE[col] ?? 'bg-blue-500')}
+            className={cn(
+              'pointer-events-none absolute -top-24 -start-24 h-72 w-72 rounded-full opacity-20 blur-3xl',
+              STRIPE[col] ?? 'bg-blue-500',
+            )}
           />
 
           {/* Breadcrumb */}
@@ -287,9 +306,14 @@ export function CoursePlatformPreviewTab({ course }: Props) {
             </div>
 
             <div className='min-w-0 flex-1'>
-              {/* Badges row */}
+              {/* Badges */}
               <div className='flex flex-wrap gap-1.5 mb-2'>
-                <Badge variant='outline' className={cn('rounded-full text-[11px] font-bold gap-1', ACCESS_BADGE[course.access ?? 'FREE'] ?? ACCESS_BADGE.FREE)}>
+                <Badge
+                  variant='outline'
+                  className={cn(
+                    'rounded-full text-[11px] font-bold gap-1',
+                    ACCESS_BADGE[course.access ?? 'FREE'] ?? ACCESS_BADGE.FREE,
+                  )}>
                   {(course.access ?? 'FREE') === 'FREE'
                     ? <Unlock className='h-2.5 w-2.5' />
                     : <Crown  className='h-2.5 w-2.5' />
@@ -323,16 +347,15 @@ export function CoursePlatformPreviewTab({ course }: Props) {
                 {title || <span className='opacity-30 italic'>Course Title</span>}
               </h1>
 
-              {/* Description */}
+              {/* Short description */}
               {desc && (
                 <p className='mt-2 max-w-2xl text-sm leading-relaxed text-white/60'>{desc}</p>
               )}
             </div>
           </div>
 
-          {/* Stats + CTA row */}
+          {/* Stats + CTA */}
           <div className='relative mt-6 flex flex-wrap items-center justify-between gap-4'>
-            {/* Stats */}
             <div className='flex flex-wrap items-center gap-x-5 gap-y-1.5'>
               {(course.totalTopics ?? 0) > 0 && (
                 <div className='flex items-center gap-1.5 text-xs'>
@@ -355,20 +378,15 @@ export function CoursePlatformPreviewTab({ course }: Props) {
               {(course.enrollmentCount ?? 0) > 0 && (
                 <div className='flex items-center gap-1.5 text-xs'>
                   <Users className={cn('h-3.5 w-3.5', textCls)} />
-                  <span className='font-bold text-white'>{(course.enrollmentCount ?? 0).toLocaleString()}</span>
+                  <span className='font-bold text-white'>
+                    {(course.enrollmentCount ?? 0).toLocaleString()}
+                  </span>
                   <span className='text-white/45'>enrolled</span>
-                </div>
-              )}
-              {(course.averageRating ?? 0) > 0 && (
-                <div className='flex items-center gap-1.5 text-xs'>
-                  <Star className='h-3.5 w-3.5 fill-yellow-500 text-yellow-500' />
-                  <span className='font-bold text-white'>{course.averageRating}</span>
-                  {course.reviewCount && <span className='text-white/45'>({course.reviewCount})</span>}
                 </div>
               )}
             </div>
 
-            {/* CTA — static (view only) */}
+            {/* CTA — view only */}
             <div className='flex items-center gap-2'>
               <button className='flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-xs font-medium text-white/50 cursor-default'>
                 <Heart className='h-3.5 w-3.5' /> Save
@@ -388,9 +406,9 @@ export function CoursePlatformPreviewTab({ course }: Props) {
           </div>
         </div>
 
-        {/* ── Long description (under hero, inside container) ── */}
+        {/* ── Long description ── */}
         {(lang === 'ar' ? course.ar_longDescription : course.longDescription) && (
-          <div className='container mx-auto px-6 pt-8'>
+          <div className='px-6 pt-8'>
             <div className='mb-8 p-5 rounded-xl border border-border/40 bg-muted/20'>
               <p className='text-sm text-foreground/70 leading-7'>
                 {lang === 'ar' ? course.ar_longDescription : course.longDescription}
@@ -399,7 +417,7 @@ export function CoursePlatformPreviewTab({ course }: Props) {
           </div>
         )}
 
-        {/* ── Curriculum — مطابق تماماً لـ CourseCurriculum في المنصة ── */}
+        {/* ── Curriculum ── */}
         <div className='px-6 pb-10 pt-6 space-y-6'>
           <div className='flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between'>
             <div>
@@ -414,7 +432,7 @@ export function CoursePlatformPreviewTab({ course }: Props) {
             <CurriculumSkeleton />
           ) : topics.length === 0 ? (
             <div className='flex flex-col items-center justify-center gap-3 py-16 text-center border border-dashed rounded-xl'>
-              <p className='text-muted-foreground text-sm'>No topics yet.</p>
+              <TopicSkeleton />
             </div>
           ) : (
             <div className='relative'>
@@ -428,7 +446,6 @@ export function CoursePlatformPreviewTab({ course }: Props) {
                     total={topics.length}
                     isOpen={openId === topic.id}
                     onToggle={() => setOpenId((p) => (p === topic.id ? null : topic.id))}
-                    textColor={textCls}
                     lang={lang}
                   />
                 ))}
