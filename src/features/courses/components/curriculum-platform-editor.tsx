@@ -17,10 +17,34 @@ import {
 import { cn } from '@/lib/utils';
 
 // ── Types ─────────────────────────────────────────────────────────────
+interface TopicTitle {
+  en: string;
+  ar: string;
+}
+
 interface Topic {
   id: string;
-  title: { en: string; ar: string };
+  title: TopicTitle;
   elements: CourseElement[];
+}
+
+/** Normalize any title shape coming from DB into { en, ar } */
+function normalizeTitle(raw: any): TopicTitle {
+  if (raw && typeof raw === 'object' && ('en' in raw || 'ar' in raw)) {
+    return { en: raw.en ?? '', ar: raw.ar ?? '' };
+  }
+  // plain string
+  const str = typeof raw === 'string' ? raw : '';
+  return { en: str, ar: '' };
+}
+
+/** Normalize a raw topic from any DB shape */
+function normalizeTopic(raw: any, idx: number): Topic {
+  return {
+    id:       raw?.id ?? `topic-${Date.now()}-${idx}`,
+    title:    normalizeTitle(raw?.title),
+    elements: Array.isArray(raw?.elements) ? raw.elements : [],
+  };
 }
 
 // ── Element factory ───────────────────────────────────────────────────
@@ -301,7 +325,7 @@ function TopicRow({
       transition={{ duration: 0.25, delay: topicIndex * 0.04 }}
       className='relative'>
       <div className='flex gap-4'>
-        {/* ── Timeline dot ── */}
+        {/* Timeline dot */}
         <div className='relative flex shrink-0 flex-col items-center'>
           <div className={cn(
             'relative z-10 flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold transition-all duration-300',
@@ -316,7 +340,7 @@ function TopicRow({
           )}
         </div>
 
-        {/* ── Card ── */}
+        {/* Card */}
         <div className={cn(
           'mb-2 min-w-0 flex-1 rounded-xl border bg-card transition-all duration-300',
           isOpen ? 'border-primary/30 shadow-sm' : 'cursor-pointer border-border/50 hover:border-border',
@@ -383,25 +407,19 @@ function TopicRow({
               </Badge>
               {editMode ? (
                 <div className='flex items-center gap-1' onClick={(e) => e.stopPropagation()}>
-                  <button
-                    onClick={onMoveUp}
-                    disabled={topicIndex === 0}
+                  <button onClick={onMoveUp} disabled={topicIndex === 0}
                     className='p-1 rounded text-muted-foreground hover:text-foreground disabled:opacity-30'>
                     <ArrowUp className='h-3.5 w-3.5' />
                   </button>
-                  <button
-                    onClick={onMoveDown}
-                    disabled={isLast}
+                  <button onClick={onMoveDown} disabled={isLast}
                     className='p-1 rounded text-muted-foreground hover:text-foreground disabled:opacity-30'>
                     <ArrowDown className='h-3.5 w-3.5' />
                   </button>
-                  <button
-                    onClick={onToggle}
+                  <button onClick={onToggle}
                     className='p-1 rounded text-muted-foreground hover:text-primary'>
                     <ChevronDown className={cn('h-4 w-4 transition-transform', isOpen && 'rotate-180')} />
                   </button>
-                  <button
-                    onClick={onDelete}
+                  <button onClick={onDelete}
                     className='p-1 rounded text-muted-foreground hover:text-destructive'>
                     <Trash2 className='h-3.5 w-3.5' />
                   </button>
@@ -440,15 +458,11 @@ function TopicRow({
                               {el.type}
                             </Badge>
                             <div className='flex-1' />
-                            <button
-                              onClick={() => moveEl(el.id!, 'up')}
-                              disabled={elIdx === 0}
+                            <button onClick={() => moveEl(el.id!, 'up')} disabled={elIdx === 0}
                               className='p-1 text-muted-foreground hover:text-foreground disabled:opacity-30'>
                               <ArrowUp className='h-3 w-3' />
                             </button>
-                            <button
-                              onClick={() => moveEl(el.id!, 'down')}
-                              disabled={elIdx === topic.elements.length - 1}
+                            <button onClick={() => moveEl(el.id!, 'down')} disabled={elIdx === topic.elements.length - 1}
                               className='p-1 text-muted-foreground hover:text-foreground disabled:opacity-30'>
                               <ArrowDown className='h-3 w-3' />
                             </button>
@@ -458,8 +472,7 @@ function TopicRow({
                               <Pencil className='h-3 w-3' />
                               {editingElId === el.id ? 'Close' : 'Edit'}
                             </button>
-                            <button
-                              onClick={() => deleteEl(el.id!)}
+                            <button onClick={() => deleteEl(el.id!)}
                               className='text-muted-foreground hover:text-destructive'>
                               <Trash2 className='h-3.5 w-3.5' />
                             </button>
@@ -475,14 +488,10 @@ function TopicRow({
                           )}
                         </div>
                       ))}
-
-                      {/* Add element bar */}
                       <div className='flex flex-wrap gap-1.5 border-t pt-3'>
                         <span className='text-xs text-muted-foreground self-center'>+ Add:</span>
                         {ELEMENT_TYPES.map((type) => (
-                          <button
-                            key={type}
-                            onClick={() => addEl(type)}
+                          <button key={type} onClick={() => addEl(type)}
                             className={cn(
                               'rounded-md border px-2 py-0.5 text-[11px] font-medium hover:opacity-80 transition-opacity',
                               EL_COLORS[type] ?? 'bg-muted border-border text-muted-foreground',
@@ -522,13 +531,7 @@ function CurriculumSkeleton() {
 }
 
 // ── JSON Import Panel ─────────────────────────────────────────────────
-function JsonImportPanel({
-  onImport,
-  onClose,
-}: {
-  onImport: (topics: Topic[]) => void;
-  onClose: () => void;
-}) {
+function JsonImportPanel({ onImport, onClose }: { onImport: (topics: Topic[]) => void; onClose: () => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [raw, setRaw] = useState('');
   const [parseError, setParseError] = useState('');
@@ -536,19 +539,13 @@ function JsonImportPanel({
   const tryParse = (text: string) => {
     try {
       const parsed = JSON.parse(text);
-      // Accept either array of topics directly, or { topics: [...] }
-      const topics: Topic[] = Array.isArray(parsed)
+      const arr: any[] = Array.isArray(parsed)
         ? parsed
         : Array.isArray(parsed?.topics)
-        ? parsed.topics
-        : null;
-      if (!topics) throw new Error('Expected array of topics or { topics: [...] }');
-      // Ensure each topic has required shape
-      const normalized = topics.map((t: any, i: number) => ({
-        id: t.id ?? `imported-${Date.now()}-${i}`,
-        title: typeof t.title === 'object' ? t.title : { en: String(t.title ?? ''), ar: '' },
-        elements: Array.isArray(t.elements) ? t.elements : [],
-      }));
+          ? parsed.topics
+          : null;
+      if (!arr) throw new Error('Expected array of topics or { topics: [...] }');
+      const normalized = arr.map((t, i) => normalizeTopic(t, i));
       onImport(normalized);
       toast.success(`Imported ${normalized.length} topics — click Save to persist`);
       onClose();
@@ -561,11 +558,7 @@ function JsonImportPanel({
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target?.result as string;
-      setRaw(text);
-      setParseError('');
-    };
+    reader.onload = (ev) => { setRaw(ev.target?.result as string ?? ''); setParseError(''); };
     reader.readAsText(file);
   };
 
@@ -576,40 +569,26 @@ function JsonImportPanel({
           <FileJson className='h-4 w-4 text-primary' />
           <span className='text-sm font-semibold'>Import Curriculum from JSON</span>
         </div>
-        <button onClick={onClose} className='text-muted-foreground hover:text-foreground'>
-          <X className='h-4 w-4' />
-        </button>
+        <button onClick={onClose} className='text-muted-foreground hover:text-foreground'><X className='h-4 w-4' /></button>
       </div>
-
       <p className='text-xs text-muted-foreground'>
         Upload a <code className='text-primary'>.json</code> file or paste JSON directly.
-        Expected format: <code className='text-primary'>{'[{id, title:{en,ar}, elements:[...]}]'}</code>
+        Format: <code className='text-primary'>{'[{id, title:{en,ar}, elements:[...]}]'}</code>
       </p>
-
-      {/* File picker */}
       <div>
         <input ref={fileRef} type='file' accept='.json,application/json' className='hidden' onChange={handleFile} />
         <Button variant='outline' size='sm' className='gap-1.5 h-8' onClick={() => fileRef.current?.click()}>
           <Upload className='h-3.5 w-3.5' /> Choose JSON file
         </Button>
       </div>
-
-      {/* Paste area */}
-      <Textarea
-        rows={6}
-        placeholder='Or paste JSON here...'
-        value={raw}
-        onChange={(e) => { setRaw(e.target.value); setParseError(''); }}
-        className='font-mono text-xs resize-none'
-      />
-
+      <Textarea rows={6} placeholder='Or paste JSON here...'
+        value={raw} onChange={(e) => { setRaw(e.target.value); setParseError(''); }}
+        className='font-mono text-xs resize-none' />
       {parseError && (
         <div className='flex items-center gap-2 text-xs text-destructive'>
-          <AlertTriangle className='h-3.5 w-3.5 shrink-0' />
-          {parseError}
+          <AlertTriangle className='h-3.5 w-3.5 shrink-0' />{parseError}
         </div>
       )}
-
       <div className='flex gap-2'>
         <Button size='sm' className='gap-1.5 h-8' onClick={() => tryParse(raw)} disabled={!raw.trim()}>
           <FileJson className='h-3.5 w-3.5' /> Parse & Replace
@@ -640,21 +619,22 @@ export function CurriculumPlatformEditor({ courseId, courseSlug }: Props) {
 
   useEffect(() => {
     if (data?.topics && localTopics === null) {
-      setLocalTopics(data.topics);
-      if (data.topics.length > 0) setOpenId(data.topics[0].id);
+      // Normalize every topic from DB on first load
+      const normalized = (data.topics as any[]).map((t, i) => normalizeTopic(t, i));
+      setLocalTopics(normalized);
+      if (normalized.length > 0) setOpenId(normalized[0].id);
     }
   }, [data]);
 
-  const topics: Topic[] = localTopics ?? data?.topics ?? [];
+  const topics: Topic[] = localTopics ?? [];
   const total = topics.length;
-
   const toggle = (id: string) => setOpenId((p) => (p === id ? null : id));
 
   const { mutate: save, isPending: saving } = useMutation({
     mutationFn: () => adminCoursesApi.saveCurriculum(courseId, topics),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'curriculum', courseSlug] });
-      toast.success('Curriculum saved! Changes will appear on the platform after refresh.');
+      toast.success('Curriculum saved!');
       setEditMode(false);
     },
     onError: () => toast.error('Failed to save curriculum'),
@@ -666,17 +646,14 @@ export function CurriculumPlatformEditor({ courseId, courseSlug }: Props) {
       title: { en: 'New Topic', ar: 'موضوع جديد' },
       elements: [],
     };
-    const updated = [...topics, newT];
-    setLocalTopics(updated);
+    setLocalTopics([...topics, newT]);
     setOpenId(newT.id);
   };
 
   const updateTopic = (updated: Topic) =>
     setLocalTopics(topics.map((t) => t.id === updated.id ? updated : t));
-
   const deleteTopic = (id: string) =>
     setLocalTopics(topics.filter((t) => t.id !== id));
-
   const moveTopic = (id: string, dir: 'up' | 'down') => {
     const arr = [...topics];
     const idx = arr.findIndex((t) => t.id === id);
@@ -688,14 +665,14 @@ export function CurriculumPlatformEditor({ courseId, courseSlug }: Props) {
   const handleJsonImport = (imported: Topic[]) => {
     setLocalTopics(imported);
     if (imported.length > 0) setOpenId(imported[0].id);
-    setEditMode(true); // auto-enter edit mode so user can review before saving
+    setEditMode(true);
   };
 
   if (isLoading) return <CurriculumSkeleton />;
 
   return (
     <section id='course-curriculum' className='space-y-6'>
-      {/* ── Header ── */}
+      {/* Header */}
       <div className='flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between'>
         <div>
           <h2 className='text-xl font-bold tracking-tight sm:text-2xl'>Course Curriculum</h2>
@@ -703,40 +680,24 @@ export function CurriculumPlatformEditor({ courseId, courseSlug }: Props) {
             {total} Topics · Follow the order for best results
           </p>
         </div>
-
-        {/* Toolbar */}
         <div className='flex items-center gap-2 flex-wrap'>
-          {/* JSON Import button */}
-          <Button
-            variant='outline'
-            size='sm'
-            className='gap-1.5 h-8 border-primary/30 text-primary hover:bg-primary/10'
-            onClick={() => setShowImport((v) => !v)}
-          >
+          <Button variant='outline' size='sm' className='gap-1.5 h-8 border-primary/30 text-primary hover:bg-primary/10'
+            onClick={() => setShowImport((v) => !v)}>
             <FileJson className='h-3.5 w-3.5' />
             {showImport ? 'Close Import' : 'Import JSON'}
           </Button>
-
-          {/* View / Edit toggle */}
           <div className='flex items-center gap-0.5 rounded-lg border border-border/50 bg-muted/30 p-0.5'>
-            <button
-              onClick={() => setEditMode(false)}
-              className={cn(
-                'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-                !editMode ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
-              )}>
+            <button onClick={() => setEditMode(false)}
+              className={cn('flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                !editMode ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}>
               <Eye className='h-3.5 w-3.5' /> Preview
             </button>
-            <button
-              onClick={() => setEditMode(true)}
-              className={cn(
-                'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-                editMode ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
-              )}>
+            <button onClick={() => setEditMode(true)}
+              className={cn('flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                editMode ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}>
               <Edit3 className='h-3.5 w-3.5' /> Edit
             </button>
           </div>
-
           {editMode && (
             <>
               <Button variant='outline' size='sm' onClick={addTopic} className='gap-1.5 h-8'>
@@ -748,9 +709,12 @@ export function CurriculumPlatformEditor({ courseId, courseSlug }: Props) {
                   : <Save className='h-3.5 w-3.5' />}
                 {saving ? 'Saving...' : 'Save'}
               </Button>
-              <Button
-                variant='ghost' size='sm'
-                onClick={() => { setLocalTopics(data?.topics ?? []); setEditMode(false); }}
+              <Button variant='ghost' size='sm'
+                onClick={() => {
+                  const normalized = ((data?.topics ?? []) as any[]).map((t, i) => normalizeTopic(t, i));
+                  setLocalTopics(normalized);
+                  setEditMode(false);
+                }}
                 className='h-8 gap-1.5 text-muted-foreground'>
                 <X className='h-3.5 w-3.5' /> Discard
               </Button>
@@ -759,25 +723,15 @@ export function CurriculumPlatformEditor({ courseId, courseSlug }: Props) {
         </div>
       </div>
 
-      {/* ── JSON Import Panel ── */}
       <AnimatePresence>
         {showImport && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.25 }}
-            className='overflow-hidden'
-          >
-            <JsonImportPanel
-              onImport={handleJsonImport}
-              onClose={() => setShowImport(false)}
-            />
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.25 }} className='overflow-hidden'>
+            <JsonImportPanel onImport={handleJsonImport} onClose={() => setShowImport(false)} />
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ── Topics list ── */}
       {topics.length === 0 ? (
         <div className='flex flex-col items-center justify-center gap-3 py-16 text-center border border-dashed rounded-xl'>
           <p className='text-muted-foreground text-sm'>No topics yet.</p>
