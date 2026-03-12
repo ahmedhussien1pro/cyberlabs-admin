@@ -33,7 +33,12 @@ function unwrapItem<T>(res: any): T {
 function unwrapList<T>(res: any): T {
   const axiosData = res?.data ?? res;
   let payload = axiosData;
-  if (payload && typeof payload === 'object' && 'data' in payload && !Array.isArray(payload.data)) {
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    'data' in payload &&
+    !Array.isArray(payload.data)
+  ) {
     const inner = payload.data;
     if (inner && typeof inner === 'object' && Array.isArray(inner.data)) {
       payload = inner;
@@ -47,7 +52,10 @@ function unwrapList<T>(res: any): T {
     : Array.isArray(payload)
       ? payload
       : [];
-  return { data: arr, meta: { total: arr.length, page: 1, limit: 20, totalPages: 1 } } as T;
+  return {
+    data: arr,
+    meta: { total: arr.length, page: 1, limit: 20, totalPages: 1 },
+  } as T;
 }
 
 function normalizeArrays(course: AdminCourse): AdminCourse {
@@ -64,39 +72,13 @@ function normalizeArrays(course: AdminCourse): AdminCourse {
   };
 }
 
-/**
- * Smart setState:
- * 1. Try dedicated endpoint first (PUBLISHED → /publish, DRAFT → /unpublish, COMING_SOON → /coming-soon)
- * 2. If backend returns 404/405 (no dedicated endpoint), fall back to PATCH { state }
- */
-async function smartSetState(id: string, state: CourseState): Promise<AdminCourse> {
-  const endpointMap: Record<CourseState, string> = {
-    PUBLISHED:   `/admin/courses/${id}/publish`,
-    DRAFT:       `/admin/courses/${id}/unpublish`,
-    COMING_SOON: `/admin/courses/${id}/coming-soon`,
-  };
-
-  try {
-    const res = await adminApiClient.patch(endpointMap[state]);
-    return normalizeArrays(unwrapItem<AdminCourse>(res));
-  } catch (err: any) {
-    const status = err?.response?.status;
-    // Only fallback on 404 (endpoint doesn't exist) or 405 (method not allowed)
-    if (status === 404 || status === 405) {
-      const res = await adminApiClient.patch(`/admin/courses/${id}`, { state });
-      return normalizeArrays(unwrapItem<AdminCourse>(res));
-    }
-    throw err;
-  }
-}
-
 export const adminCoursesApi = {
   list: async (params: AdminCourseListParams = {}): Promise<AdminCoursesListResponse> => {
     const query: Record<string, any> = {
       page:  params.page  ?? 1,
       limit: params.limit ?? 20,
     };
-    if (params.search)                                   query.search     = params.search;
+    if (params.search)                                    query.search     = params.search;
     if (params.difficulty && params.difficulty !== 'ALL') query.difficulty = params.difficulty;
     if (params.state && params.state !== 'all')           query.state      = params.state;
     const res = await adminApiClient.get('/admin/courses', { params: query });
@@ -132,9 +114,11 @@ export const adminCoursesApi = {
     return normalizeArrays(unwrapItem<AdminCourse>(res));
   },
 
-  // Uses smart fallback: dedicated endpoint first, then PATCH { state }
-  setState: (id: string, state: CourseState): Promise<AdminCourse> =>
-    smartSetState(id, state),
+  // Direct PATCH { state } — backend does not have dedicated /publish /unpublish endpoints
+  setState: async (id: string, state: CourseState): Promise<AdminCourse> => {
+    const res = await adminApiClient.patch(`/admin/courses/${id}`, { state });
+    return normalizeArrays(unwrapItem<AdminCourse>(res));
+  },
 
   duplicate: async (id: string): Promise<AdminCourse> => {
     const res = await adminApiClient.post(`/admin/courses/${id}/duplicate`);
@@ -156,7 +140,10 @@ export const adminCoursesApi = {
   },
 
   saveCurriculum: async (courseId: string, topics: object[]): Promise<any> => {
-    const res = await adminApiClient.put(`/admin/courses/${courseId}/curriculum`, { topics });
+    const res = await adminApiClient.put(
+      `/admin/courses/${courseId}/curriculum`,
+      { topics },
+    );
     return unwrapItem(res);
   },
 
