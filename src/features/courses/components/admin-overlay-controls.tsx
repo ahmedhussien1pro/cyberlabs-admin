@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
-  Pencil, Trash2, Globe, EyeOff, Copy, ExternalLink, Loader2,
+  Pencil, Trash2, Globe, EyeOff, Copy, Eye, Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,7 +19,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { adminCoursesApi } from '../services/admin-courses.api';
-import { getPlatformCourseUrl } from '../utils/course-utils';
 import { ROUTES } from '@/shared/constants';
 import type { AdminCourse } from '../types/admin-course.types';
 
@@ -69,8 +68,8 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
     onSuccess: (updated) => {
       toast.success(
         updated.state === 'PUBLISHED'
-          ? `“${course.title}” published`
-          : `“${course.title}” unpublished`,
+          ? `"${course.title}" published`
+          : `"${course.title}" unpublished`,
       );
       invalidate();
     },
@@ -88,7 +87,7 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
   const duplicateMutation = useMutation({
     mutationFn: () => adminCoursesApi.duplicate(course.id),
     onSuccess: (newCourse) => {
-      toast.success(`“${course.title}” duplicated`);
+      toast.success(`"${course.title}" duplicated`);
       invalidate();
       navigate(ROUTES.COURSE_EDIT(newCourse.slug ?? newCourse.id));
     },
@@ -111,7 +110,7 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
       return { snapshot };
     },
     onSuccess: () => {
-      toast.success(`“${course.title}” deleted`);
+      toast.success(`"${course.title}" deleted`);
       invalidate();
       setDeleteOpen(false);
     },
@@ -125,8 +124,6 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
       toast.error(`Cannot delete: ${msg}`);
     },
   });
-
-  const platformUrl = getPlatformCourseUrl(course.slug);
 
   return (
     <>
@@ -164,17 +161,20 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
             )}
           </Button>
 
-          {/* View on platform */}
-          <a
-            href={platformUrl}
-            target='_blank'
-            rel='noopener noreferrer'
-            onClick={(e) => e.stopPropagation()}
-            aria-label='View on platform'
-            className='flex h-7 w-7 items-center justify-center rounded-full bg-black/40 text-white/70 hover:text-white hover:bg-black/60 transition-colors'
+          {/* Preview — internal admin preview tab */}
+          <Button
+            size='sm'
+            variant='ghost'
+            aria-label='Preview course'
+            className='h-7 w-7 p-0 rounded-full bg-black/40 text-white/70 hover:text-white hover:bg-black/60 transition-colors'
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              navigate(`${ROUTES.COURSE_EDIT(course.slug)}?tab=preview`);
+            }}
           >
-            <ExternalLink className='h-3.5 w-3.5' />
-          </a>
+            <Eye className='h-3.5 w-3.5' />
+          </Button>
         </div>
 
         {/* Bottom row */}
@@ -223,7 +223,7 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete “{course.title}”?</AlertDialogTitle>
+            <AlertDialogTitle>Delete "{course.title}"?</AlertDialogTitle>
             <AlertDialogDescription>
               This will permanently delete the course and all its curriculum data.
               This action cannot be undone.
