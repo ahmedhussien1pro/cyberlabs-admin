@@ -1,25 +1,25 @@
 // src/features/courses/pages/courses-list.page.tsx
-import { useState }      from 'react';
-import { useNavigate }   from 'react-router-dom';
-import { useQuery }      from '@tanstack/react-query';
+import { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   BookOpen, Plus, Globe, EyeOff, Clock, AlertCircle,
-  LayoutGrid, List, ChevronLeft, ChevronRight, Search, FileJson,
+  LayoutGrid, List, ChevronLeft, ChevronRight, Search, FileJson, RefreshCw,
 } from 'lucide-react';
-import { Card }          from '@/components/ui/card';
-import { Button }        from '@/components/ui/button';
-import { Input }         from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Select, SelectContent, SelectItem,
   SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Skeleton }      from '@/components/ui/skeleton';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { cn }            from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { adminCoursesApi } from '../services/admin-courses.api';
-import { CourseCard }    from '../components/course-card';
-import { CoursesTable }  from '../components/courses-table';
-import { ROUTES }        from '@/shared/constants';
+import { CourseAdminCard } from '../components/course-admin-card';
+import { CoursesTable } from '../components/courses-table';
+import { ROUTES } from '@/shared/constants';
 import type { CourseState } from '../types/course.types';
 
 const STAT_CARDS = [
@@ -34,43 +34,66 @@ type DiffFilter  = 'ALL' | 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT';
 
 export default function CoursesListPage() {
   const navigate = useNavigate();
-  const [page,        setPage]        = useState(1);
-  const [search,      setSearch]      = useState('');
-  const [diff,        setDiff]        = useState<DiffFilter>('ALL');
-  const [state,       setState]       = useState<StateFilter>('all');
-  const [view,        setView]        = useState<'grid' | 'table'>('grid');
+  const [page,   setPage]   = useState(1);
+  const [search, setSearch] = useState('');
+  const [diff,   setDiff]   = useState<DiffFilter>('ALL');
+  const [state,  setState]  = useState<StateFilter>('all');
+  const [view,   setView]   = useState<'grid' | 'table'>('grid');
   const limit = 20;
 
-  const { data: stats, isLoading: statsLoading } = useQuery({
+  const {
+    data: stats,
+    isLoading: statsLoading,
+  } = useQuery({
     queryKey: ['admin', 'courses', 'stats'],
-    queryFn:  adminCoursesApi.getStats,
+    queryFn: adminCoursesApi.getStats,
+    staleTime: 30_000,
   });
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const {
+    data,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ['admin', 'courses', 'list', page, search, diff, state],
-    queryFn:  () => adminCoursesApi.list({
-      page,
-      limit,
-      search:     search || undefined,
-      difficulty: diff !== 'ALL' ? diff : undefined,
-      state,
-    }),
+    queryFn: () => adminCoursesApi.list({ page, limit, search: search || undefined, difficulty: diff !== 'ALL' ? diff : undefined, state }),
+    staleTime: 10_000,
+    retry: 1,
   });
+
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => { setSearch(e.target.value); setPage(1); },
+    [],
+  );
+  const handleStateChange = useCallback(
+    (v: string) => { setState(v as StateFilter); setPage(1); },
+    [],
+  );
+  const handleDiffChange = useCallback(
+    (v: string) => { setDiff(v as DiffFilter); setPage(1); },
+    [],
+  );
 
   if (error) {
     return (
       <div className='flex h-full items-center justify-center p-6'>
-        <Alert variant='destructive' className='max-w-md'>
-          <AlertCircle className='h-4 w-4' />
-          <AlertDescription>Failed to load courses. Please try again.</AlertDescription>
-        </Alert>
+        <div className='flex flex-col items-center gap-4 max-w-md w-full'>
+          <Alert variant='destructive'>
+            <AlertCircle className='h-4 w-4' aria-hidden='true' />
+            <AlertDescription>Failed to load courses. Please check your connection and try again.</AlertDescription>
+          </Alert>
+          <Button variant='outline' onClick={() => refetch()} className='gap-2'>
+            <RefreshCw className='h-4 w-4' aria-hidden='true' /> Try Again
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
     <div className='space-y-6'>
-      {/* ── Header ── */}
+      {/* Header */}
       <div className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
         <div>
           <h1 className='text-2xl font-bold tracking-tight'>Courses</h1>
@@ -79,24 +102,26 @@ export default function CoursesListPage() {
         <div className='flex shrink-0 items-center gap-2'>
           <Button variant='outline' size='sm' className='h-9 gap-2'
             onClick={() => navigate('/courses/import')}>
-            <FileJson className='h-4 w-4' />
+            <FileJson className='h-4 w-4' aria-hidden='true' />
             <span className='hidden sm:inline'>Import JSON</span>
           </Button>
           <Button size='sm' className='h-9 gap-2'
             onClick={() => navigate(ROUTES.COURSE_CREATE)}>
-            <Plus className='h-4 w-4' /> New Course
+            <Plus className='h-4 w-4' aria-hidden='true' /> New Course
           </Button>
         </div>
       </div>
 
-      {/* ── Stats ── */}
+      {/* Stats */}
       <div className='grid grid-cols-2 gap-3 lg:grid-cols-4'>
         {statsLoading
-          ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className='h-24 rounded-xl' />)
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className='h-24 rounded-xl' aria-label='Loading stat' />
+            ))
           : STAT_CARDS.map(({ key, label, icon: Icon, color, bg }) => (
               <Card key={key} className='flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors'>
                 <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border', bg)}>
-                  <Icon className={cn('h-5 w-5', color)} />
+                  <Icon className={cn('h-5 w-5', color)} aria-hidden='true' />
                 </div>
                 <div className='min-w-0'>
                   <p className='truncate text-xs text-muted-foreground'>{label}</p>
@@ -106,19 +131,22 @@ export default function CoursesListPage() {
             ))}
       </div>
 
-      {/* ── Filters ── */}
+      {/* Filters */}
       <div className='flex items-center gap-2 flex-wrap'>
         <div className='relative flex-1 min-w-[180px]'>
-          <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+          <Search className='absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' aria-hidden='true' />
           <Input
             placeholder='Search courses...'
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className='h-9 pl-9 bg-background'
+            onChange={handleSearchChange}
+            className='h-9 ps-9 bg-background'
+            aria-label='Search courses'
           />
         </div>
-        <Select value={state} onValueChange={(v) => { setState(v as StateFilter); setPage(1); }}>
-          <SelectTrigger className='h-9 w-36 bg-background'><SelectValue /></SelectTrigger>
+        <Select value={state} onValueChange={handleStateChange}>
+          <SelectTrigger className='h-9 w-36 bg-background' aria-label='Filter by status'>
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value='all'>All Status</SelectItem>
             <SelectItem value='PUBLISHED'>Published</SelectItem>
@@ -126,8 +154,10 @@ export default function CoursesListPage() {
             <SelectItem value='COMING_SOON'>Coming Soon</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={diff} onValueChange={(v) => { setDiff(v as DiffFilter); setPage(1); }}>
-          <SelectTrigger className='h-9 w-36 bg-background'><SelectValue /></SelectTrigger>
+        <Select value={diff} onValueChange={handleDiffChange}>
+          <SelectTrigger className='h-9 w-36 bg-background' aria-label='Filter by difficulty'>
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value='ALL'>All Levels</SelectItem>
             <SelectItem value='BEGINNER'>Beginner</SelectItem>
@@ -136,28 +166,36 @@ export default function CoursesListPage() {
             <SelectItem value='EXPERT'>Expert</SelectItem>
           </SelectContent>
         </Select>
-        <div className='flex items-center gap-0.5 rounded-lg border border-border/50 bg-muted/30 p-0.5'>
-          <Button variant={view === 'grid' ? 'default' : 'ghost'} size='sm'
+        <div className='flex items-center gap-0.5 rounded-lg border border-border/50 bg-muted/30 p-0.5' role='group' aria-label='View mode'>
+          <Button
+            variant={view === 'grid' ? 'default' : 'ghost'} size='sm'
+            aria-label='Grid view' aria-pressed={view === 'grid'}
             className='h-8 w-8 p-0' onClick={() => setView('grid')}>
-            <LayoutGrid className='h-3.5 w-3.5' />
+            <LayoutGrid className='h-3.5 w-3.5' aria-hidden='true' />
           </Button>
-          <Button variant={view === 'table' ? 'default' : 'ghost'} size='sm'
+          <Button
+            variant={view === 'table' ? 'default' : 'ghost'} size='sm'
+            aria-label='Table view' aria-pressed={view === 'table'}
             className='h-8 w-8 p-0' onClick={() => setView('table')}>
-            <List className='h-3.5 w-3.5' />
+            <List className='h-3.5 w-3.5' aria-hidden='true' />
           </Button>
         </div>
       </div>
 
-      {/* ── Content ── */}
+      {/* Content */}
       {isLoading ? (
         view === 'grid' ? (
-          <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
-            {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className='h-80 rounded-2xl' />)}
+          <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' aria-label='Loading courses'>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} className='h-80 rounded-2xl' />
+            ))}
           </div>
         ) : (
           <Card className='p-6'>
-            <div className='space-y-3'>
-              {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className='h-14 rounded-lg' />)}
+            <div className='space-y-3' aria-label='Loading courses'>
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} className='h-14 rounded-lg' />
+              ))}
             </div>
           </Card>
         )
@@ -165,14 +203,17 @@ export default function CoursesListPage() {
         <>
           {(data?.data ?? []).length === 0 ? (
             <Card className='flex flex-col items-center justify-center gap-3 p-16 text-center'>
-              <BookOpen className='h-8 w-8 text-muted-foreground' />
+              <BookOpen className='h-8 w-8 text-muted-foreground' aria-hidden='true' />
               <p className='font-medium'>No courses found</p>
               <p className='text-sm text-muted-foreground'>Adjust filters or create a new course.</p>
+              <Button size='sm' className='mt-2 gap-2' onClick={() => navigate(ROUTES.COURSE_CREATE)}>
+                <Plus className='h-4 w-4' aria-hidden='true' /> New Course
+              </Button>
             </Card>
           ) : (
             <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
               {(data?.data ?? []).map((course, i) => (
-                <CourseCard key={course.id} course={course as any} index={i} />
+                <CourseAdminCard key={course.id} course={course} index={i} />
               ))}
             </div>
           )}
@@ -181,20 +222,33 @@ export default function CoursesListPage() {
           {data?.meta && data.meta.totalPages > 1 && (
             <div className='flex items-center justify-between border-t pt-4'>
               <p className='text-xs text-muted-foreground'>
-                Showing <span className='font-semibold text-foreground'>{(page - 1) * limit + 1}–{Math.min(page * limit, data.meta.total)}</span> of{' '}
+                Showing{' '}
+                <span className='font-semibold text-foreground'>
+                  {(page - 1) * limit + 1}–{Math.min(page * limit, data.meta.total)}
+                </span>{' '}of{' '}
                 <span className='font-semibold text-foreground'>{data.meta.total}</span>
               </p>
               <div className='flex items-center gap-1'>
-                <Button variant='outline' size='sm' className='h-8 gap-1 px-3 text-xs'
-                  onClick={() => setPage((p) => p - 1)} disabled={page === 1}>
-                  <ChevronLeft className='h-3.5 w-3.5' /> Prev
+                <Button
+                  variant='outline' size='sm'
+                  aria-label='Previous page'
+                  className='h-8 gap-1 px-3 text-xs'
+                  onClick={() => setPage((p) => p - 1)}
+                  disabled={page === 1}
+                >
+                  <ChevronLeft className='h-3.5 w-3.5' aria-hidden='true' /> Prev
                 </Button>
                 <div className='flex h-8 min-w-[2rem] items-center justify-center rounded-md border border-primary/30 bg-primary/10 px-2 text-xs font-semibold text-primary'>
                   {page}
                 </div>
-                <Button variant='outline' size='sm' className='h-8 gap-1 px-3 text-xs'
-                  onClick={() => setPage((p) => p + 1)} disabled={page === data.meta.totalPages}>
-                  Next <ChevronRight className='h-3.5 w-3.5' />
+                <Button
+                  variant='outline' size='sm'
+                  aria-label='Next page'
+                  className='h-8 gap-1 px-3 text-xs'
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={page === data.meta.totalPages}
+                >
+                  Next <ChevronRight className='h-3.5 w-3.5' aria-hidden='true' />
                 </Button>
               </div>
             </div>
@@ -202,7 +256,7 @@ export default function CoursesListPage() {
         </>
       ) : (
         <CoursesTable
-          data={data?.data as any ?? []}
+          data={data?.data ?? []}
           meta={data?.meta}
           page={page}
           onPageChange={setPage}
