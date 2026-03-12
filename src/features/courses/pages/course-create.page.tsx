@@ -1,14 +1,16 @@
 // src/features/courses/pages/course-create.page.tsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Plus, Loader2, BookOpen, Layers, Save,
   ChevronUp, ChevronDown, Trash2, FolderOpen, PanelLeftClose, PanelLeftOpen,
+  User, Search,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { coursesApi } from '../services/courses.api';
+import { usersService } from '@/core/api/services';
 import { ROUTES } from '@/shared/constants';
 import type { CourseCreateDto } from '../types/course.types';
 import CourseInfoForm, { CourseInfoData, DEFAULT_INFO } from '../components/content-editor/CourseInfoForm';
@@ -33,6 +35,106 @@ function slugify(s: string) {
 
 type ActiveView = 'course-info' | 'topic';
 
+// Instructor picker component
+function InstructorPicker({
+  value, onChange,
+}: { value: string; onChange: (id: string, name: string) => void }) {
+  const [search, setSearch] = useState('');
+  const [open, setOpen] = useState(false);
+  const [selectedName, setSelectedName] = useState('');
+
+  const { data: adminData } = useQuery({
+    queryKey: ['users', 'instructors', 'ADMIN'],
+    queryFn: () => usersService.getAll({ page: 1, limit: 100, role: 'ADMIN' as any }),
+  });
+  const { data: instructorData } = useQuery({
+    queryKey: ['users', 'instructors', 'INSTRUCTOR'],
+    queryFn: () => usersService.getAll({ page: 1, limit: 100, role: 'INSTRUCTOR' as any }),
+  });
+
+  const allUsers = [
+    ...(adminData?.data ?? []),
+    ...(instructorData?.data ?? []),
+  ].filter((u, i, arr) => arr.findIndex((x) => x.id === u.id) === i);
+
+  const filtered = allUsers.filter((u) => {
+    const name = `${u.firstName ?? ''} ${u.lastName ?? ''} ${u.email ?? ''}`.toLowerCase();
+    return name.includes(search.toLowerCase());
+  });
+
+  const handleSelect = (u: any) => {
+    const name = `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || u.email;
+    onChange(u.id, name);
+    setSelectedName(name);
+    setOpen(false);
+    setSearch('');
+  };
+
+  return (
+    <div className="relative">
+      <label className="text-xs text-muted-foreground mb-1 block">Instructor</label>
+      <button
+        type="button"
+        className="w-full flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm text-left hover:bg-muted/30 transition-colors"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <User size={14} className="text-muted-foreground flex-shrink-0" />
+        <span className={selectedName ? '' : 'text-muted-foreground'}>
+          {selectedName || 'Select instructor...'}
+        </span>
+        {value && (
+          <span className="ml-auto text-xs font-mono text-muted-foreground truncate max-w-[120px]">{value.slice(0, 8)}...</span>
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full rounded-md border bg-card shadow-lg">
+          <div className="p-2 border-b">
+            <div className="flex items-center gap-2 px-2 py-1 rounded border bg-background">
+              <Search size={12} className="text-muted-foreground" />
+              <input
+                autoFocus
+                className="flex-1 bg-transparent text-sm outline-none"
+                placeholder="Search by name or email..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+          </div>
+          <ul className="max-h-48 overflow-y-auto py-1">
+            {filtered.length === 0 ? (
+              <li className="px-4 py-3 text-xs text-muted-foreground text-center">No users found</li>
+            ) : (
+              filtered.map((u: any) => (
+                <li
+                  key={u.id}
+                  className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors ${
+                    u.id === value ? 'bg-primary/10 text-primary' : ''
+                  }`}
+                  onClick={() => handleSelect(u)}
+                >
+                  <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
+                    {(u.firstName?.[0] ?? u.email?.[0] ?? '?').toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {`${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || 'No name'}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                  </div>
+                  <span className="ml-auto text-xs bg-muted px-1.5 py-0.5 rounded flex-shrink-0">
+                    {u.role}
+                  </span>
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CourseCreatePage() {
   const navigate = useNavigate();
 
@@ -48,7 +150,9 @@ export default function CourseCreatePage() {
     color: 'BLUE' as typeof COLORS[number],
     contentType: 'MIXED' as typeof CONTENT_TYPES[number],
     instructorId: '',
+    instructorName: '',
   });
+
   const setMeta_ = (k: string, v: string) => setMeta((f) => ({ ...f, [k]: v }));
   const handleTitleChange = (v: string) => setMeta((f) => ({
     ...f, title: v, slug: f.slug === slugify(f.title) || f.slug === '' ? slugify(v) : f.slug,
@@ -69,7 +173,7 @@ export default function CourseCreatePage() {
   const handleAddTopic = () => {
     const newTopic: Topic = {
       id: `topic-${Date.now()}`,
-      title: { en: `Topic ${topics.length + 1}`, ar: `موضوع ${topics.length + 1}` },
+      title: { en: `Topic ${topics.length + 1}`, ar: `\u0645\u0648\u0636\u0648\u0639 ${topics.length + 1}` },
       elements: [],
     };
     setTopics((t) => [...t, newTopic]);
@@ -90,10 +194,7 @@ export default function CourseCreatePage() {
           toast.success('Topic deleted');
         },
       },
-      cancel: {
-        label: 'Cancel',
-        onClick: () => {},
-      },
+      cancel: { label: 'Cancel', onClick: () => {} },
     });
   };
 
@@ -118,12 +219,12 @@ export default function CourseCreatePage() {
     onSuccess: (course) => {
       setCreatedCourseId(course.id);
       setCreatedCourseSlug(course.slug);
-      toast.success(`Course "${course.title}" created!`, { description: 'Now add content and save.' });
+      toast.success(`Course "${course.title}" created!`, { description: 'Now add topics and content.' });
       setCourseInfo((c) => ({ ...c, title: { en: meta.title, ar: meta.ar_title } }));
     },
     onError: (err: any) => {
       const msg = err?.response?.data?.message ?? err?.message ?? 'Failed to create course';
-      toast.error(Array.isArray(msg) ? msg.join(' · ') : msg);
+      toast.error(Array.isArray(msg) ? msg.join(' \u00b7 ') : msg);
     },
   });
 
@@ -134,12 +235,10 @@ export default function CourseCreatePage() {
         ...t, landingData: courseInfo, imageMap,
       })));
     },
-    onSuccess: () => {
-      toast.success('Content saved successfully!');
-    },
+    onSuccess: () => { toast.success('Content saved successfully!'); },
     onError: (err: any) => {
       const msg = err?.response?.data?.message ?? err?.message ?? 'Failed to save';
-      toast.error(Array.isArray(msg) ? msg.join(' · ') : msg);
+      toast.error(Array.isArray(msg) ? msg.join(' \u00b7 ') : msg);
     },
   });
 
@@ -147,7 +246,7 @@ export default function CourseCreatePage() {
     e.preventDefault();
     if (!meta.title.trim()) return toast.error('Title is required');
     if (!meta.slug.trim()) return toast.error('Slug is required');
-    createCourse({
+    const dto: CourseCreateDto = {
       title: meta.title.trim(),
       ar_title: meta.ar_title.trim() || undefined,
       slug: meta.slug.trim(),
@@ -157,72 +256,115 @@ export default function CourseCreatePage() {
       category: meta.category,
       color: meta.color,
       contentType: meta.contentType,
-      instructorId: meta.instructorId.trim() || 'default',
-    });
+    };
+    // Only send instructorId if a valid UUID was selected
+    if (meta.instructorId.trim()) {
+      (dto as any).instructorId = meta.instructorId.trim();
+    }
+    createCourse(dto);
   };
 
   const getTopBarTitle = () => {
-    if (activeView === 'course-info') return 'Course Information';
     if (activeView === 'topic' && currentTopicIndex >= 0) return topics[currentTopicIndex]?.title.en || 'Topic';
-    return 'New Course';
+    return 'Course Information';
   };
 
+  // Determine what to show in the main area
+  const showTopicEditor = activeView === 'topic' && currentTopicIndex >= 0;
+  const showCourseInfo = activeView === 'course-info';
+
   return (
-    <div className='flex h-[calc(100vh-4rem)] overflow-hidden'>
+    <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
 
       {/* Sidebar */}
-      <aside className={`flex-shrink-0 flex flex-col border-r bg-card transition-all duration-200 ${sidebarCollapsed ? 'w-12' : 'w-60'}`}>
-        <div className='flex items-center justify-between px-3 py-3 border-b'>
-          {!sidebarCollapsed && <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wide'>Content Editor</span>}
-          <button className='p-1 rounded hover:bg-muted transition-colors ml-auto' onClick={() => setSidebarCollapsed((v) => !v)}>
+      <aside className={`flex-shrink-0 flex flex-col border-r bg-card transition-all duration-200 ${sidebarCollapsed ? 'w-12' : 'w-64'}`}>
+        <div className="flex items-center justify-between px-3 py-3 border-b">
+          {!sidebarCollapsed && (
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Content Editor</span>
+          )}
+          <button
+            className="p-1 rounded hover:bg-muted transition-colors ml-auto"
+            onClick={() => setSidebarCollapsed((v) => !v)}
+          >
             {sidebarCollapsed ? <PanelLeftOpen size={15} /> : <PanelLeftClose size={15} />}
           </button>
         </div>
 
         {!sidebarCollapsed && (
           <>
-            <nav className='p-2'>
+            {/* Course Info nav item */}
+            <nav className="p-2">
               <button
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
                   activeView === 'course-info' ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-muted'
                 }`}
-                onClick={() => setActiveView('course-info')}>
+                onClick={() => setActiveView('course-info')}
+              >
                 <BookOpen size={14} />
                 <span>Course Information</span>
+                {!createdCourseId && (
+                  <span className="ml-auto text-xs bg-yellow-500/20 text-yellow-400 px-1.5 rounded">Step 1</span>
+                )}
               </button>
             </nav>
 
-            <div className='flex-1 overflow-y-auto'>
-              <div className='flex items-center justify-between px-3 py-2'>
-                <div className='flex items-center gap-1.5'>
-                  <span className='text-xs font-semibold text-muted-foreground'>TOPICS</span>
-                  <span className='text-xs bg-muted px-1.5 py-0.5 rounded-full'>{topics.length}</span>
+            {/* Topics list */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="flex items-center justify-between px-3 py-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-muted-foreground">TOPICS</span>
+                  <span className="text-xs bg-muted px-1.5 py-0.5 rounded-full">{topics.length}</span>
                 </div>
-                <button className='p-1 rounded hover:bg-muted transition-colors' onClick={handleAddTopic} title='Add Topic'>
+                <button
+                  className="p-1 rounded hover:bg-muted transition-colors"
+                  onClick={handleAddTopic}
+                  title="Add Topic"
+                >
                   <Plus size={13} />
                 </button>
               </div>
 
               {topics.length === 0 ? (
-                <div className='px-4 py-6 text-center'>
-                  <FolderOpen size={24} className='text-muted-foreground mx-auto mb-1' />
-                  <p className='text-xs text-muted-foreground'>No topics yet.<br />Click + to add one.</p>
+                <div className="px-4 py-6 text-center">
+                  <FolderOpen size={24} className="text-muted-foreground mx-auto mb-1" />
+                  <p className="text-xs text-muted-foreground">No topics yet.<br />Click + to add one.</p>
                 </div>
               ) : (
-                <ul className='space-y-0.5 px-2'>
+                <ul className="space-y-0.5 px-2">
                   {topics.map((topic, i) => (
                     <li key={topic.id}>
                       <div
                         className={`flex items-center gap-1 px-2 py-1.5 rounded-md cursor-pointer transition-colors group ${
-                          currentTopicIndex === i && activeView === 'topic' ? 'bg-primary/10 text-primary' : 'hover:bg-muted'
+                          currentTopicIndex === i && activeView === 'topic'
+                            ? 'bg-primary/10 text-primary'
+                            : 'hover:bg-muted'
                         }`}
-                        onClick={() => { setCurrentTopicIndex(i); setActiveView('topic'); }}>
-                        <Layers size={12} className='flex-shrink-0 text-muted-foreground' />
-                        <span className='text-xs flex-1 truncate'>{topic.title.en || `Topic ${i + 1}`}</span>
-                        <div className='hidden group-hover:flex items-center gap-0.5'>
-                          <button className='p-0.5 rounded hover:bg-muted-foreground/20 disabled:opacity-30' disabled={i === 0} onClick={(e) => { e.stopPropagation(); handleMoveTopic(i, 'up'); }}><ChevronUp size={10} /></button>
-                          <button className='p-0.5 rounded hover:bg-muted-foreground/20 disabled:opacity-30' disabled={i === topics.length - 1} onClick={(e) => { e.stopPropagation(); handleMoveTopic(i, 'down'); }}><ChevronDown size={10} /></button>
-                          <button className='p-0.5 rounded hover:bg-destructive/20 text-destructive' onClick={(e) => { e.stopPropagation(); handleDeleteTopic(i); }}><Trash2 size={10} /></button>
+                        onClick={() => { setCurrentTopicIndex(i); setActiveView('topic'); }}
+                      >
+                        <Layers size={12} className="flex-shrink-0 text-muted-foreground" />
+                        <span className="text-xs flex-1 truncate">{topic.title.en || `Topic ${i + 1}`}</span>
+                        <span className="text-xs text-muted-foreground flex-shrink-0">{topic.elements.length}</span>
+                        <div className="hidden group-hover:flex items-center gap-0.5">
+                          <button
+                            className="p-0.5 rounded hover:bg-muted-foreground/20 disabled:opacity-30"
+                            disabled={i === 0}
+                            onClick={(e) => { e.stopPropagation(); handleMoveTopic(i, 'up'); }}
+                          >
+                            <ChevronUp size={10} />
+                          </button>
+                          <button
+                            className="p-0.5 rounded hover:bg-muted-foreground/20 disabled:opacity-30"
+                            disabled={i === topics.length - 1}
+                            onClick={(e) => { e.stopPropagation(); handleMoveTopic(i, 'down'); }}
+                          >
+                            <ChevronDown size={10} />
+                          </button>
+                          <button
+                            className="p-0.5 rounded hover:bg-destructive/20 text-destructive"
+                            onClick={(e) => { e.stopPropagation(); handleDeleteTopic(i); }}
+                          >
+                            <Trash2 size={10} />
+                          </button>
                         </div>
                       </div>
                     </li>
@@ -231,15 +373,21 @@ export default function CourseCreatePage() {
               )}
             </div>
 
-            <div className='p-3 border-t space-y-2'>
+            {/* Bottom actions */}
+            <div className="p-3 border-t space-y-2">
               {createdCourseId && (
-                <Button size='sm' className='w-full gap-2' onClick={() => saveCurriculum()} disabled={isSaving}>
-                  {isSaving ? <Loader2 size={13} className='animate-spin' /> : <Save size={13} />}
+                <Button size="sm" className="w-full gap-2" onClick={() => saveCurriculum()} disabled={isSaving}>
+                  {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
                   Save Content
                 </Button>
               )}
               {createdCourseSlug && (
-                <Button size='sm' variant='outline' className='w-full gap-1 text-xs' onClick={() => navigate(`/courses/${createdCourseSlug}/edit`)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full gap-1 text-xs"
+                  onClick={() => navigate(`/courses/${createdCourseSlug}/edit`)}
+                >
                   Open in Editor
                 </Button>
               )}
@@ -249,125 +397,182 @@ export default function CourseCreatePage() {
       </aside>
 
       {/* Main Area */}
-      <div className='flex-1 flex flex-col min-w-0 overflow-hidden'>
-        <div className='flex items-center justify-between px-6 py-3 border-b bg-card shrink-0'>
-          <div className='flex items-center gap-3'>
-            <Button variant='ghost' size='sm' className='gap-1' onClick={() => navigate(ROUTES.COURSES)}>
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Top bar */}
+        <div className="flex items-center justify-between px-6 py-3 border-b bg-card shrink-0">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" className="gap-1" onClick={() => navigate(ROUTES.COURSES)}>
               <ArrowLeft size={14} /> Back
             </Button>
-            <div className='h-4 w-px bg-border' />
-            <span className='text-sm font-medium'>{getTopBarTitle()}</span>
-            {createdCourseId && <span className='text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-full px-2 py-0.5'>Created ✓</span>}
+            <div className="h-4 w-px bg-border" />
+            <span className="text-sm font-medium">{getTopBarTitle()}</span>
+            {createdCourseId && (
+              <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-full px-2 py-0.5">
+                Created \u2713
+              </span>
+            )}
           </div>
-          <div className='flex items-center gap-2'>
-            {!createdCourseId ? (
-              <span className='text-xs text-muted-foreground'>Fill Course Info below → Create → Add Content</span>
-            ) : (
-              <Button size='sm' className='gap-2' onClick={() => saveCurriculum()} disabled={isSaving}>
-                {isSaving ? <Loader2 size={13} className='animate-spin' /> : <Save size={13} />}
+          <div className="flex items-center gap-2">
+            {createdCourseId ? (
+              <Button size="sm" className="gap-2" onClick={() => saveCurriculum()} disabled={isSaving}>
+                {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
                 Save Content
               </Button>
+            ) : (
+              <span className="text-xs text-muted-foreground">Fill info \u2192 Create \u2192 Add Topics</span>
             )}
           </div>
         </div>
 
-        <div className='flex-1 overflow-y-auto'>
-          <div className='max-w-4xl mx-auto px-6 py-6 space-y-6'>
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-4xl mx-auto px-6 py-6 space-y-6">
 
-            {!createdCourseId && (
-              <div className='rounded-xl border bg-card p-6 space-y-5'>
-                <div className='flex items-center gap-2'>
-                  <div className='w-6 h-6 rounded-full bg-primary flex items-center justify-center text-xs font-bold text-primary-foreground'>1</div>
-                  <h2 className='text-sm font-semibold'>Create Course</h2>
-                  <span className='text-xs text-muted-foreground'>— Define course metadata first</span>
-                </div>
-
-                <form onSubmit={handleCreateSubmit} className='space-y-4'>
-                  <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-                    <div>
-                      <label className='text-xs text-muted-foreground mb-1 block'>Title (EN) *</label>
-                      <input className='w-full rounded-md border bg-background px-3 py-2 text-sm' placeholder='e.g., Web Application Hacking' value={meta.title} onChange={(e) => handleTitleChange(e.target.value)} required />
-                    </div>
-                    <div>
-                      <label className='text-xs text-muted-foreground mb-1 block'>Title (AR)</label>
-                      <input className='w-full rounded-md border bg-background px-3 py-2 text-sm' dir='rtl' placeholder='العنوان بالعربي' value={meta.ar_title} onChange={(e) => setMeta_('ar_title', e.target.value)} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className='text-xs text-muted-foreground mb-1 block'>Slug *</label>
-                    <div className='flex items-center gap-2'>
-                      <span className='text-xs text-muted-foreground font-mono'>courses/</span>
-                      <input className='flex-1 rounded-md border bg-background px-3 py-2 text-sm font-mono' placeholder='web-application-hacking' value={meta.slug} onChange={(e) => setMeta_('slug', slugify(e.target.value))} required />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className='text-xs text-muted-foreground mb-1 block'>Description</label>
-                    <textarea className='w-full rounded-md border bg-background px-3 py-2 text-sm' rows={2} placeholder='Short description...' value={meta.description} onChange={(e) => setMeta_('description', e.target.value)} />
-                  </div>
-
-                  <div className='grid grid-cols-2 sm:grid-cols-3 gap-3'>
-                    {[
-                      { key: 'difficulty', label: 'Difficulty', opts: DIFFICULTIES },
-                      { key: 'access', label: 'Access', opts: ACCESSES },
-                      { key: 'color', label: 'Color', opts: COLORS },
-                      { key: 'contentType', label: 'Content Type', opts: CONTENT_TYPES },
-                    ].map(({ key, label, opts }) => (
-                      <div key={key}>
-                        <label className='text-xs text-muted-foreground mb-1 block'>{label}</label>
-                        <select className='w-full rounded-md border bg-background px-3 py-2 text-sm' value={(meta as any)[key]} onChange={(e) => setMeta_(key, e.target.value)}>
-                          {opts.map((o) => <option key={o} value={o}>{o.replace(/_/g, ' ')}</option>)}
-                        </select>
-                      </div>
-                    ))}
-                    <div className='col-span-2'>
-                      <label className='text-xs text-muted-foreground mb-1 block'>Category</label>
-                      <select className='w-full rounded-md border bg-background px-3 py-2 text-sm' value={meta.category} onChange={(e) => setMeta_('category', e.target.value)}>
-                        {CATEGORIES.map((c) => <option key={c} value={c}>{c.replace(/_/g, ' ')}</option>)}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className='flex justify-end pt-2'>
-                    <Button type='submit' disabled={isCreating} className='gap-2'>
-                      {isCreating ? <><Loader2 size={14} className='animate-spin' /> Creating...</> : <><Plus size={14} /> Create Course</>}
-                    </Button>
-                  </div>
-                </form>
-              </div>
-            )}
-
-            {createdCourseId && (
+            {/* === Course Info View === */}
+            {showCourseInfo && (
               <>
-                {activeView === 'course-info' && (
-                  <div className='space-y-2'>
-                    <div className='flex items-center gap-2'>
-                      <div className='w-6 h-6 rounded-full bg-primary flex items-center justify-center text-xs font-bold text-primary-foreground'>2</div>
-                      <h2 className='text-sm font-semibold'>Landing Page Content</h2>
+                {/* Step 1: Create metadata (always visible until created) */}
+                {!createdCourseId && (
+                  <div className="rounded-xl border bg-card p-6 space-y-5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-xs font-bold text-primary-foreground">1</div>
+                      <h2 className="text-sm font-semibold">Create Course</h2>
+                      <span className="text-xs text-muted-foreground">\u2014 Define course metadata first</span>
+                    </div>
+
+                    <form onSubmit={handleCreateSubmit} className="space-y-4">
+                      {/* Title */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-xs text-muted-foreground mb-1 block">Title (EN) *</label>
+                          <input
+                            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                            placeholder="e.g., Web Application Hacking"
+                            value={meta.title}
+                            onChange={(e) => handleTitleChange(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-muted-foreground mb-1 block">Title (AR)</label>
+                          <input
+                            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                            dir="rtl"
+                            placeholder="\u0627\u0644\u0639\u0646\u0648\u0627\u0646 \u0628\u0627\u0644\u0639\u0631\u0628\u064a"
+                            value={meta.ar_title}
+                            onChange={(e) => setMeta_('ar_title', e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Slug */}
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Slug *</label>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground font-mono">courses/</span>
+                          <input
+                            className="flex-1 rounded-md border bg-background px-3 py-2 text-sm font-mono"
+                            placeholder="web-application-hacking"
+                            value={meta.slug}
+                            onChange={(e) => setMeta_('slug', slugify(e.target.value))}
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      {/* Description */}
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Description</label>
+                        <textarea
+                          className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                          rows={2}
+                          placeholder="Short description..."
+                          value={meta.description}
+                          onChange={(e) => setMeta_('description', e.target.value)}
+                        />
+                      </div>
+
+                      {/* Selects row */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {[
+                          { key: 'difficulty',  label: 'Difficulty',    opts: DIFFICULTIES },
+                          { key: 'access',      label: 'Access',        opts: ACCESSES },
+                          { key: 'color',       label: 'Color',         opts: COLORS },
+                          { key: 'contentType', label: 'Content Type',  opts: CONTENT_TYPES },
+                        ].map(({ key, label, opts }) => (
+                          <div key={key}>
+                            <label className="text-xs text-muted-foreground mb-1 block">{label}</label>
+                            <select
+                              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                              value={(meta as any)[key]}
+                              onChange={(e) => setMeta_(key, e.target.value)}
+                            >
+                              {opts.map((o) => <option key={o} value={o}>{o.replace(/_/g, ' ')}</option>)}
+                            </select>
+                          </div>
+                        ))}
+                        <div className="col-span-2">
+                          <label className="text-xs text-muted-foreground mb-1 block">Category</label>
+                          <select
+                            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                            value={meta.category}
+                            onChange={(e) => setMeta_('category', e.target.value)}
+                          >
+                            {CATEGORIES.map((c) => <option key={c} value={c}>{c.replace(/_/g, ' ')}</option>)}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Instructor Picker */}
+                      <InstructorPicker
+                        value={meta.instructorId}
+                        onChange={(id, name) => setMeta((f) => ({ ...f, instructorId: id, instructorName: name }))}
+                      />
+
+                      <div className="flex justify-end pt-2">
+                        <Button type="submit" disabled={isCreating} className="gap-2">
+                          {isCreating
+                            ? <><Loader2 size={14} className="animate-spin" /> Creating...</>
+                            : <><Plus size={14} /> Create Course</>}
+                        </Button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
+                {/* Step 2: Landing page content (after create) */}
+                {createdCourseId && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-xs font-bold text-primary-foreground">2</div>
+                      <h2 className="text-sm font-semibold">Landing Page Content</h2>
                     </div>
                     <CourseInfoForm courseInfo={courseInfo} onChange={setCourseInfo} />
                   </div>
                 )}
-
-                {activeView === 'topic' && currentTopicIndex >= 0 && (
-                  <TopicEditor
-                    topic={topics[currentTopicIndex]}
-                    topicIndex={currentTopicIndex}
-                    onTopicChange={handleTopicChange}
-                    imageMap={imageMap}
-                    onImageUpload={handleImageUpload}
-                  />
-                )}
-
-                {activeView === 'topic' && currentTopicIndex < 0 && (
-                  <div className='rounded-xl border border-dashed p-16 text-center'>
-                    <Layers size={32} className='text-muted-foreground mx-auto mb-3' />
-                    <p className='text-sm text-muted-foreground'>Select a topic from the sidebar or add a new one.</p>
-                    <Button size='sm' className='mt-4 gap-1' onClick={handleAddTopic}><Plus size={13} /> Add Topic</Button>
-                  </div>
-                )}
               </>
+            )}
+
+            {/* === Topic Editor View === */}
+            {showTopicEditor && (
+              <TopicEditor
+                topic={topics[currentTopicIndex]}
+                topicIndex={currentTopicIndex}
+                onTopicChange={handleTopicChange}
+                imageMap={imageMap}
+                onImageUpload={handleImageUpload}
+              />
+            )}
+
+            {/* Empty topic state */}
+            {activeView === 'topic' && currentTopicIndex < 0 && (
+              <div className="rounded-xl border border-dashed p-16 text-center">
+                <Layers size={32} className="text-muted-foreground mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">Select a topic from the sidebar or add a new one.</p>
+                <Button size="sm" className="mt-4 gap-1" onClick={handleAddTopic}>
+                  <Plus size={13} /> Add Topic
+                </Button>
+              </div>
             )}
 
           </div>
