@@ -1,6 +1,3 @@
-// src/features/courses/types/admin-course.types.ts
-// ✅ FIXED: CourseColor now UPPERCASE to match backend validation
-
 export type CourseAccess = 'FREE' | 'PRO' | 'PREMIUM';
 export type CourseDifficulty =
   | 'BEGINNER'
@@ -8,7 +5,6 @@ export type CourseDifficulty =
   | 'ADVANCED'
   | 'EXPERT';
 
-// ✅ FIXED: backend expects UPPERCASE color values
 export type CourseColor =
   | 'EMERALD'
   | 'BLUE'
@@ -30,7 +26,6 @@ export type CourseCategory =
   | 'TOOLS_AND_TECHNIQUES'
   | 'CAREER_AND_INDUSTRY';
 
-// ── Curriculum (مطابق لـ CurriculumTopic في المنصة) ──────────────────────
 export type CurriculumElementType =
   | 'image'
   | 'title'
