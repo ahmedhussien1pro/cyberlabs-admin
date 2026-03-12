@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Link, Bold, Italic, Code } from 'lucide-react';
+import { Link, Bold, Italic, Code, X } from 'lucide-react';
 
 interface RichTextEditorProps {
   value: string;
@@ -61,23 +61,22 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, dir = 
   ];
 
   return (
-    <div className='space-y-1'>
-      {/* Toolbar */}
-      <div className='flex items-center gap-1 px-1 py-1 rounded-md border bg-muted/30'>
+    <div className="space-y-1">
+      <div className="flex items-center gap-1 px-1 py-1 rounded-md border bg-muted/30">
         {TOOLBAR.map(({ icon: Icon, title, start, end }) => (
           <button
             key={title}
-            type='button'
+            type="button"
             title={title}
-            className='p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground'
+            className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
             onClick={() => insertTag(start, end)}
           >
             <Icon size={13} />
           </button>
         ))}
         <button
-          type='button'
-          title='Insert Link'
+          type="button"
+          title="Insert Link"
           className={`p-1.5 rounded hover:bg-muted transition-colors ${showLinkInput ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'}`}
           onClick={handleLinkClick}
         >
@@ -85,13 +84,12 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, dir = 
         </button>
       </div>
 
-      {/* Inline Link Input */}
       {showLinkInput && (
-        <div className='flex items-center gap-2 px-2 py-1.5 rounded-md border bg-muted/20'>
+        <div className="flex items-center gap-2 px-2 py-1.5 rounded-md border bg-muted/20">
           <input
             autoFocus
-            className='flex-1 rounded border bg-background px-2 py-1 text-xs font-mono'
-            placeholder='https://example.com'
+            className="flex-1 rounded border bg-background px-2 py-1 text-xs font-mono"
+            placeholder="https://example.com"
             value={linkUrl}
             onChange={(e) => setLinkUrl(e.target.value)}
             onKeyDown={(e) => {
@@ -99,18 +97,29 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, dir = 
               if (e.key === 'Escape') setShowLinkInput(false);
             }}
           />
-          <button type='button' className='text-xs bg-primary text-primary-foreground px-2 py-1 rounded' onClick={handleLinkInsert}>Insert</button>
-          <button type='button' className='text-xs text-muted-foreground hover:text-foreground px-1' onClick={() => setShowLinkInput(false)}>✕</button>
+          <button
+            type="button"
+            className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded"
+            onClick={handleLinkInsert}
+          >
+            Insert
+          </button>
+          <button
+            type="button"
+            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+            onClick={() => setShowLinkInput(false)}
+          >
+            <X size={12} />
+          </button>
         </div>
       )}
 
-      {/* Textarea */}
       <textarea
         ref={textareaRef}
-        className='w-full rounded-md border bg-background px-3 py-2 text-sm resize-y min-h-[80px]'
+        className="w-full rounded-md border bg-background px-3 py-2 text-sm resize-y min-h-[80px]"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder='Type here...'
+        placeholder="Type here..."
         dir={dir}
         rows={4}
       />
