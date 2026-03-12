@@ -32,8 +32,16 @@ export type CourseCategory =
 
 // ── Curriculum (مطابق لـ CurriculumTopic في المنصة) ──────────────────────
 export type CurriculumElementType =
-  | 'image' | 'title' | 'text' | 'table' | 'terminal'
-  | 'note'  | 'hr'    | 'orderedList' | 'list' | 'quiz';
+  | 'image'
+  | 'title'
+  | 'text'
+  | 'table'
+  | 'terminal'
+  | 'note'
+  | 'hr'
+  | 'orderedList'
+  | 'list'
+  | 'quiz';
 
 export interface CurriculumElement {
   id: string | number;
@@ -66,6 +74,7 @@ export interface AdminCourse {
   ar_longDescription: string | null;
   image: string | null;
   thumbnail: string | null;
+  isPublished?: boolean;
   color: CourseColor;
   access: CourseAccess;
   state: CourseState;
