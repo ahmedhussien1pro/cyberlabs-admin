@@ -94,9 +94,7 @@ export interface AdminCourse {
   isFeatured: boolean;
   isNew: boolean;
   labsLink?: string | null;
-  // ✅ Added: labs attached to this course (array of lab slugs)
   labSlugs: string[];
-  // ✅ Added: instructor relationship (backend requires this on create)
   instructorId?: string | null;
 }
 

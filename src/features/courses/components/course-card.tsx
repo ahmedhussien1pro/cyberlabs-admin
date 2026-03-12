@@ -1,5 +1,3 @@
-// src/features/courses/components/course-card.tsx
-// Thin wrapper: uses CourseAdminCard so there is ONE card implementation.
 import { CourseAdminCard } from './course-admin-card';
 import type { AdminCourse } from '../types/admin-course.types';
 
