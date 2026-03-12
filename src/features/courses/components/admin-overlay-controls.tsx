@@ -2,11 +2,19 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
-  Pencil, Trash2, Globe, EyeOff, Copy, Eye, Loader2,
+  Pencil, Trash2, Globe, EyeOff, Copy, Eye, Loader2, Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,14 +28,27 @@ import {
 import { cn } from '@/lib/utils';
 import { adminCoursesApi } from '../services/admin-courses.api';
 import { ROUTES } from '@/shared/constants';
-import type { AdminCourse } from '../types/admin-course.types';
+import type { AdminCourse, CourseState } from '../types/admin-course.types';
 
 interface AdminOverlayControlsProps {
   course: AdminCourse;
   className?: string;
 }
 
+const STATE_OPTIONS: { value: CourseState; labelKey: string; icon: React.ElementType; color: string }[] = [
+  { value: 'PUBLISHED',   labelKey: 'state.PUBLISHED',   icon: Globe,   color: 'text-emerald-400' },
+  { value: 'COMING_SOON', labelKey: 'state.COMING_SOON', icon: Clock,   color: 'text-blue-400'    },
+  { value: 'DRAFT',       labelKey: 'state.DRAFT',       icon: EyeOff,  color: 'text-zinc-400'    },
+];
+
+const STATE_PILL: Record<string, string> = {
+  PUBLISHED:   'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/40',
+  COMING_SOON: 'bg-blue-500/20    text-blue-300    hover:bg-blue-500/40',
+  DRAFT:       'bg-zinc-800/80    text-zinc-300    hover:bg-zinc-700',
+};
+
 export function AdminOverlayControls({ course, className }: AdminOverlayControlsProps) {
+  const { t } = useTranslation('courses');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -37,16 +58,10 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
     [queryClient],
   );
 
-  const isPublished = course.state === 'PUBLISHED';
-
-  // ── Publish toggle with optimistic update ────────────────────────────
-  const publishMutation = useMutation({
-    mutationFn: () =>
-      adminCoursesApi.setState(
-        course.id,
-        isPublished ? 'DRAFT' : 'PUBLISHED',
-      ),
-    onMutate: async () => {
+  // ── Set State (PUBLISHED / COMING_SOON / DRAFT) with optimistic update ──
+  const stateMutation = useMutation({
+    mutationFn: (newState: CourseState) => adminCoursesApi.setState(course.id, newState),
+    onMutate: async (newState) => {
       await queryClient.cancelQueries({ queryKey: ['admin', 'courses'] });
       const snapshot = queryClient.getQueriesData({ queryKey: ['admin', 'courses', 'list'] });
       queryClient.setQueriesData(
@@ -56,9 +71,7 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
           return {
             ...old,
             data: old.data.map((c: AdminCourse) =>
-              c.id === course.id
-                ? { ...c, state: isPublished ? 'DRAFT' : 'PUBLISHED' }
-                : c,
+              c.id === course.id ? { ...c, state: newState } : c,
             ),
           };
         },
@@ -66,20 +79,18 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
       return { snapshot };
     },
     onSuccess: (updated) => {
-      toast.success(
-        updated.state === 'PUBLISHED'
-          ? `"${course.title}" published`
-          : `"${course.title}" unpublished`,
-      );
+      const toastKey =
+        updated.state === 'PUBLISHED'   ? 'toast.published'
+        : updated.state === 'COMING_SOON' ? 'toast.comingSoon'
+        : 'toast.unpublished';
+      toast.success(t(toastKey, { title: course.title }));
       invalidate();
     },
     onError: (_e, _v, ctx: any) => {
       if (ctx?.snapshot) {
-        ctx.snapshot.forEach(([key, val]: [any, any]) => {
-          queryClient.setQueryData(key, val);
-        });
+        ctx.snapshot.forEach(([key, val]: [any, any]) => queryClient.setQueryData(key, val));
       }
-      toast.error('Failed to update publish state');
+      toast.error(t('errors.publishFailed'));
     },
   });
 
@@ -87,11 +98,11 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
   const duplicateMutation = useMutation({
     mutationFn: () => adminCoursesApi.duplicate(course.id),
     onSuccess: (newCourse) => {
-      toast.success(`"${course.title}" duplicated`);
+      toast.success(t('toast.duplicated', { title: course.title }));
       invalidate();
       navigate(ROUTES.COURSE_EDIT(newCourse.slug ?? newCourse.id));
     },
-    onError: () => toast.error('Failed to duplicate course'),
+    onError: () => toast.error(t('errors.duplicateFailed')),
   });
 
   // ── Delete ────────────────────────────────────────────────────────────
@@ -110,20 +121,21 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
       return { snapshot };
     },
     onSuccess: () => {
-      toast.success(`"${course.title}" deleted`);
+      toast.success(t('toast.deleted', { title: course.title }));
       invalidate();
       setDeleteOpen(false);
     },
     onError: (err: any, _v, ctx: any) => {
       if (ctx?.snapshot) {
-        ctx.snapshot.forEach(([key, val]: [any, any]) => {
-          queryClient.setQueryData(key, val);
-        });
+        ctx.snapshot.forEach(([key, val]: [any, any]) => queryClient.setQueryData(key, val));
       }
-      const msg = err?.response?.data?.message ?? err?.message ?? 'Failed to delete';
-      toast.error(`Cannot delete: ${msg}`);
+      const msg = err?.response?.data?.message ?? err?.message ?? 'Unknown error';
+      toast.error(t('errors.deleteFailed', { message: msg }));
     },
   });
+
+  const currentStateOption = STATE_OPTIONS.find((o) => o.value === course.state) ?? STATE_OPTIONS[2];
+  const CurrentIcon = currentStateOption.icon;
 
   return (
     <>
@@ -136,36 +148,56 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
           className,
         )}
       >
-        {/* Top row */}
-        <div className='flex items-center justify-between'>
-          {/* Publish / Unpublish */}
-          <Button
-            size='sm'
-            variant='ghost'
-            aria-label={isPublished ? 'Unpublish course' : 'Publish course'}
-            className={cn(
-              'h-7 gap-1.5 text-[11px] font-semibold rounded-full px-2.5',
-              isPublished
-                ? 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/40'
-                : 'bg-zinc-800/80 text-zinc-300 hover:bg-zinc-700',
-            )}
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); publishMutation.mutate(); }}
-            disabled={publishMutation.isPending}
-          >
-            {publishMutation.isPending ? (
-              <Loader2 className='h-3 w-3 animate-spin' />
-            ) : isPublished ? (
-              <><EyeOff className='h-3 w-3' /> Unpublish</>
-            ) : (
-              <><Globe className='h-3 w-3' /> Publish</>
-            )}
-          </Button>
+        {/* Top row: State dropdown + Preview */}
+        <div className='flex items-center justify-between gap-1'>
+          {/* State dropdown — 3 options */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size='sm'
+                variant='ghost'
+                aria-label={t('overlay.setState')}
+                className={cn(
+                  'h-7 gap-1.5 text-[11px] font-semibold rounded-full px-2.5',
+                  STATE_PILL[course.state] ?? STATE_PILL.DRAFT,
+                )}
+                disabled={stateMutation.isPending}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              >
+                {stateMutation.isPending
+                  ? <Loader2 className='h-3 w-3 animate-spin' />
+                  : <><CurrentIcon className='h-3 w-3' /> {t(currentStateOption.labelKey)}</>
+                }
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='start' className='min-w-[160px]'>
+              {STATE_OPTIONS.map((opt) => {
+                const Icon = opt.icon;
+                const isCurrent = course.state === opt.value;
+                return (
+                  <DropdownMenuItem
+                    key={opt.value}
+                    disabled={isCurrent}
+                    className={cn('gap-2 text-xs', isCurrent && 'opacity-50 cursor-default')}
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      if (!isCurrent) stateMutation.mutate(opt.value);
+                    }}
+                  >
+                    <Icon className={cn('h-3.5 w-3.5', opt.color)} />
+                    {t(opt.labelKey)}
+                    {isCurrent && <span className='ms-auto text-[10px] text-muted-foreground'>✓</span>}
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Preview — internal admin preview tab */}
           <Button
             size='sm'
             variant='ghost'
-            aria-label='Preview course'
+            aria-label={t('overlay.preview')}
             className='h-7 w-7 p-0 rounded-full bg-black/40 text-white/70 hover:text-white hover:bg-black/60 transition-colors'
             onClick={(e) => {
               e.preventDefault();
@@ -177,23 +209,21 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
           </Button>
         </div>
 
-        {/* Bottom row */}
+        {/* Bottom row: Edit + Duplicate + Delete */}
         <div className='flex items-center gap-1.5'>
-          {/* Edit */}
           <Button
             size='sm'
-            aria-label='Edit course'
+            aria-label={t('overlay.edit')}
             className='flex-1 h-8 text-[11px] gap-1.5 bg-primary/80 hover:bg-primary text-white rounded-lg'
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(ROUTES.COURSE_EDIT(course.slug)); }}
           >
-            <Pencil className='h-3 w-3' /> Edit
+            <Pencil className='h-3 w-3' /> {t('overlay.edit')}
           </Button>
 
-          {/* Duplicate */}
           <Button
             size='sm'
             variant='ghost'
-            aria-label='Duplicate course'
+            aria-label={t('overlay.duplicate')}
             className='h-8 w-8 p-0 bg-white/10 text-white hover:bg-white/20 rounded-lg'
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); duplicateMutation.mutate(); }}
             disabled={duplicateMutation.isPending}
@@ -203,11 +233,10 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
               : <Copy className='h-3.5 w-3.5' />}
           </Button>
 
-          {/* Delete */}
           <Button
             size='sm'
             variant='ghost'
-            aria-label='Delete course'
+            aria-label={t('overlay.delete')}
             className='h-8 w-8 p-0 bg-red-500/20 text-red-300 hover:bg-red-500/40 rounded-lg'
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteOpen(true); }}
             disabled={deleteMutation.isPending}
@@ -223,22 +252,21 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete "{course.title}"?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the course and all its curriculum data.
-              This action cannot be undone.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t('dialogs.deleteTitle', { title: course.title })}</AlertDialogTitle>
+            <AlertDialogDescription>{t('dialogs.deleteDesc')}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>
+              {t('dialogs.cancel')}
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => { e.preventDefault(); deleteMutation.mutate(); }}
               disabled={deleteMutation.isPending}
               className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
             >
               {deleteMutation.isPending
-                ? <><Loader2 className='mr-2 h-4 w-4 animate-spin' /> Deleting...</>
-                : 'Delete Course'}
+                ? <><Loader2 className='mr-2 h-4 w-4 animate-spin' /> {t('dialogs.deleting')}</>
+                : t('dialogs.deleteConfirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

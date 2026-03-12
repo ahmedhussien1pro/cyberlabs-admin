@@ -18,21 +18,8 @@ export interface AdminCourseListParams {
   difficulty?: string;
 }
 
-/**
- * Axios interceptor returns the full AxiosResponse.
- * Backend wraps single items as { data: <item> }.
- * So the chain is: AxiosResponse.data = { data: item }
- *
- * unwrapItem drills through any number of { data: ... } wrappers
- * until it finds an object that looks like a real entity (has an `id` field)
- * or until there is nothing left to unwrap.
- */
 function unwrapItem<T>(res: any): T {
-  // Start from AxiosResponse.data
   let val = res?.data ?? res;
-
-  // Keep unwrapping { data: ... } as long as the current value doesn't look
-  // like a real entity (i.e. it has a `data` key but no `id` key).
   for (let i = 0; i < 5; i++) {
     if (val && typeof val === 'object' && 'data' in val && !('id' in val)) {
       val = val.data;
@@ -40,29 +27,21 @@ function unwrapItem<T>(res: any): T {
       break;
     }
   }
-
   return val as T;
 }
 
 function unwrapList<T>(res: any): T {
-  // AxiosResponse.data
   const axiosData = res?.data ?? res;
-
-  // Backend returns { data: [...], meta: {...} }
-  // axiosData might already be that shape, or wrapped one more time.
   let payload = axiosData;
   if (payload && typeof payload === 'object' && 'data' in payload && !Array.isArray(payload.data)) {
-    // could be { data: { data: [...], meta: {...} } }
     const inner = payload.data;
     if (inner && typeof inner === 'object' && Array.isArray(inner.data)) {
       payload = inner;
     }
   }
-
   if (payload?.data !== undefined && payload?.meta !== undefined) {
     return payload as T;
   }
-
   const arr = Array.isArray(payload?.data)
     ? payload.data
     : Array.isArray(payload)
@@ -85,23 +64,16 @@ function normalizeArrays(course: AdminCourse): AdminCourse {
   };
 }
 
-function stateToIsPublished(state?: CourseState | 'all'): boolean | undefined {
-  if (!state || state === 'all') return undefined;
-  if (state === 'PUBLISHED') return true;
-  if (state === 'DRAFT' || state === 'COMING_SOON') return false;
-  return undefined;
-}
-
 export const adminCoursesApi = {
   list: async (params: AdminCourseListParams = {}): Promise<AdminCoursesListResponse> => {
     const query: Record<string, any> = {
       page:  params.page  ?? 1,
       limit: params.limit ?? 20,
     };
-    if (params.search)     query.search     = params.search;
-    if (params.difficulty) query.difficulty = params.difficulty;
-    const isPublished = stateToIsPublished(params.state);
-    if (isPublished !== undefined) query.isPublished = isPublished;
+    if (params.search)                              query.search     = params.search;
+    if (params.difficulty && params.difficulty !== 'ALL') query.difficulty = params.difficulty;
+    // Send state only when a specific state is selected (not 'all')
+    if (params.state && params.state !== 'all')     query.state      = params.state;
     const res = await adminApiClient.get('/admin/courses', { params: query });
     return unwrapList<AdminCoursesListResponse>(res);
   },
@@ -119,11 +91,9 @@ export const adminCoursesApi = {
   getBySlug: async (slug: string): Promise<AdminCourse> => {
     const res = await adminApiClient.get(`/admin/courses/${encodeURIComponent(slug)}`);
     const course = unwrapItem<AdminCourse>(res);
-
     if (!course || typeof course !== 'object' || !('id' in course)) {
       throw new Error(`Course not found: ${slug}`);
     }
-
     return normalizeArrays(course);
   },
 

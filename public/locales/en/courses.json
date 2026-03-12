@@ -1,40 +1,94 @@
 {
   "title": "Courses",
   "subtitle": "Manage platform courses",
+  "newCourse": "New Course",
+  "importJson": "Import JSON",
   "stats": {
-    "total": "Total Courses",
+    "total": "Total",
     "published": "Published",
-    "unpublished": "Unpublished",
+    "draft": "Draft",
+    "comingSoon": "Coming Soon",
     "featured": "Featured"
   },
+  "filters": {
+    "searchPlaceholder": "Search courses...",
+    "allStatuses": "All Status",
+    "allDifficulties": "All Levels",
+    "allAccess": "All Access",
+    "gridView": "Grid view",
+    "tableView": "Table view"
+  },
   "table": {
-    "title": "Title",
-    "instructor": "Instructor",
+    "course": "Course",
+    "state": "State",
     "difficulty": "Difficulty",
     "access": "Access",
-    "status": "Status",
-    "enrollments": "Enrollments",
-    "rating": "Rating",
-    "createdAt": "Created At",
-    "actions": "Actions"
+    "enrolled": "Enrolled",
+    "actions": "Actions",
+    "noResults": "No courses found",
+    "noResultsHint": "Adjust filters or create a new course.",
+    "page": "Page",
+    "of": "of",
+    "total": "total",
+    "prevPage": "Previous page",
+    "nextPage": "Next page"
   },
-  "filters": {
-    "allDifficulties": "All Difficulties",
-    "allAccess": "All Access Types",
-    "allStatuses": "All Statuses",
-    "searchPlaceholder": "Search courses..."
+  "card": {
+    "enrolled": "enrolled",
+    "topics": "Topics",
+    "hours": "h",
+    "labs": "labs",
+    "noDescription": "No description"
   },
   "difficulty": {
+    "ALL": "All Levels",
     "BEGINNER": "Beginner",
     "INTERMEDIATE": "Intermediate",
     "ADVANCED": "Advanced",
     "EXPERT": "Expert"
   },
-  "access": { "FREE": "Free", "PRO": "Pro", "PREMIUM": "Premium" },
+  "access": {
+    "FREE": "Free",
+    "PRO": "Pro",
+    "PREMIUM": "Premium"
+  },
   "state": {
+    "all": "All Status",
     "PUBLISHED": "Published",
     "DRAFT": "Draft",
     "COMING_SOON": "Coming Soon"
+  },
+  "contentType": {
+    "PRACTICAL": "Practical",
+    "THEORETICAL": "Theory",
+    "MIXED": "Mixed"
+  },
+  "overlay": {
+    "edit": "Edit",
+    "preview": "Preview",
+    "duplicate": "Duplicate",
+    "delete": "Delete",
+    "publish": "Publish",
+    "unpublish": "Unpublish",
+    "setComingSoon": "Coming Soon",
+    "setState": "Set State"
+  },
+  "actions": {
+    "create": "Create Course",
+    "edit": "Edit",
+    "delete": "Delete",
+    "publish": "Publish",
+    "unpublish": "Unpublish",
+    "duplicate": "Duplicate",
+    "tryAgain": "Try Again",
+    "viewDetail": "View Detail"
+  },
+  "dialogs": {
+    "deleteTitle": "Delete \"{{title}}\"?",
+    "deleteDesc": "This will permanently delete the course and all its curriculum data. This action cannot be undone.",
+    "deleteConfirm": "Delete Course",
+    "deleting": "Deleting...",
+    "cancel": "Cancel"
   },
   "form": {
     "createTitle": "Create Course",
@@ -55,8 +109,6 @@
     "state": "State",
     "thumbnailUrl": "Thumbnail URL",
     "backgroundImageUrl": "Background Image URL",
-    "price": "Price ($)",
-    "duration": "Duration (hours)",
     "estimatedHours": "Estimated Hours",
     "tags": "Tags",
     "skills": "Skills",
@@ -70,20 +122,18 @@
     "createCourse": "Create Course",
     "saveChanges": "Save Changes"
   },
-  "actions": {
-    "create": "Create Course",
-    "edit": "Edit",
-    "delete": "Delete",
-    "publish": "Publish",
-    "unpublish": "Unpublish",
-    "viewDetail": "View Detail"
+  "errors": {
+    "loadFailed": "Failed to load courses. Please check your connection and try again.",
+    "deleteFailed": "Cannot delete: {{message}}",
+    "publishFailed": "Failed to update state",
+    "duplicateFailed": "Failed to duplicate"
   },
-  "dialogs": {
-    "deleteTitle": "Delete Course",
-    "deleteDesc": "Are you sure you want to delete \"{{title}}\"? This cannot be undone.",
-    "publishTitle": "Publish Course",
-    "publishDesc": "Publish \"{{title}}\"?",
-    "unpublishTitle": "Unpublish Course",
-    "unpublishDesc": "Unpublish \"{{title}}\"?"
+  "toast": {
+    "published": "\"{{title}}\" published",
+    "unpublished": "\"{{title}}\" unpublished",
+    "comingSoon": "\"{{title}}\" set to Coming Soon",
+    "deleted": "\"{{title}}\" deleted",
+    "duplicated": "\"{{title}}\" duplicated",
+    "stateUpdated": "State updated"
   }
 }

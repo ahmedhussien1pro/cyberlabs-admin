@@ -1,37 +1,95 @@
 {
   "title": "الكورسات",
   "subtitle": "إدارة كورسات المنصة",
+  "newCourse": "كورس جديد",
+  "importJson": "استيراد JSON",
   "stats": {
-    "total": "إجمالي الكورسات",
-    "published": "المنشورة",
-    "unpublished": "غير المنشورة",
-    "featured": "المميزة"
-  },
-  "table": {
-    "title": "العنوان",
-    "instructor": "المدرب",
-    "difficulty": "المستوى",
-    "access": "نوع الوصول",
-    "status": "الحالة",
-    "enrollments": "التسجيلات",
-    "rating": "التقييم",
-    "createdAt": "تاريخ الإنشاء",
-    "actions": "الإجراءات"
+    "total": "الإجمالي",
+    "published": "منشورة",
+    "draft": "مسودة",
+    "comingSoon": "قريباً",
+    "featured": "مميزة"
   },
   "filters": {
+    "searchPlaceholder": "البحث في الكورسات...",
+    "allStatuses": "كل الحالات",
     "allDifficulties": "كل المستويات",
     "allAccess": "كل أنواع الوصول",
-    "allStatuses": "كل الحالات",
-    "searchPlaceholder": "البحث في الكورسات..."
+    "gridView": "عرض شبكي",
+    "tableView": "عرض جدول"
+  },
+  "table": {
+    "course": "الكورس",
+    "state": "الحالة",
+    "difficulty": "المستوى",
+    "access": "الوصول",
+    "enrolled": "المسجلون",
+    "actions": "الإجراءات",
+    "noResults": "لا توجد كورسات",
+    "noResultsHint": "عدّل الفلاتر أو أنشئ كورساً جديداً.",
+    "page": "صفحة",
+    "of": "من",
+    "total": "إجمالي",
+    "prevPage": "الصفحة السابقة",
+    "nextPage": "الصفحة التالية"
+  },
+  "card": {
+    "enrolled": "مسجل",
+    "topics": "موضوعات",
+    "hours": "س",
+    "labs": "لابات",
+    "noDescription": "لا يوجد وصف"
   },
   "difficulty": {
+    "ALL": "كل المستويات",
     "BEGINNER": "مبتدئ",
     "INTERMEDIATE": "متوسط",
     "ADVANCED": "متقدم",
     "EXPERT": "خبير"
   },
-  "access": { "FREE": "مجاني", "PRO": "برو", "PREMIUM": "مميز" },
-  "state": { "PUBLISHED": "منشور", "DRAFT": "مسودة", "COMING_SOON": "قريباً" },
+  "access": {
+    "FREE": "مجاني",
+    "PRO": "برو",
+    "PREMIUM": "مميز"
+  },
+  "state": {
+    "all": "كل الحالات",
+    "PUBLISHED": "منشور",
+    "DRAFT": "مسودة",
+    "COMING_SOON": "قريباً"
+  },
+  "contentType": {
+    "PRACTICAL": "تطبيقي",
+    "THEORETICAL": "نظري",
+    "MIXED": "مختلط"
+  },
+  "overlay": {
+    "edit": "تعديل",
+    "preview": "معاينة",
+    "duplicate": "نسخ",
+    "delete": "حذف",
+    "publish": "نشر",
+    "unpublish": "إلغاء النشر",
+    "setComingSoon": "قريباً",
+    "setState": "تغيير الحالة"
+  },
+  "actions": {
+    "create": "إنشاء كورس",
+    "edit": "تعديل",
+    "delete": "حذف",
+    "publish": "نشر",
+    "unpublish": "إلغاء النشر",
+    "duplicate": "نسخ",
+    "tryAgain": "حاول مجدداً",
+    "viewDetail": "عرض التفاصيل"
+  },
+  "dialogs": {
+    "deleteTitle": "حذف \"{{title}}\"؟",
+    "deleteDesc": "سيُحذف الكورس وكل بيانات المنهج نهائياً. لا يمكن التراجع.",
+    "deleteConfirm": "حذف الكورس",
+    "deleting": "جارٍ الحذف...",
+    "cancel": "إلغاء"
+  },
   "form": {
     "createTitle": "إنشاء كورس",
     "editTitle": "تعديل الكورس",
@@ -51,8 +109,6 @@
     "state": "الحالة",
     "thumbnailUrl": "رابط الصورة المصغرة",
     "backgroundImageUrl": "رابط صورة الخلفية",
-    "price": "السعر ($)",
-    "duration": "المدة (ساعات)",
     "estimatedHours": "الساعات التقديرية",
     "tags": "الوسوم",
     "skills": "المهارات",
@@ -66,20 +122,18 @@
     "createCourse": "إنشاء الكورس",
     "saveChanges": "حفظ التغييرات"
   },
-  "actions": {
-    "create": "إنشاء كورس",
-    "edit": "تعديل",
-    "delete": "حذف",
-    "publish": "نشر",
-    "unpublish": "إلغاء النشر",
-    "viewDetail": "عرض التفاصيل"
+  "errors": {
+    "loadFailed": "فشل تحميل الكورسات. تحقق من الاتصال وحاول مجدداً.",
+    "deleteFailed": "تعذّر الحذف: {{message}}",
+    "publishFailed": "فشل تحديث الحالة",
+    "duplicateFailed": "فشل النسخ"
   },
-  "dialogs": {
-    "deleteTitle": "حذف الكورس",
-    "deleteDesc": "هل أنت متأكد من حذف \"{{title}}\"؟ لا يمكن التراجع.",
-    "publishTitle": "نشر الكورس",
-    "publishDesc": "هل تريد نشر \"{{title}}\"؟",
-    "unpublishTitle": "إلغاء النشر",
-    "unpublishDesc": "هل تريد إلغاء نشر \"{{title}}\"؟"
+  "toast": {
+    "published": "تم نشر \"{{title}}\"",
+    "unpublished": "تم إلغاء نشر \"{{title}}\"",
+    "comingSoon": "تم تعيين \"{{title}}\" كـ قريباً",
+    "deleted": "تم حذف \"{{title}}\"",
+    "duplicated": "تم نسخ \"{{title}}\"",
+    "stateUpdated": "تم تحديث الحالة"
   }
 }
