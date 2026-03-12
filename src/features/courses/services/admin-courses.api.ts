@@ -64,16 +64,41 @@ function normalizeArrays(course: AdminCourse): AdminCourse {
   };
 }
 
+/**
+ * Smart setState:
+ * 1. Try dedicated endpoint first (PUBLISHED → /publish, DRAFT → /unpublish, COMING_SOON → /coming-soon)
+ * 2. If backend returns 404/405 (no dedicated endpoint), fall back to PATCH { state }
+ */
+async function smartSetState(id: string, state: CourseState): Promise<AdminCourse> {
+  const endpointMap: Record<CourseState, string> = {
+    PUBLISHED:   `/admin/courses/${id}/publish`,
+    DRAFT:       `/admin/courses/${id}/unpublish`,
+    COMING_SOON: `/admin/courses/${id}/coming-soon`,
+  };
+
+  try {
+    const res = await adminApiClient.patch(endpointMap[state]);
+    return normalizeArrays(unwrapItem<AdminCourse>(res));
+  } catch (err: any) {
+    const status = err?.response?.status;
+    // Only fallback on 404 (endpoint doesn't exist) or 405 (method not allowed)
+    if (status === 404 || status === 405) {
+      const res = await adminApiClient.patch(`/admin/courses/${id}`, { state });
+      return normalizeArrays(unwrapItem<AdminCourse>(res));
+    }
+    throw err;
+  }
+}
+
 export const adminCoursesApi = {
   list: async (params: AdminCourseListParams = {}): Promise<AdminCoursesListResponse> => {
     const query: Record<string, any> = {
       page:  params.page  ?? 1,
       limit: params.limit ?? 20,
     };
-    if (params.search)                              query.search     = params.search;
+    if (params.search)                                   query.search     = params.search;
     if (params.difficulty && params.difficulty !== 'ALL') query.difficulty = params.difficulty;
-    // Send state only when a specific state is selected (not 'all')
-    if (params.state && params.state !== 'all')     query.state      = params.state;
+    if (params.state && params.state !== 'all')           query.state      = params.state;
     const res = await adminApiClient.get('/admin/courses', { params: query });
     return unwrapList<AdminCoursesListResponse>(res);
   },
@@ -107,20 +132,9 @@ export const adminCoursesApi = {
     return normalizeArrays(unwrapItem<AdminCourse>(res));
   },
 
-  setState: async (id: string, state: CourseState): Promise<AdminCourse> => {
-    const res = await adminApiClient.patch(`/admin/courses/${id}`, { state });
-    return normalizeArrays(unwrapItem<AdminCourse>(res));
-  },
-
-  publish: async (id: string): Promise<AdminCourse> => {
-    const res = await adminApiClient.patch(`/admin/courses/${id}/publish`);
-    return normalizeArrays(unwrapItem<AdminCourse>(res));
-  },
-
-  unpublish: async (id: string): Promise<AdminCourse> => {
-    const res = await adminApiClient.patch(`/admin/courses/${id}/unpublish`);
-    return normalizeArrays(unwrapItem<AdminCourse>(res));
-  },
+  // Uses smart fallback: dedicated endpoint first, then PATCH { state }
+  setState: (id: string, state: CourseState): Promise<AdminCourse> =>
+    smartSetState(id, state),
 
   duplicate: async (id: string): Promise<AdminCourse> => {
     const res = await adminApiClient.post(`/admin/courses/${id}/duplicate`);
