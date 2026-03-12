@@ -1,5 +1,5 @@
 // src/features/courses/pages/course-create.page.tsx
-import { useState, useRef, useCallback } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -13,7 +13,6 @@ import { ROUTES } from '@/shared/constants';
 import type { CourseCreateDto } from '../types/course.types';
 import CourseInfoForm, { CourseInfoData, DEFAULT_INFO } from '../components/content-editor/CourseInfoForm';
 import TopicEditor, { Topic } from '../components/content-editor/TopicEditor';
-import Swal from 'sweetalert2';
 
 const DIFFICULTIES = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'EXPERT'] as const;
 const ACCESSES = ['FREE', 'PRO', 'PREMIUM'] as const;
@@ -37,14 +36,10 @@ type ActiveView = 'course-info' | 'topic';
 export default function CourseCreatePage() {
   const navigate = useNavigate();
 
-  // Sidebar
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-
-  // View
   const [activeView, setActiveView] = useState<ActiveView>('course-info');
   const [currentTopicIndex, setCurrentTopicIndex] = useState(-1);
 
-  // Course meta (for creation)
   const [meta, setMeta] = useState({
     title: '', ar_title: '', slug: '', description: '',
     difficulty: 'BEGINNER' as typeof DIFFICULTIES[number],
@@ -59,12 +54,9 @@ export default function CourseCreatePage() {
     ...f, title: v, slug: f.slug === slugify(f.title) || f.slug === '' ? slugify(v) : f.slug,
   }));
 
-  // Content data
   const [courseInfo, setCourseInfo] = useState<CourseInfoData>({ ...DEFAULT_INFO });
   const [topics, setTopics] = useState<Topic[]>([]);
   const [imageMap, setImageMap] = useState<Record<string, string>>({});
-
-  // Created course id (after first save)
   const [createdCourseId, setCreatedCourseId] = useState<string | null>(null);
   const [createdCourseSlug, setCreatedCourseSlug] = useState<string | null>(null);
 
@@ -85,16 +77,24 @@ export default function CourseCreatePage() {
     setActiveView('topic');
   };
 
-  const handleDeleteTopic = async (index: number) => {
-    const res = await Swal.fire({
-      title: 'Delete Topic?', text: 'All elements inside will be lost!',
-      icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete',
-      confirmButtonColor: '#ef4444',
+  const handleDeleteTopic = (index: number) => {
+    const topicTitle = topics[index]?.title.en || `Topic ${index + 1}`;
+    toast(`Delete "${topicTitle}"?`, {
+      description: 'All elements inside will be lost.',
+      action: {
+        label: 'Delete',
+        onClick: () => {
+          setTopics((t) => t.filter((_, i) => i !== index));
+          if (currentTopicIndex === index) { setCurrentTopicIndex(-1); setActiveView('course-info'); }
+          else if (currentTopicIndex > index) setCurrentTopicIndex((i) => i - 1);
+          toast.success('Topic deleted');
+        },
+      },
+      cancel: {
+        label: 'Cancel',
+        onClick: () => {},
+      },
     });
-    if (!res.isConfirmed) return;
-    setTopics((t) => t.filter((_, i) => i !== index));
-    if (currentTopicIndex === index) { setCurrentTopicIndex(-1); setActiveView('course-info'); }
-    else if (currentTopicIndex > index) setCurrentTopicIndex((i) => i - 1);
   };
 
   const handleMoveTopic = (index: number, dir: 'up' | 'down') => {
@@ -113,14 +113,12 @@ export default function CourseCreatePage() {
     setTopics(nt);
   };
 
-  // Create course (step 1)
   const { mutate: createCourse, isPending: isCreating } = useMutation({
     mutationFn: (dto: CourseCreateDto) => coursesApi.create(dto),
-    onSuccess: async (course) => {
+    onSuccess: (course) => {
       setCreatedCourseId(course.id);
       setCreatedCourseSlug(course.slug);
-      toast.success(`Course "${course.title}" created! Now add content and save.`);
-      // Auto-sync meta title to courseInfo
+      toast.success(`Course "${course.title}" created!`, { description: 'Now add content and save.' });
       setCourseInfo((c) => ({ ...c, title: { en: meta.title, ar: meta.ar_title } }));
     },
     onError: (err: any) => {
@@ -129,7 +127,6 @@ export default function CourseCreatePage() {
     },
   });
 
-  // Save curriculum (step 2)
   const { mutate: saveCurriculum, isPending: isSaving } = useMutation({
     mutationFn: async () => {
       if (!createdCourseId) throw new Error('Create the course first');
@@ -173,9 +170,8 @@ export default function CourseCreatePage() {
   return (
     <div className='flex h-[calc(100vh-4rem)] overflow-hidden'>
 
-      {/* ─── Sidebar ─── */}
+      {/* Sidebar */}
       <aside className={`flex-shrink-0 flex flex-col border-r bg-card transition-all duration-200 ${sidebarCollapsed ? 'w-12' : 'w-60'}`}>
-        {/* Sidebar Header */}
         <div className='flex items-center justify-between px-3 py-3 border-b'>
           {!sidebarCollapsed && <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wide'>Content Editor</span>}
           <button className='p-1 rounded hover:bg-muted transition-colors ml-auto' onClick={() => setSidebarCollapsed((v) => !v)}>
@@ -185,19 +181,17 @@ export default function CourseCreatePage() {
 
         {!sidebarCollapsed && (
           <>
-            {/* Course Info Nav */}
             <nav className='p-2'>
               <button
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
                   activeView === 'course-info' ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-muted'
                 }`}
-                onClick={() => { setActiveView('course-info'); }}>
+                onClick={() => setActiveView('course-info')}>
                 <BookOpen size={14} />
                 <span>Course Information</span>
               </button>
             </nav>
 
-            {/* Topics */}
             <div className='flex-1 overflow-y-auto'>
               <div className='flex items-center justify-between px-3 py-2'>
                 <div className='flex items-center gap-1.5'>
@@ -237,14 +231,13 @@ export default function CourseCreatePage() {
               )}
             </div>
 
-            {/* Actions */}
             <div className='p-3 border-t space-y-2'>
-              {createdCourseId ? (
+              {createdCourseId && (
                 <Button size='sm' className='w-full gap-2' onClick={() => saveCurriculum()} disabled={isSaving}>
                   {isSaving ? <Loader2 size={13} className='animate-spin' /> : <Save size={13} />}
                   Save Content
                 </Button>
-              ) : null}
+              )}
               {createdCourseSlug && (
                 <Button size='sm' variant='outline' className='w-full gap-1 text-xs' onClick={() => navigate(`/courses/${createdCourseSlug}/edit`)}>
                   Open in Editor
@@ -255,9 +248,8 @@ export default function CourseCreatePage() {
         )}
       </aside>
 
-      {/* ─── Main Area ─── */}
+      {/* Main Area */}
       <div className='flex-1 flex flex-col min-w-0 overflow-hidden'>
-        {/* Top bar */}
         <div className='flex items-center justify-between px-6 py-3 border-b bg-card shrink-0'>
           <div className='flex items-center gap-3'>
             <Button variant='ghost' size='sm' className='gap-1' onClick={() => navigate(ROUTES.COURSES)}>
@@ -279,11 +271,9 @@ export default function CourseCreatePage() {
           </div>
         </div>
 
-        {/* Scrollable Content */}
         <div className='flex-1 overflow-y-auto'>
           <div className='max-w-4xl mx-auto px-6 py-6 space-y-6'>
 
-            {/* Step 1: Create Course (always visible until created) */}
             {!createdCourseId && (
               <div className='rounded-xl border bg-card p-6 space-y-5'>
                 <div className='flex items-center gap-2'>
@@ -348,7 +338,6 @@ export default function CourseCreatePage() {
               </div>
             )}
 
-            {/* Step 2: Content Editor (after course is created) */}
             {createdCourseId && (
               <>
                 {activeView === 'course-info' && (

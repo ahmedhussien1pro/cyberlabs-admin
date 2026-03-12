@@ -4,7 +4,7 @@ import {
   List, ListOrdered, StickyNote, Video, Table, Minus, Plus, Layers,
 } from 'lucide-react';
 import ElementItem, { ContentElement } from './ElementItem';
-import Swal from 'sweetalert2';
+import { toast } from 'sonner';
 
 export interface Topic {
   id: string;
@@ -63,11 +63,23 @@ const TopicEditor: React.FC<TopicEditorProps> = ({ topic, topicIndex, onTopicCha
     onTopicChange({ ...topic, elements: els });
   };
 
-  const handleDeleteElement = async (index: number) => {
-    const res = await Swal.fire({ title: 'Delete Element?', text: 'This cannot be undone!', icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete', confirmButtonColor: '#ef4444' });
-    if (res.isConfirmed) {
-      onTopicChange({ ...topic, elements: topic.elements.filter((_, i) => i !== index) });
-    }
+  const handleDeleteElement = (index: number) => {
+    // Use toast with action button for undo-style confirmation
+    const elementType = topic.elements[index].type;
+    toast(`Delete "${elementType}" element?`, {
+      description: 'This action cannot be undone.',
+      action: {
+        label: 'Delete',
+        onClick: () => {
+          onTopicChange({ ...topic, elements: topic.elements.filter((_, i) => i !== index) });
+          toast.success('Element deleted');
+        },
+      },
+      cancel: {
+        label: 'Cancel',
+        onClick: () => {},
+      },
+    });
   };
 
   const handleMoveElement = (index: number, dir: 'up' | 'down') => {
@@ -83,6 +95,7 @@ const TopicEditor: React.FC<TopicEditorProps> = ({ topic, topicIndex, onTopicCha
     const els = [...topic.elements];
     els.splice(index + 1, 0, dup);
     onTopicChange({ ...topic, elements: els });
+    toast.success('Element duplicated');
   };
 
   return (
@@ -134,7 +147,19 @@ const TopicEditor: React.FC<TopicEditorProps> = ({ topic, topicIndex, onTopicCha
           </div>
         ) : (
           topic.elements.map((el, i) => (
-            <ElementItem key={el.id} element={el} index={i} onChange={(u) => handleElementChange(i, u)} onDelete={() => handleDeleteElement(i)} onMove={handleMoveElement} onDuplicate={() => handleDuplicateElement(i)} isFirst={i === 0} isLast={i === topic.elements.length - 1} imageMap={imageMap} onImageUpload={onImageUpload} />
+            <ElementItem
+              key={el.id}
+              element={el}
+              index={i}
+              onChange={(u) => handleElementChange(i, u)}
+              onDelete={() => handleDeleteElement(i)}
+              onMove={handleMoveElement}
+              onDuplicate={() => handleDuplicateElement(i)}
+              isFirst={i === 0}
+              isLast={i === topic.elements.length - 1}
+              imageMap={imageMap}
+              onImageUpload={onImageUpload}
+            />
           ))
         )}
       </div>

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import {
-  ChevronDown, ChevronUp, Trash2, Copy, Plus, CheckCircle, Link, Upload, X,
+  ChevronDown, ChevronUp, Trash2, Copy, Plus, Link, Upload, X,
 } from 'lucide-react';
 import RichTextEditor from './RichTextEditor';
-import Swal from 'sweetalert2';
+import { toast } from 'sonner';
 
 export interface ContentElement {
   id: number;
@@ -59,8 +59,20 @@ const ElementItem: React.FC<ElementItemProps> = ({
   isFirst, isLast, imageMap, onImageUpload,
 }) => {
   const [collapsed, setCollapsed] = useState(false);
-
   const badgeCls = BADGE_COLORS[element.type] ?? 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30';
+
+  const handleImageFile = (file: File) => {
+    if (!['image/jpeg','image/png','image/jpg','image/webp'].includes(file.type)) {
+      toast.error('Please upload a valid image (JPEG, PNG, WebP)');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size should be less than 5MB');
+      return;
+    }
+    if (element.srcKey) onImageUpload(element.srcKey, file);
+    else toast.error('Set an Image Key first');
+  };
 
   const renderFields = () => {
     switch (element.type) {
@@ -98,7 +110,7 @@ const ElementItem: React.FC<ElementItemProps> = ({
               </div>
             </div>
             <div className='flex gap-2'>
-              <button type='button' className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs border transition-colors ${element.imageMode === 'upload' ? '' : 'bg-primary text-primary-foreground border-primary'}`} onClick={() => onChange({ ...element, imageMode: 'url', imageUrl: '' })}><Link size={12} /> Image URL</button>
+              <button type='button' className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs border transition-colors ${element.imageMode !== 'upload' ? 'bg-primary text-primary-foreground border-primary' : ''}`} onClick={() => onChange({ ...element, imageMode: 'url', imageUrl: '' })}><Link size={12} /> Image URL</button>
               <button type='button' className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs border transition-colors ${element.imageMode === 'upload' ? 'bg-primary text-primary-foreground border-primary' : ''}`} onClick={() => onChange({ ...element, imageMode: 'upload' })}><Upload size={12} /> Upload</button>
             </div>
             {(!element.imageMode || element.imageMode === 'url') && (
@@ -106,7 +118,7 @@ const ElementItem: React.FC<ElementItemProps> = ({
             )}
             {element.imageMode === 'upload' && (
               <label className='flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-md cursor-pointer hover:bg-muted/30 transition-colors'>
-                <input type='file' accept='image/*' className='hidden' onChange={(e) => { if (e.target.files?.[0] && element.srcKey) onImageUpload(element.srcKey, e.target.files[0]); }} />
+                <input type='file' accept='image/*' className='hidden' onChange={(e) => { if (e.target.files?.[0]) handleImageFile(e.target.files[0]); }} />
                 <Upload size={20} className='text-muted-foreground mb-1' />
                 <span className='text-xs text-muted-foreground'>Click to upload (PNG, JPG, WEBP, max 5MB)</span>
               </label>
@@ -147,7 +159,7 @@ const ElementItem: React.FC<ElementItemProps> = ({
           </div>
         );
 
-      case 'note':
+      case 'note': {
         const NOTE_COLORS: Record<string, string> = { info: 'border-blue-500/40 bg-blue-500/10', warning: 'border-yellow-500/40 bg-yellow-500/10', success: 'border-green-500/40 bg-green-500/10', danger: 'border-red-500/40 bg-red-500/10' };
         return (
           <div className={`space-y-3 p-3 rounded-md border ${NOTE_COLORS[element.noteType ?? 'info']}`}>
@@ -182,6 +194,7 @@ const ElementItem: React.FC<ElementItemProps> = ({
             </label>
           </div>
         );
+      }
 
       case 'hr':
         return <div className='flex items-center gap-3 py-2'><div className='flex-1 border-t border-dashed border-muted-foreground/40' /><span className='text-xs text-muted-foreground'>Divider</span><div className='flex-1 border-t border-dashed border-muted-foreground/40' /></div>;
@@ -225,7 +238,7 @@ const ElementItem: React.FC<ElementItemProps> = ({
                 {(element.items?.en ?? []).map((item: string, i: number) => (
                   <div key={i} className='flex gap-1 mb-1'>
                     <input className='flex-1 rounded-md border bg-background px-2 py-1.5 text-sm' value={item} onChange={(e) => { const ne = [...element.items.en]; ne[i] = e.target.value; onChange({ ...element, items: { ...element.items, en: ne } }); }} />
-                    <button type='button' className='text-destructive hover:bg-destructive/10 rounded p-1' onClick={() => onChange({ ...element, items: { en: element.items.en.filter((_:any,idx:number) => idx !== i), ar: element.items.ar.filter((_:any,idx:number) => idx !== i) } })}><Trash2 size={12} /></button>
+                    <button type='button' className='text-destructive hover:bg-destructive/10 rounded p-1' onClick={() => onChange({ ...element, items: { en: element.items.en.filter((_: any, idx: number) => idx !== i), ar: element.items.ar.filter((_: any, idx: number) => idx !== i) } })}><Trash2 size={12} /></button>
                   </div>
                 ))}
                 <button type='button' className='flex items-center gap-1 text-xs text-primary mt-1' onClick={() => onChange({ ...element, items: { en: [...(element.items?.en ?? []), ''], ar: [...(element.items?.ar ?? []), ''] } })}><Plus size={12} /> Add Item</button>
@@ -257,7 +270,10 @@ const ElementItem: React.FC<ElementItemProps> = ({
             </div>
             {(element.items ?? []).map((item: any, i: number) => (
               <div key={i} className='border rounded-md p-3 space-y-2 bg-muted/20'>
-                <div className='flex items-center justify-between'><span className='text-xs font-medium text-muted-foreground'>Item {i + 1}</span><button type='button' className='text-destructive hover:bg-destructive/10 rounded p-1' onClick={() => onChange({ ...element, items: element.items.filter((_:any, idx:number) => idx !== i) })}><Trash2 size={12} /></button></div>
+                <div className='flex items-center justify-between'>
+                  <span className='text-xs font-medium text-muted-foreground'>Item {i + 1}</span>
+                  <button type='button' className='text-destructive hover:bg-destructive/10 rounded p-1' onClick={() => onChange({ ...element, items: element.items.filter((_: any, idx: number) => idx !== i) })}><Trash2 size={12} /></button>
+                </div>
                 <div className='grid grid-cols-2 gap-2'>
                   <input className='rounded-md border bg-background px-2 py-1.5 text-sm' placeholder='Subtitle (EN)' value={item.subtitle?.en ?? ''} onChange={(e) => { const ni = [...element.items]; ni[i] = { ...ni[i], subtitle: { ...ni[i].subtitle, en: e.target.value } }; onChange({ ...element, items: ni }); }} />
                   <input className='rounded-md border bg-background px-2 py-1.5 text-sm' dir='rtl' placeholder='العنوان الفرعي' value={item.subtitle?.ar ?? ''} onChange={(e) => { const ni = [...element.items]; ni[i] = { ...ni[i], subtitle: { ...ni[i].subtitle, ar: e.target.value } }; onChange({ ...element, items: ni }); }} />
@@ -282,20 +298,20 @@ const ElementItem: React.FC<ElementItemProps> = ({
             <div className='flex flex-wrap gap-2'>
               {(element.headers?.en ?? []).map((h: string, i: number) => (
                 <div key={i} className='flex items-center gap-1'>
-                  <input className='w-28 rounded-md border bg-background px-2 py-1.5 text-xs' placeholder={`Header ${i+1}`} value={h} onChange={(e) => { const nh = { ...element.headers }; nh.en[i] = e.target.value; onChange({ ...element, headers: nh }); }} />
-                  <button type='button' className='text-destructive' onClick={() => onChange({ ...element, headers: { en: element.headers!.en.filter((_:any,idx:number)=>idx!==i), ar: element.headers!.ar.filter((_:any,idx:number)=>idx!==i) }, rows: (element.rows??[]).map(r=>({en:r.en.filter((_:any,idx:number)=>idx!==i), ar:r.ar.filter((_:any,idx:number)=>idx!==i)})) })}><Trash2 size={10} /></button>
+                  <input className='w-28 rounded-md border bg-background px-2 py-1.5 text-xs' placeholder={`Header ${i + 1}`} value={h} onChange={(e) => { const nh = { ...element.headers }; nh.en![i] = e.target.value; onChange({ ...element, headers: nh }); }} />
+                  <button type='button' className='text-destructive' onClick={() => onChange({ ...element, headers: { en: element.headers!.en.filter((_: any, idx: number) => idx !== i), ar: element.headers!.ar.filter((_: any, idx: number) => idx !== i) }, rows: (element.rows ?? []).map(r => ({ en: r.en.filter((_: any, idx: number) => idx !== i), ar: r.ar.filter((_: any, idx: number) => idx !== i) })) })}><Trash2 size={10} /></button>
                 </div>
               ))}
-              <button type='button' className='flex items-center gap-1 text-xs text-primary border rounded px-2 py-1' onClick={() => onChange({ ...element, headers: { en: [...(element.headers?.en??[]), ''], ar: [...(element.headers?.ar??[]), ''] }, rows: (element.rows??[]).map(r=>({en:[...r.en,''],ar:[...r.ar,'']})) })}><Plus size={10} /> Col</button>
+              <button type='button' className='flex items-center gap-1 text-xs text-primary border rounded px-2 py-1' onClick={() => onChange({ ...element, headers: { en: [...(element.headers?.en ?? []), ''], ar: [...(element.headers?.ar ?? []), ''] }, rows: (element.rows ?? []).map(r => ({ en: [...r.en, ''], ar: [...r.ar, ''] })) })}><Plus size={10} /> Col</button>
             </div>
             {(element.rows ?? []).map((row: any, ri: number) => (
               <div key={ri} className='border rounded-md p-2 space-y-1 bg-muted/10'>
-                <div className='flex items-center justify-between'><span className='text-xs text-muted-foreground'>Row {ri+1}</span><button type='button' className='text-destructive' onClick={() => onChange({ ...element, rows: element.rows!.filter((_:any,idx:number)=>idx!==ri) })}><Trash2 size={10} /></button></div>
-                <div className='flex gap-1 flex-wrap'>{row.en.map((cell:string,ci:number)=>(<input key={ci} className='flex-1 min-w-20 rounded border bg-background px-2 py-1 text-xs' placeholder={element.headers?.en[ci]??`Col${ci+1}`} value={cell} onChange={(e)=>{const nr=[...element.rows!];nr[ri]={...nr[ri],en:[...nr[ri].en]};nr[ri].en[ci]=e.target.value;onChange({...element,rows:nr});}} />))}</div>
-                <div className='flex gap-1 flex-wrap'>{row.ar.map((cell:string,ci:number)=>(<input key={ci} className='flex-1 min-w-20 rounded border bg-background px-2 py-1 text-xs' dir='rtl' placeholder={element.headers?.ar[ci]??`عمود${ci+1}`} value={cell} onChange={(e)=>{const nr=[...element.rows!];nr[ri]={...nr[ri],ar:[...nr[ri].ar]};nr[ri].ar[ci]=e.target.value;onChange({...element,rows:nr});}} />))}</div>
+                <div className='flex items-center justify-between'><span className='text-xs text-muted-foreground'>Row {ri + 1}</span><button type='button' className='text-destructive' onClick={() => onChange({ ...element, rows: element.rows!.filter((_: any, idx: number) => idx !== ri) })}><Trash2 size={10} /></button></div>
+                <div className='flex gap-1 flex-wrap'>{row.en.map((cell: string, ci: number) => (<input key={ci} className='flex-1 min-w-20 rounded border bg-background px-2 py-1 text-xs' placeholder={element.headers?.en[ci] ?? `Col${ci + 1}`} value={cell} onChange={(e) => { const nr = [...element.rows!]; nr[ri] = { ...nr[ri], en: [...nr[ri].en] }; nr[ri].en[ci] = e.target.value; onChange({ ...element, rows: nr }); }} />))}</div>
+                <div className='flex gap-1 flex-wrap'>{row.ar.map((cell: string, ci: number) => (<input key={ci} className='flex-1 min-w-20 rounded border bg-background px-2 py-1 text-xs' dir='rtl' placeholder={element.headers?.ar[ci] ?? `عمود${ci + 1}`} value={cell} onChange={(e) => { const nr = [...element.rows!]; nr[ri] = { ...nr[ri], ar: [...nr[ri].ar] }; nr[ri].ar[ci] = e.target.value; onChange({ ...element, rows: nr }); }} />))}</div>
               </div>
             ))}
-            <button type='button' className='flex items-center gap-1 text-xs text-primary border rounded px-2 py-1' onClick={() => onChange({ ...element, rows: [...(element.rows??[]), { en: (element.headers?.en??[]).map(()=>''), ar: (element.headers?.ar??[]).map(()=>'') }] })}><Plus size={12} /> Add Row</button>
+            <button type='button' className='flex items-center gap-1 text-xs text-primary border rounded px-2 py-1' onClick={() => onChange({ ...element, rows: [...(element.rows ?? []), { en: (element.headers?.en ?? []).map(() => ''), ar: (element.headers?.ar ?? []).map(() => '') }] })}><Plus size={12} /> Add Row</button>
           </div>
         );
 
