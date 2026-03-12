@@ -1,12 +1,12 @@
 // src/features/courses/pages/course-create.page.tsx
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Plus, Loader2, BookOpen, Layers, Save,
   ChevronUp, ChevronDown, Trash2, FolderOpen, PanelLeftClose, PanelLeftOpen,
-  User, Search,
+  User, Search, Upload, FileJson, X, AlertCircle, CheckCircle2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { coursesApi } from '../services/courses.api';
@@ -35,7 +35,244 @@ function slugify(s: string) {
 
 type ActiveView = 'course-info' | 'topic';
 
-// Instructor picker component
+// ─── JSON Import Modal ──────────────────────────────────────────────────────
+interface ImportPreview {
+  topics: Topic[];
+  meta?: Partial<{
+    title: string; ar_title: string; slug: string; description: string;
+    difficulty: string; access: string; color: string; contentType: string; category: string;
+  }>;
+  topicCount: number;
+  elementCount: number;
+  warnings: string[];
+}
+
+function normalizeImportedTopics(raw: any[]): { topics: Topic[]; warnings: string[] } {
+  const warnings: string[] = [];
+  const topics: Topic[] = raw.map((t: any, ti: number) => {
+    if (!t || typeof t !== 'object') {
+      warnings.push(`Topic ${ti + 1}: invalid format, skipped`);
+      return null as any;
+    }
+    const title = typeof t.title === 'object'
+      ? { en: t.title?.en ?? '', ar: t.title?.ar ?? '' }
+      : { en: String(t.title ?? `Topic ${ti + 1}`), ar: '' };
+
+    const elements = Array.isArray(t.elements)
+      ? t.elements.map((el: any, ei: number) => {
+          if (!el?.type) { warnings.push(`Topic ${ti + 1}, Element ${ei + 1}: missing type`); return null; }
+          return { ...el, id: el.id ?? (Date.now() + Math.random()) };
+        }).filter(Boolean)
+      : [];
+
+    return {
+      id: t.id ?? `imported-${ti}-${Date.now()}`,
+      title,
+      elements,
+    };
+  }).filter(Boolean);
+
+  return { topics, warnings };
+}
+
+function parseJsonFile(content: string): ImportPreview {
+  const parsed = JSON.parse(content);
+  const warnings: string[] = [];
+
+  // Detect shape: { topics: [...], meta: {...} } OR [...topics]
+  let rawTopics: any[] = [];
+  let meta: ImportPreview['meta'] = {};
+
+  if (Array.isArray(parsed)) {
+    rawTopics = parsed;
+  } else if (parsed && typeof parsed === 'object') {
+    if (Array.isArray(parsed.topics)) {
+      rawTopics = parsed.topics;
+    } else if (Array.isArray(parsed.curriculum)) {
+      rawTopics = parsed.curriculum;
+    } else {
+      warnings.push('No "topics" or "curriculum" array found — treating entire file as single topic');
+      rawTopics = [parsed];
+    }
+    // extract meta if present
+    const m = parsed.meta ?? parsed.course ?? parsed.metadata ?? {};
+    if (m.title || m.slug) meta = m;
+  }
+
+  const { topics, warnings: tw } = normalizeImportedTopics(rawTopics);
+  const elementCount = topics.reduce((s, t) => s + t.elements.length, 0);
+
+  return {
+    topics,
+    meta: Object.keys(meta ?? {}).length ? meta : undefined,
+    topicCount: topics.length,
+    elementCount,
+    warnings: [...warnings, ...tw],
+  };
+}
+
+function JsonImportModal({
+  onImport, onClose,
+}: { onImport: (preview: ImportPreview) => void; onClose: () => void }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<ImportPreview | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [fileName, setFileName] = useState('');
+  const [applyMeta, setApplyMeta] = useState(true);
+  const [mode, setMode] = useState<'replace' | 'append'>('replace');
+
+  const handleFile = (file: File) => {
+    if (!file.name.endsWith('.json')) { setError('Only .json files are supported'); return; }
+    setFileName(file.name);
+    setError(null);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const p = parseJsonFile(e.target!.result as string);
+        if (p.topicCount === 0) { setError('No valid topics found in this file'); return; }
+        setPreview(p);
+      } catch (err: any) {
+        setError(`JSON parse error: ${err?.message ?? 'invalid JSON'}`);
+        setPreview(null);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  };
+
+  const handleConfirm = () => {
+    if (!preview) return;
+    onImport({ ...preview, meta: applyMeta ? preview.meta : undefined, topics: preview.topics.map(t => ({...t, _importMode: mode} as any)) });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="w-full max-w-lg rounded-xl border bg-card shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b">
+          <div className="flex items-center gap-2">
+            <FileJson size={18} className="text-primary" />
+            <span className="font-semibold text-sm">Import JSON</span>
+          </div>
+          <button className="p-1 rounded hover:bg-muted" onClick={onClose}><X size={15} /></button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {/* Drop zone */}
+          <label
+            className="flex flex-col items-center justify-center gap-3 w-full h-32 border-2 border-dashed rounded-xl cursor-pointer hover:bg-muted/30 hover:border-primary/50 transition-all"
+            onDrop={handleDrop}
+            onDragOver={(e) => e.preventDefault()}
+          >
+            <input ref={fileRef} type="file" accept=".json" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+            <Upload size={22} className="text-muted-foreground" />
+            <div className="text-center">
+              <p className="text-sm font-medium">{fileName || 'Drop .json file here or click to browse'}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Supports: topics array, curriculum object, or full course export</p>
+            </div>
+          </label>
+
+          {/* Error */}
+          {error && (
+            <div className="flex items-center gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+              <AlertCircle size={14} />
+              {error}
+            </div>
+          )}
+
+          {/* Preview */}
+          {preview && (
+            <div className="space-y-3">
+              <div className="rounded-md border bg-muted/20 p-3 space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-emerald-400">
+                  <CheckCircle2 size={14} />
+                  File parsed successfully
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="rounded border bg-background px-3 py-2">
+                    <span className="text-muted-foreground">Topics</span>
+                    <p className="text-lg font-bold mt-0.5">{preview.topicCount}</p>
+                  </div>
+                  <div className="rounded border bg-background px-3 py-2">
+                    <span className="text-muted-foreground">Elements</span>
+                    <p className="text-lg font-bold mt-0.5">{preview.elementCount}</p>
+                  </div>
+                </div>
+                {/* Topic list preview */}
+                <ul className="space-y-0.5 max-h-24 overflow-y-auto">
+                  {preview.topics.map((t, i) => (
+                    <li key={i} className="flex items-center gap-2 text-xs px-1">
+                      <Layers size={10} className="text-muted-foreground flex-shrink-0" />
+                      <span className="truncate">{t.title.en || `Topic ${i + 1}`}</span>
+                      <span className="ml-auto text-muted-foreground">{t.elements.length} el.</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Warnings */}
+              {preview.warnings.length > 0 && (
+                <div className="rounded-md border border-yellow-500/30 bg-yellow-500/10 p-3 space-y-1">
+                  <p className="text-xs font-medium text-yellow-400">Warnings ({preview.warnings.length})</p>
+                  {preview.warnings.map((w, i) => (
+                    <p key={i} className="text-xs text-yellow-300/80">• {w}</p>
+                  ))}
+                </div>
+              )}
+
+              {/* Options */}
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className={`flex-1 py-1.5 rounded-md text-xs border font-medium transition-colors ${
+                      mode === 'replace' ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted'
+                    }`}
+                    onClick={() => setMode('replace')}
+                  >
+                    Replace existing topics
+                  </button>
+                  <button
+                    type="button"
+                    className={`flex-1 py-1.5 rounded-md text-xs border font-medium transition-colors ${
+                      mode === 'append' ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted'
+                    }`}
+                    onClick={() => setMode('append')}
+                  >
+                    Append to existing
+                  </button>
+                </div>
+                {preview.meta && (
+                  <label className="flex items-center gap-2 text-xs cursor-pointer">
+                    <input type="checkbox" checked={applyMeta} onChange={(e) => setApplyMeta(e.target.checked)} />
+                    Apply course metadata from file (title, slug, difficulty...)
+                  </label>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t">
+          <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
+          <Button size="sm" disabled={!preview} onClick={handleConfirm} className="gap-1">
+            <Upload size={13} />
+            Import {preview ? `${preview.topicCount} topic${preview.topicCount !== 1 ? 's' : ''}` : ''}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Instructor Picker ───────────────────────────────────────────────────────
 function InstructorPicker({
   value, onChange,
 }: { value: string; onChange: (id: string, name: string) => void }) {
@@ -122,9 +359,7 @@ function InstructorPicker({
                     </p>
                     <p className="text-xs text-muted-foreground truncate">{u.email}</p>
                   </div>
-                  <span className="ml-auto text-xs bg-muted px-1.5 py-0.5 rounded flex-shrink-0">
-                    {u.role}
-                  </span>
+                  <span className="ml-auto text-xs bg-muted px-1.5 py-0.5 rounded flex-shrink-0">{u.role}</span>
                 </li>
               ))
             )}
@@ -135,12 +370,14 @@ function InstructorPicker({
   );
 }
 
+// ─── Main Page ───────────────────────────────────────────────────────────────
 export default function CourseCreatePage() {
   const navigate = useNavigate();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeView, setActiveView] = useState<ActiveView>('course-info');
   const [currentTopicIndex, setCurrentTopicIndex] = useState(-1);
+  const [showImport, setShowImport] = useState(false);
 
   const [meta, setMeta] = useState({
     title: '', ar_title: '', slug: '', description: '',
@@ -168,6 +405,42 @@ export default function CourseCreatePage() {
     const reader = new FileReader();
     reader.onloadend = () => setImageMap((m) => ({ ...m, [key]: reader.result as string }));
     reader.readAsDataURL(file);
+  };
+
+  // Handle JSON import result
+  const handleImport = (preview: ImportPreview) => {
+    const isAppend = (preview.topics[0] as any)?._importMode === 'append';
+    const cleanTopics = preview.topics.map(({ _importMode, ...t }: any) => t as Topic);
+
+    if (isAppend) {
+      setTopics((prev) => [...prev, ...cleanTopics]);
+      toast.success(`Appended ${cleanTopics.length} topics`);
+    } else {
+      setTopics(cleanTopics);
+      toast.success(`Imported ${cleanTopics.length} topics`);
+    }
+
+    // Apply meta if present and checkbox was checked
+    if (preview.meta) {
+      setMeta((f) => ({
+        ...f,
+        title:       preview.meta!.title       ?? f.title,
+        ar_title:    preview.meta!.ar_title     ?? f.ar_title,
+        slug:        preview.meta!.slug         ?? f.slug,
+        description: preview.meta!.description  ?? f.description,
+        difficulty:  (preview.meta!.difficulty  as any) ?? f.difficulty,
+        access:      (preview.meta!.access      as any) ?? f.access,
+        color:       (preview.meta!.color       as any) ?? f.color,
+        contentType: (preview.meta!.contentType as any) ?? f.contentType,
+        category:    (preview.meta!.category    as any) ?? f.category,
+      }));
+      toast.info('Course metadata applied from JSON');
+    }
+
+    if (cleanTopics.length > 0) {
+      setCurrentTopicIndex(isAppend ? topics.length : 0);
+      setActiveView('topic');
+    }
   };
 
   const handleAddTopic = () => {
@@ -257,10 +530,7 @@ export default function CourseCreatePage() {
       color: meta.color,
       contentType: meta.contentType,
     };
-    // Only send instructorId if a valid UUID was selected
-    if (meta.instructorId.trim()) {
-      (dto as any).instructorId = meta.instructorId.trim();
-    }
+    if (meta.instructorId.trim()) (dto as any).instructorId = meta.instructorId.trim();
     createCourse(dto);
   };
 
@@ -269,12 +539,19 @@ export default function CourseCreatePage() {
     return 'Course Information';
   };
 
-  // Determine what to show in the main area
   const showTopicEditor = activeView === 'topic' && currentTopicIndex >= 0;
   const showCourseInfo = activeView === 'course-info';
 
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
+
+      {/* JSON Import Modal */}
+      {showImport && (
+        <JsonImportModal
+          onImport={handleImport}
+          onClose={() => setShowImport(false)}
+        />
+      )}
 
       {/* Sidebar */}
       <aside className={`flex-shrink-0 flex flex-col border-r bg-card transition-all duration-200 ${sidebarCollapsed ? 'w-12' : 'w-64'}`}>
@@ -292,8 +569,7 @@ export default function CourseCreatePage() {
 
         {!sidebarCollapsed && (
           <>
-            {/* Course Info nav item */}
-            <nav className="p-2">
+            <nav className="p-2 space-y-1">
               <button
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
                   activeView === 'course-info' ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-muted'
@@ -306,9 +582,20 @@ export default function CourseCreatePage() {
                   <span className="ml-auto text-xs bg-yellow-500/20 text-yellow-400 px-1.5 rounded">Step 1</span>
                 )}
               </button>
+
+              {/* Import JSON Button */}
+              <button
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                onClick={() => setShowImport(true)}
+              >
+                <FileJson size={14} />
+                <span>Import JSON</span>
+                {topics.length > 0 && (
+                  <span className="ml-auto text-xs bg-blue-500/20 text-blue-400 px-1.5 rounded">{topics.length}</span>
+                )}
+              </button>
             </nav>
 
-            {/* Topics list */}
             <div className="flex-1 overflow-y-auto">
               <div className="flex items-center justify-between px-3 py-2">
                 <div className="flex items-center gap-1.5">
@@ -327,7 +614,13 @@ export default function CourseCreatePage() {
               {topics.length === 0 ? (
                 <div className="px-4 py-6 text-center">
                   <FolderOpen size={24} className="text-muted-foreground mx-auto mb-1" />
-                  <p className="text-xs text-muted-foreground">No topics yet.<br />Click + to add one.</p>
+                  <p className="text-xs text-muted-foreground">No topics yet.</p>
+                  <button
+                    className="mt-2 flex items-center gap-1 text-xs text-primary mx-auto"
+                    onClick={() => setShowImport(true)}
+                  >
+                    <Upload size={11} /> Import from JSON
+                  </button>
                 </div>
               ) : (
                 <ul className="space-y-0.5 px-2">
@@ -345,26 +638,9 @@ export default function CourseCreatePage() {
                         <span className="text-xs flex-1 truncate">{topic.title.en || `Topic ${i + 1}`}</span>
                         <span className="text-xs text-muted-foreground flex-shrink-0">{topic.elements.length}</span>
                         <div className="hidden group-hover:flex items-center gap-0.5">
-                          <button
-                            className="p-0.5 rounded hover:bg-muted-foreground/20 disabled:opacity-30"
-                            disabled={i === 0}
-                            onClick={(e) => { e.stopPropagation(); handleMoveTopic(i, 'up'); }}
-                          >
-                            <ChevronUp size={10} />
-                          </button>
-                          <button
-                            className="p-0.5 rounded hover:bg-muted-foreground/20 disabled:opacity-30"
-                            disabled={i === topics.length - 1}
-                            onClick={(e) => { e.stopPropagation(); handleMoveTopic(i, 'down'); }}
-                          >
-                            <ChevronDown size={10} />
-                          </button>
-                          <button
-                            className="p-0.5 rounded hover:bg-destructive/20 text-destructive"
-                            onClick={(e) => { e.stopPropagation(); handleDeleteTopic(i); }}
-                          >
-                            <Trash2 size={10} />
-                          </button>
+                          <button className="p-0.5 rounded hover:bg-muted-foreground/20 disabled:opacity-30" disabled={i === 0} onClick={(e) => { e.stopPropagation(); handleMoveTopic(i, 'up'); }}><ChevronUp size={10} /></button>
+                          <button className="p-0.5 rounded hover:bg-muted-foreground/20 disabled:opacity-30" disabled={i === topics.length - 1} onClick={(e) => { e.stopPropagation(); handleMoveTopic(i, 'down'); }}><ChevronDown size={10} /></button>
+                          <button className="p-0.5 rounded hover:bg-destructive/20 text-destructive" onClick={(e) => { e.stopPropagation(); handleDeleteTopic(i); }}><Trash2 size={10} /></button>
                         </div>
                       </div>
                     </li>
@@ -373,7 +649,6 @@ export default function CourseCreatePage() {
               )}
             </div>
 
-            {/* Bottom actions */}
             <div className="p-3 border-t space-y-2">
               {createdCourseId && (
                 <Button size="sm" className="w-full gap-2" onClick={() => saveCurriculum()} disabled={isSaving}>
@@ -382,12 +657,7 @@ export default function CourseCreatePage() {
                 </Button>
               )}
               {createdCourseSlug && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-full gap-1 text-xs"
-                  onClick={() => navigate(`/courses/${createdCourseSlug}/edit`)}
-                >
+                <Button size="sm" variant="outline" className="w-full gap-1 text-xs" onClick={() => navigate(`/courses/${createdCourseSlug}/edit`)}>
                   Open in Editor
                 </Button>
               )}
@@ -398,7 +668,6 @@ export default function CourseCreatePage() {
 
       {/* Main Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top bar */}
         <div className="flex items-center justify-between px-6 py-3 border-b bg-card shrink-0">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" className="gap-1" onClick={() => navigate(ROUTES.COURSES)}>
@@ -407,12 +676,14 @@ export default function CourseCreatePage() {
             <div className="h-4 w-px bg-border" />
             <span className="text-sm font-medium">{getTopBarTitle()}</span>
             {createdCourseId && (
-              <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-full px-2 py-0.5">
-                Created \u2713
-              </span>
+              <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-full px-2 py-0.5">Created \u2713</span>
             )}
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setShowImport(true)}>
+              <FileJson size={13} />
+              Import JSON
+            </Button>
             {createdCourseId ? (
               <Button size="sm" className="gap-2" onClick={() => saveCurriculum()} disabled={isSaving}>
                 {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
@@ -424,14 +695,11 @@ export default function CourseCreatePage() {
           </div>
         </div>
 
-        {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-4xl mx-auto px-6 py-6 space-y-6">
 
-            {/* === Course Info View === */}
             {showCourseInfo && (
               <>
-                {/* Step 1: Create metadata (always visible until created) */}
                 {!createdCourseId && (
                   <div className="rounded-xl border bg-card p-6 space-y-5">
                     <div className="flex items-center gap-2">
@@ -441,89 +709,52 @@ export default function CourseCreatePage() {
                     </div>
 
                     <form onSubmit={handleCreateSubmit} className="space-y-4">
-                      {/* Title */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="text-xs text-muted-foreground mb-1 block">Title (EN) *</label>
-                          <input
-                            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                            placeholder="e.g., Web Application Hacking"
-                            value={meta.title}
-                            onChange={(e) => handleTitleChange(e.target.value)}
-                            required
-                          />
+                          <input className="w-full rounded-md border bg-background px-3 py-2 text-sm" placeholder="e.g., Web Application Hacking" value={meta.title} onChange={(e) => handleTitleChange(e.target.value)} required />
                         </div>
                         <div>
                           <label className="text-xs text-muted-foreground mb-1 block">Title (AR)</label>
-                          <input
-                            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                            dir="rtl"
-                            placeholder="\u0627\u0644\u0639\u0646\u0648\u0627\u0646 \u0628\u0627\u0644\u0639\u0631\u0628\u064a"
-                            value={meta.ar_title}
-                            onChange={(e) => setMeta_('ar_title', e.target.value)}
-                          />
+                          <input className="w-full rounded-md border bg-background px-3 py-2 text-sm" dir="rtl" placeholder="\u0627\u0644\u0639\u0646\u0648\u0627\u0646 \u0628\u0627\u0644\u0639\u0631\u0628\u064a" value={meta.ar_title} onChange={(e) => setMeta_('ar_title', e.target.value)} />
                         </div>
                       </div>
 
-                      {/* Slug */}
                       <div>
                         <label className="text-xs text-muted-foreground mb-1 block">Slug *</label>
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-muted-foreground font-mono">courses/</span>
-                          <input
-                            className="flex-1 rounded-md border bg-background px-3 py-2 text-sm font-mono"
-                            placeholder="web-application-hacking"
-                            value={meta.slug}
-                            onChange={(e) => setMeta_('slug', slugify(e.target.value))}
-                            required
-                          />
+                          <input className="flex-1 rounded-md border bg-background px-3 py-2 text-sm font-mono" placeholder="web-application-hacking" value={meta.slug} onChange={(e) => setMeta_('slug', slugify(e.target.value))} required />
                         </div>
                       </div>
 
-                      {/* Description */}
                       <div>
                         <label className="text-xs text-muted-foreground mb-1 block">Description</label>
-                        <textarea
-                          className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                          rows={2}
-                          placeholder="Short description..."
-                          value={meta.description}
-                          onChange={(e) => setMeta_('description', e.target.value)}
-                        />
+                        <textarea className="w-full rounded-md border bg-background px-3 py-2 text-sm" rows={2} placeholder="Short description..." value={meta.description} onChange={(e) => setMeta_('description', e.target.value)} />
                       </div>
 
-                      {/* Selects row */}
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         {[
-                          { key: 'difficulty',  label: 'Difficulty',    opts: DIFFICULTIES },
-                          { key: 'access',      label: 'Access',        opts: ACCESSES },
-                          { key: 'color',       label: 'Color',         opts: COLORS },
-                          { key: 'contentType', label: 'Content Type',  opts: CONTENT_TYPES },
+                          { key: 'difficulty', label: 'Difficulty', opts: DIFFICULTIES },
+                          { key: 'access', label: 'Access', opts: ACCESSES },
+                          { key: 'color', label: 'Color', opts: COLORS },
+                          { key: 'contentType', label: 'Content Type', opts: CONTENT_TYPES },
                         ].map(({ key, label, opts }) => (
                           <div key={key}>
                             <label className="text-xs text-muted-foreground mb-1 block">{label}</label>
-                            <select
-                              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                              value={(meta as any)[key]}
-                              onChange={(e) => setMeta_(key, e.target.value)}
-                            >
+                            <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={(meta as any)[key]} onChange={(e) => setMeta_(key, e.target.value)}>
                               {opts.map((o) => <option key={o} value={o}>{o.replace(/_/g, ' ')}</option>)}
                             </select>
                           </div>
                         ))}
                         <div className="col-span-2">
                           <label className="text-xs text-muted-foreground mb-1 block">Category</label>
-                          <select
-                            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                            value={meta.category}
-                            onChange={(e) => setMeta_('category', e.target.value)}
-                          >
+                          <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={meta.category} onChange={(e) => setMeta_('category', e.target.value)}>
                             {CATEGORIES.map((c) => <option key={c} value={c}>{c.replace(/_/g, ' ')}</option>)}
                           </select>
                         </div>
                       </div>
 
-                      {/* Instructor Picker */}
                       <InstructorPicker
                         value={meta.instructorId}
                         onChange={(id, name) => setMeta((f) => ({ ...f, instructorId: id, instructorName: name }))}
@@ -531,16 +762,13 @@ export default function CourseCreatePage() {
 
                       <div className="flex justify-end pt-2">
                         <Button type="submit" disabled={isCreating} className="gap-2">
-                          {isCreating
-                            ? <><Loader2 size={14} className="animate-spin" /> Creating...</>
-                            : <><Plus size={14} /> Create Course</>}
+                          {isCreating ? <><Loader2 size={14} className="animate-spin" /> Creating...</> : <><Plus size={14} /> Create Course</>}
                         </Button>
                       </div>
                     </form>
                   </div>
                 )}
 
-                {/* Step 2: Landing page content (after create) */}
                 {createdCourseId && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
@@ -553,7 +781,6 @@ export default function CourseCreatePage() {
               </>
             )}
 
-            {/* === Topic Editor View === */}
             {showTopicEditor && (
               <TopicEditor
                 topic={topics[currentTopicIndex]}
@@ -564,14 +791,14 @@ export default function CourseCreatePage() {
               />
             )}
 
-            {/* Empty topic state */}
             {activeView === 'topic' && currentTopicIndex < 0 && (
               <div className="rounded-xl border border-dashed p-16 text-center">
                 <Layers size={32} className="text-muted-foreground mx-auto mb-3" />
                 <p className="text-sm text-muted-foreground">Select a topic from the sidebar or add a new one.</p>
-                <Button size="sm" className="mt-4 gap-1" onClick={handleAddTopic}>
-                  <Plus size={13} /> Add Topic
-                </Button>
+                <div className="flex items-center justify-center gap-2 mt-4">
+                  <Button size="sm" className="gap-1" onClick={handleAddTopic}><Plus size={13} /> Add Topic</Button>
+                  <Button size="sm" variant="outline" className="gap-1" onClick={() => setShowImport(true)}><FileJson size={13} /> Import JSON</Button>
+                </div>
               </div>
             )}
 
