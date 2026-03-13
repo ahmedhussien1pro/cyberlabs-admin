@@ -71,6 +71,10 @@ function PreviewCard({ payload }: { payload: ImportPayload }) {
             <p className='text-xs text-muted-foreground'>Access / Difficulty</p>
             <p>{payload.access} · {payload.difficulty}</p>
           </div>
+          <div>
+            <p className='text-xs text-muted-foreground'>Color</p>
+            <p className='font-mono text-xs'>{(payload.color ?? '').toLowerCase()}</p>
+          </div>
         </div>
         {(payload.topics?.length ?? 0) > 0 && (
           <div className='flex items-center gap-2 pt-2 border-t border-border/40'>
@@ -121,17 +125,17 @@ export default function CourseImportPage() {
     mutationFn: async () => {
       if (!payload) throw new Error('Nothing to import');
 
-      // 1. Create the course
+      // ✅ color must always be lowercase to match backend/prisma enum
       const dto: CourseCreateDto = {
-        title: payload.title,
-        ar_title: payload.ar_title,
-        slug: payload.slug,
+        title:       payload.title,
+        ar_title:    payload.ar_title,
+        slug:        payload.slug,
         description: payload.description,
-        difficulty: (payload.difficulty as any) ?? 'BEGINNER',
-        access: (payload.access as any) ?? 'FREE',
-        category: (payload.category as any) ?? 'FUNDAMENTALS',
-        color: (payload.color as any) ?? 'BLUE',
-        contentType: (payload.contentType as any) ?? 'MIXED',
+        difficulty:  (payload.difficulty as any)               ?? 'BEGINNER',
+        access:      (payload.access    as any)               ?? 'FREE',
+        category:    (payload.category  as any)               ?? 'FUNDAMENTALS',
+        color:       ((payload.color as string)?.toLowerCase() ?? 'blue') as any,
+        contentType: (payload.contentType as any)             ?? 'MIXED',
         instructorId: payload.instructorId ?? 'default',
       };
       const course = await coursesApi.create(dto);
@@ -172,7 +176,7 @@ export default function CourseImportPage() {
       <Card className='border-border/50'>
         <CardContent className='pt-4 pb-3'>
           <p className='text-xs text-muted-foreground font-mono leading-relaxed'>
-            {`{ title, slug, difficulty, access, color, category, contentType,`}
+            {`{ title, slug, difficulty, access, color (lowercase), category, contentType,`}
             <br />
             {`  topics: [{ id, title: {en, ar}, elements: [...] }] }`}
           </p>

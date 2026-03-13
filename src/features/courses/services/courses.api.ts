@@ -28,6 +28,8 @@ function unwrapList<T>(res: any): T {
 function normalize(c: Course): Course {
   return {
     ...c,
+    // ✅ color must be lowercase for Tailwind class generation
+    color:            (c.color as string)?.toLowerCase() as Course['color'],
     tags:             Array.isArray(c.tags)             ? c.tags             : [],
     skills:           Array.isArray(c.skills)           ? c.skills           : [],
     ar_skills:        Array.isArray(c.ar_skills)        ? c.ar_skills        : [],
@@ -44,9 +46,8 @@ export const coursesApi = {
     const q: Record<string, any> = { page: p.page ?? 1, limit: p.limit ?? 20 };
     if (p.search)     q.search = p.search;
     if (p.difficulty) q.difficulty = p.difficulty;
-    if (p.state && p.state !== 'all') {
-      q.isPublished = p.state === 'PUBLISHED' ? true : false;
-    }
+    // ✅ backend accepts `state` directly — not `isPublished`
+    if (p.state && p.state !== 'all') q.state = p.state;
     const res = await adminApiClient.get('/admin/courses', { params: q });
     return unwrapList<CoursesListResponse>(res);
   },
