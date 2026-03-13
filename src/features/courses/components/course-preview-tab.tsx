@@ -25,29 +25,46 @@ import type { AdminCourse, CurriculumTopic } from '../types/admin-course.types';
 
 // ── color maps ─────────────────────────────────────────────────────────
 const MATRIX_COLOR: Record<string, string> = {
-  emerald: '#10b981', blue: '#3b82f6', violet: '#8b5cf6',
-  rose: '#f43f5e', orange: '#f97316', cyan: '#06b6d4',
+  emerald: '#10b981',
+  blue: '#3b82f6',
+  violet: '#8b5cf6',
+  rose: '#f43f5e',
+  orange: '#f97316',
+  cyan: '#06b6d4',
 };
 const STRIPE: Record<string, string> = {
-  emerald: 'bg-emerald-500', blue: 'bg-blue-500', violet: 'bg-violet-500',
-  rose: 'bg-rose-500', orange: 'bg-orange-500', cyan: 'bg-cyan-500',
+  emerald: 'bg-emerald-500',
+  blue: 'bg-blue-500',
+  violet: 'bg-violet-500',
+  rose: 'bg-rose-500',
+  orange: 'bg-orange-500',
+  cyan: 'bg-cyan-500',
 };
 const TEXT_COLOR: Record<string, string> = {
-  emerald: 'text-emerald-400', blue: 'text-blue-400', violet: 'text-violet-400',
-  rose: 'text-rose-400', orange: 'text-orange-400', cyan: 'text-cyan-400',
+  emerald: 'text-emerald-400',
+  blue: 'text-blue-400',
+  violet: 'text-violet-400',
+  rose: 'text-rose-400',
+  orange: 'text-orange-400',
+  cyan: 'text-cyan-400',
 };
 const FALLBACK_BG: Record<string, string> = {
-  emerald: 'from-emerald-950 to-emerald-900', blue: 'from-blue-950 to-blue-900',
-  violet: 'from-violet-950 to-violet-900', rose: 'from-rose-950 to-rose-900',
-  orange: 'from-orange-950 to-orange-900', cyan: 'from-cyan-950 to-cyan-900',
+  emerald: 'from-emerald-950 to-emerald-900',
+  blue: 'from-blue-950 to-blue-900',
+  violet: 'from-violet-950 to-violet-900',
+  rose: 'from-rose-950 to-rose-900',
+  orange: 'from-orange-950 to-orange-900',
+  cyan: 'from-cyan-950 to-cyan-900',
 };
 const ACCESS_BADGE: Record<string, string> = {
-  FREE:    'border-emerald-500/40 text-emerald-400 bg-emerald-500/10',
-  PRO:     'border-blue-500/40    text-blue-400    bg-blue-500/10',
+  FREE: 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10',
+  PRO: 'border-blue-500/40    text-blue-400    bg-blue-500/10',
   PREMIUM: 'border-violet-500/40  text-violet-400  bg-violet-500/10',
 };
 const ACCESS_ICON: Record<string, React.ElementType> = {
-  FREE: Unlock, PRO: Crown, PREMIUM: Gem,
+  FREE: Unlock,
+  PRO: Crown,
+  PREMIUM: Gem,
 };
 
 // ── normalize topic title ──────────────────────────────────────────────
@@ -66,8 +83,8 @@ function normalizeTitleField(raw: unknown): { en: string; ar: string } {
 function normalizeTopic(raw: unknown, idx: number): CurriculumTopic {
   const t = (raw ?? {}) as Record<string, unknown>;
   return {
-    id:       String(t['id'] ?? `topic-${idx}`),
-    title:    normalizeTitleField(t['title']),
+    id: String(t['id'] ?? `topic-${idx}`),
+    title: normalizeTitleField(t['title']),
     elements: Array.isArray(t['elements']) ? t['elements'] : [],
   };
 }
@@ -110,7 +127,14 @@ interface TopicRowProps {
   lang: 'en' | 'ar';
 }
 
-function TopicRow({ topic, idx, total, isOpen, onToggle, lang }: TopicRowProps) {
+function TopicRow({
+  topic,
+  idx,
+  total,
+  isOpen,
+  onToggle,
+  lang,
+}: TopicRowProps) {
   const topicNum = String(idx + 1).padStart(2, '0');
   const isLast = idx === total - 1;
   const titleText =
@@ -121,56 +145,75 @@ function TopicRow({ topic, idx, total, isOpen, onToggle, lang }: TopicRowProps) 
   return (
     <li className='relative flex gap-4'>
       <div className='relative flex shrink-0 flex-col items-center'>
-        <div className={cn(
-          'relative z-10 flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold transition-all duration-300',
-          isOpen
-            ? 'border-primary bg-primary/15 text-primary shadow-lg shadow-primary/20'
-            : 'border-border/60 bg-muted/50 text-muted-foreground',
-        )}>
+        <div
+          className={cn(
+            'relative z-10 flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold transition-all duration-300',
+            isOpen
+              ? 'border-primary bg-primary/15 text-primary shadow-lg shadow-primary/20'
+              : 'border-border/60 bg-muted/50 text-muted-foreground',
+          )}>
           <span className='font-black'>{topicNum}</span>
         </div>
-        {!isLast && <div className='mt-1 min-h-[16px] w-px flex-1 bg-border/30' />}
+        {!isLast && (
+          <div className='mt-1 min-h-[16px] w-px flex-1 bg-border/30' />
+        )}
       </div>
 
-      <div className={cn(
-        'mb-2 min-w-0 flex-1 rounded-xl border bg-card transition-all duration-300',
-        isOpen ? 'border-primary/30 shadow-sm' : 'cursor-pointer border-border/50 hover:border-border',
-      )}>
-        <button type='button' onClick={onToggle} className='flex w-full items-center gap-3 px-4 py-3.5 text-start'>
-          <span className={cn(
-            'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors',
-            isOpen
-              ? 'border-primary/30 bg-primary/10 text-primary'
-              : 'border-border bg-muted text-muted-foreground',
-          )}>
+      <div
+        className={cn(
+          'mb-2 min-w-0 flex-1 rounded-xl border bg-card transition-all duration-300',
+          isOpen
+            ? 'border-primary/30 shadow-sm'
+            : 'cursor-pointer border-border/50 hover:border-border',
+        )}>
+        <button
+          type='button'
+          onClick={onToggle}
+          className='flex w-full items-center gap-3 px-4 py-3.5 text-start'>
+          <span
+            className={cn(
+              'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors',
+              isOpen
+                ? 'border-primary/30 bg-primary/10 text-primary'
+                : 'border-border bg-muted text-muted-foreground',
+            )}>
             <BookOpen className='h-4 w-4' />
           </span>
 
           <div className='min-w-0 flex-1'>
-            <span className={cn(
-              'inline-flex rounded-full border px-1.5 py-px text-[9px] font-bold uppercase tracking-wide mb-0.5',
-              isOpen
-                ? 'border-primary/25 bg-primary/10 text-primary'
-                : 'border-border bg-muted text-muted-foreground',
-            )}>
+            <span
+              className={cn(
+                'inline-flex rounded-full border px-1.5 py-px text-[9px] font-bold uppercase tracking-wide mb-0.5',
+                isOpen
+                  ? 'border-primary/25 bg-primary/10 text-primary'
+                  : 'border-border bg-muted text-muted-foreground',
+              )}>
               TOPIC {topicNum}
             </span>
-            <p className='text-sm font-semibold leading-snug text-foreground'>{titleText}</p>
+            <p className='text-sm font-semibold leading-snug text-foreground'>
+              {titleText}
+            </p>
           </div>
 
           <div className='flex shrink-0 items-center gap-1.5'>
-            <Badge variant='outline' className='text-xs'>{topic.elements.length} el</Badge>
-            <ChevronDown className={cn(
-              'h-4 w-4 text-muted-foreground transition-transform duration-200 ms-1',
-              isOpen && 'rotate-180',
-            )} />
+            <Badge variant='outline' className='text-xs'>
+              {topic.elements.length} el
+            </Badge>
+            <ChevronDown
+              className={cn(
+                'h-4 w-4 text-muted-foreground transition-transform duration-200 ms-1',
+                isOpen && 'rotate-180',
+              )}
+            />
           </div>
         </button>
 
         {isOpen && (
           <div className='border-t border-border/40 px-5 pb-5 pt-4 space-y-4'>
             {topic.elements.length === 0 ? (
-              <p className='text-sm italic text-muted-foreground'>No content yet.</p>
+              <p className='text-sm italic text-muted-foreground'>
+                No content yet.
+              </p>
             ) : (
               <CourseElementRenderer elements={topic.elements} lang={lang} />
             )}
@@ -183,8 +226,16 @@ function TopicRow({ topic, idx, total, isOpen, onToggle, lang }: TopicRowProps) 
 
 // ── Stat Pill ──────────────────────────────────────────────────────────
 function Stat({
-  icon, value, label, textClass,
-}: { icon: React.ReactNode; value?: number | string; label?: string; textClass: string }) {
+  icon,
+  value,
+  label,
+  textClass,
+}: {
+  icon: React.ReactNode;
+  value?: number | string;
+  label?: string;
+  textClass: string;
+}) {
   return (
     <div className='flex items-center gap-1.5 text-xs'>
       <span className={textClass}>{icon}</span>
@@ -195,39 +246,44 @@ function Stat({
 }
 
 // ── Main Component ─────────────────────────────────────────────────────
-interface Props { course: AdminCourse; }
+interface Props {
+  course: AdminCourse;
+}
 
 export function CoursePlatformPreviewTab({ course }: Props) {
-  const [lang, setLang]   = useState<'en' | 'ar'>('en');
+  const [lang, setLang] = useState<'en' | 'ar'>('en');
   const [openId, setOpenId] = useState<string | null>(null);
 
-  const col        = (course.color?.toLowerCase() ?? 'blue');
-  const matrixHex  = MATRIX_COLOR[col] ?? '#3b82f6';
-  const textCls    = TEXT_COLOR[col]   ?? 'text-blue-400';
-  const imgSrc     = course.image ?? course.thumbnail;
+  const col = course.color?.toLowerCase() ?? 'blue';
+  const matrixHex = MATRIX_COLOR[col] ?? '#3b82f6';
+  const textCls = TEXT_COLOR[col] ?? 'text-blue-400';
+  const imgSrc = course.image ?? course.thumbnail;
   const comingSoon = course.state === 'COMING_SOON';
   const AccessIcon = ACCESS_ICON[course.access ?? 'FREE'] ?? Unlock;
 
   const title = lang === 'ar' ? course.ar_title || course.title : course.title;
-  const desc  = lang === 'ar' ? course.ar_description || course.description : course.description;
+  const desc =
+    lang === 'ar'
+      ? course.ar_description || course.description
+      : course.description;
 
   // ── Fetch curriculum ─────────────────────────────────────────────────
   const { data: curriculumData, isLoading: currLoading } = useQuery({
     queryKey: ['admin', 'curriculum-preview', course.id],
-    queryFn:  () => adminCoursesApi.getCurriculum(course.slug),
+    queryFn: () => adminCoursesApi.getCurriculum(course.slug),
     staleTime: 1000 * 60 * 5,
   });
 
   // ── Fetch labs count ─────────────────────────────────────────────────
-  const { data: courseLabs } = useQuery<any[]>({
-    queryKey: ['admin', 'course-labs-preview', course.id],
-    queryFn:  async () => {
-      const res = await adminCoursesApi.getPathModules(course.id);
-      return Array.isArray(res) ? res : [];
-    },
-    staleTime: 1000 * 60 * 5,
-    enabled: !!course.id,
-  });
+  // const { data: courseLabs } = useQuery<any[]>({
+  //   queryKey: ['admin', 'course-labs-preview', course.id],
+  //   queryFn: async () => {
+  //     const res = await adminCoursesApi.getPathModules(course.id);
+  //     return Array.isArray(res) ? res : [];
+  //   },
+  //   staleTime: 1000 * 60 * 5,
+  //   enabled: !!course.id,
+  // });
 
   // Fetch actual labs attached to course
   const { data: labsList } = useQuery<any[]>({
@@ -235,7 +291,9 @@ export function CoursePlatformPreviewTab({ course }: Props) {
     queryFn: async () => {
       try {
         const { adminApiClient } = await import('@/core/api/admin-client');
-        const res = await adminApiClient.get(`/admin/courses/${course.id}/labs`);
+        const res = await adminApiClient.get(
+          `/admin/courses/${course.id}/labs`,
+        );
         const d = res?.data ?? res;
         return Array.isArray(d) ? d : Array.isArray(d?.data) ? d.data : [];
       } catch {
@@ -253,8 +311,8 @@ export function CoursePlatformPreviewTab({ course }: Props) {
   );
 
   // average rating from course data
-  const avgRating    = (course as any).averageRating ?? 0;
-  const reviewCount  = (course as any).reviewCount   ?? 0;
+  const avgRating = (course as any).averageRating ?? 0;
+  const reviewCount = (course as any).reviewCount ?? 0;
 
   const previewUrl = `${window.location.origin}/courses/${course.slug}/edit?tab=preview`;
 
@@ -269,15 +327,22 @@ export function CoursePlatformPreviewTab({ course }: Props) {
               onClick={() => setLang(l)}
               className={cn(
                 'rounded-md px-4 py-1.5 text-xs font-medium transition-colors',
-                lang === l ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                lang === l
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
               )}>
               {l === 'en' ? 'English' : 'العربية'}
             </button>
           ))}
         </div>
 
-        <Button size='sm' variant='outline' className='gap-2 h-8'
-          onClick={() => window.open(previewUrl, '_blank', 'noopener,noreferrer')}>
+        <Button
+          size='sm'
+          variant='outline'
+          className='gap-2 h-8'
+          onClick={() =>
+            window.open(previewUrl, '_blank', 'noopener,noreferrer')
+          }>
           <ExternalLink className='h-3.5 w-3.5' /> Open in New Window
         </Button>
       </div>
@@ -290,18 +355,27 @@ export function CoursePlatformPreviewTab({ course }: Props) {
         <div className={cn('h-1 w-full', STRIPE[col] ?? 'bg-blue-500')} />
 
         {/* ── Hero ── */}
-        <div className={cn(
-          'relative px-6 py-8 overflow-hidden bg-gradient-to-br',
-          FALLBACK_BG[col] ?? 'from-blue-950 to-blue-900',
-        )}>
+        <div
+          className={cn(
+            'relative px-6 py-8 overflow-hidden bg-gradient-to-br',
+            FALLBACK_BG[col] ?? 'from-blue-950 to-blue-900',
+          )}>
           {/* Matrix rain */}
-          <div aria-hidden className='pointer-events-none absolute inset-0 overflow-hidden opacity-[0.07]'
-            style={{ backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 2px, ${matrixHex}44 2px, ${matrixHex}44 4px)` }} />
+          <div
+            aria-hidden
+            className='pointer-events-none absolute inset-0 overflow-hidden opacity-[0.07]'
+            style={{
+              backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 2px, ${matrixHex}44 2px, ${matrixHex}44 4px)`,
+            }}
+          />
           {/* Bloom glow */}
-          <div aria-hidden className={cn(
-            'pointer-events-none absolute -top-24 -start-24 h-72 w-72 rounded-full opacity-20 blur-3xl',
-            STRIPE[col] ?? 'bg-blue-500',
-          )} />
+          <div
+            aria-hidden
+            className={cn(
+              'pointer-events-none absolute -top-24 -start-24 h-72 w-72 rounded-full opacity-20 blur-3xl',
+              STRIPE[col] ?? 'bg-blue-500',
+            )}
+          />
 
           {/* Breadcrumb */}
           <p className='relative text-xs text-white/40 mb-5'>
@@ -313,10 +387,22 @@ export function CoursePlatformPreviewTab({ course }: Props) {
           <div className='relative flex items-start gap-4'>
             <div className='h-14 w-14 shrink-0 overflow-hidden rounded-2xl ring-1 ring-white/10'>
               {imgSrc ? (
-                <img src={imgSrc} alt={title ?? ''} className='h-full w-full object-cover' />
+                <img
+                  src={imgSrc}
+                  alt={title ?? ''}
+                  className='h-full w-full object-cover'
+                />
               ) : (
-                <div className={cn('h-full w-full flex items-center justify-center bg-gradient-to-br', FALLBACK_BG[col])}>
-                  <p className={cn('text-[9px] font-black text-center px-1.5 leading-tight', textCls)}>
+                <div
+                  className={cn(
+                    'h-full w-full flex items-center justify-center bg-gradient-to-br',
+                    FALLBACK_BG[col],
+                  )}>
+                  <p
+                    className={cn(
+                      'text-[9px] font-black text-center px-1.5 leading-tight',
+                      textCls,
+                    )}>
                     {title?.slice(0, 12)}
                   </p>
                 </div>
@@ -326,20 +412,26 @@ export function CoursePlatformPreviewTab({ course }: Props) {
             <div className='min-w-0 flex-1'>
               {/* Badges */}
               <div className='flex flex-wrap gap-1.5 mb-2'>
-                <Badge variant='outline' className={cn(
-                  'rounded-full text-[11px] font-bold gap-1',
-                  ACCESS_BADGE[course.access ?? 'FREE'] ?? ACCESS_BADGE.FREE,
-                )}>
+                <Badge
+                  variant='outline'
+                  className={cn(
+                    'rounded-full text-[11px] font-bold gap-1',
+                    ACCESS_BADGE[course.access ?? 'FREE'] ?? ACCESS_BADGE.FREE,
+                  )}>
                   <AccessIcon className='h-2.5 w-2.5' />
                   {course.access ?? 'FREE'}
                 </Badge>
                 {course.difficulty && (
-                  <Badge variant='outline' className='rounded-full border-white/20 text-[11px] text-white/65 gap-1'>
+                  <Badge
+                    variant='outline'
+                    className='rounded-full border-white/20 text-[11px] text-white/65 gap-1'>
                     <Shield className='h-2.5 w-2.5' /> {course.difficulty}
                   </Badge>
                 )}
                 {course.category && (
-                  <Badge variant='outline' className='rounded-full border-white/15 text-[11px] text-white/50'>
+                  <Badge
+                    variant='outline'
+                    className='rounded-full border-white/15 text-[11px] text-white/50'>
                     {course.category.replace(/_/g, ' ')}
                   </Badge>
                 )}
@@ -357,12 +449,16 @@ export function CoursePlatformPreviewTab({ course }: Props) {
 
               {/* Title */}
               <h1 className='text-xl font-black leading-tight tracking-tight text-white sm:text-2xl'>
-                {title || <span className='opacity-30 italic'>Course Title</span>}
+                {title || (
+                  <span className='opacity-30 italic'>Course Title</span>
+                )}
               </h1>
 
               {/* Short description */}
               {desc && (
-                <p className='mt-2 max-w-2xl text-sm leading-relaxed text-white/60'>{desc}</p>
+                <p className='mt-2 max-w-2xl text-sm leading-relaxed text-white/60'>
+                  {desc}
+                </p>
               )}
             </div>
           </div>
@@ -371,26 +467,47 @@ export function CoursePlatformPreviewTab({ course }: Props) {
           <div className='relative mt-6 flex flex-wrap items-center justify-between gap-4'>
             <div className='flex flex-wrap items-center gap-x-5 gap-y-1.5'>
               {(course.totalTopics ?? 0) > 0 && (
-                <Stat icon={<BookOpen className='h-3.5 w-3.5' />} value={course.totalTopics} label='Topics' textClass={textCls} />
+                <Stat
+                  icon={<BookOpen className='h-3.5 w-3.5' />}
+                  value={course.totalTopics}
+                  label='Topics'
+                  textClass={textCls}
+                />
               )}
               {(course.estimatedHours ?? 0) > 0 && (
-                <Stat icon={<Clock className='h-3.5 w-3.5' />} value={`${course.estimatedHours}h`} label='est.' textClass={textCls} />
+                <Stat
+                  icon={<Clock className='h-3.5 w-3.5' />}
+                  value={`${course.estimatedHours}h`}
+                  label='est.'
+                  textClass={textCls}
+                />
               )}
               {/* Labs count من الـ API */}
               <div className='flex items-center gap-1.5 text-xs'>
-                <span className={textCls}><FlaskConical className='h-3.5 w-3.5' /></span>
-                <span className='font-bold text-white'>{labsCount > 0 ? labsCount : 'Labs'}</span>
+                <span className={textCls}>
+                  <FlaskConical className='h-3.5 w-3.5' />
+                </span>
+                <span className='font-bold text-white'>
+                  {labsCount > 0 ? labsCount : 'Labs'}
+                </span>
                 {labsCount > 0 && <span className='text-white/45'>Labs</span>}
               </div>
               {(course.enrollmentCount ?? 0) > 0 && (
-                <Stat icon={<Users className='h-3.5 w-3.5' />} value={(course.enrollmentCount ?? 0).toLocaleString()} label='enrolled' textClass={textCls} />
+                <Stat
+                  icon={<Users className='h-3.5 w-3.5' />}
+                  value={(course.enrollmentCount ?? 0).toLocaleString()}
+                  label='enrolled'
+                  textClass={textCls}
+                />
               )}
               {/* ⭐ Rating — مطابق للمنصة */}
               {avgRating > 0 && (
                 <div className='flex items-center gap-1.5 text-xs'>
                   <Star className='h-3.5 w-3.5 fill-yellow-500 text-yellow-500' />
                   <span className='font-bold text-white'>{avgRating}</span>
-                  {reviewCount > 0 && <span className='text-white/45'>({reviewCount})</span>}
+                  {reviewCount > 0 && (
+                    <span className='text-white/45'>({reviewCount})</span>
+                  )}
                 </div>
               )}
             </div>
@@ -400,14 +517,21 @@ export function CoursePlatformPreviewTab({ course }: Props) {
               <button className='flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-xs font-medium text-white/50 cursor-default'>
                 <Heart className='h-3.5 w-3.5' /> Save
               </button>
-              <button className={cn(
-                'flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-xs font-semibold text-white cursor-default',
-                comingSoon ? 'border border-white/15 bg-white/5 text-white/50' : 'bg-primary',
-              )}>
+              <button
+                className={cn(
+                  'flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-xs font-semibold text-white cursor-default',
+                  comingSoon
+                    ? 'border border-white/15 bg-white/5 text-white/50'
+                    : 'bg-primary',
+                )}>
                 {comingSoon ? (
-                  <><Clock className='h-3.5 w-3.5' /> Coming Soon</>
+                  <>
+                    <Clock className='h-3.5 w-3.5' /> Coming Soon
+                  </>
                 ) : (
-                  <><Rocket className='h-3.5 w-3.5' /> Start Free</>
+                  <>
+                    <Rocket className='h-3.5 w-3.5' /> Start Free
+                  </>
                 )}
               </button>
             </div>
@@ -415,11 +539,15 @@ export function CoursePlatformPreviewTab({ course }: Props) {
         </div>
 
         {/* ── Long description ── */}
-        {(lang === 'ar' ? course.ar_longDescription : course.longDescription) && (
+        {(lang === 'ar'
+          ? course.ar_longDescription
+          : course.longDescription) && (
           <div className='px-6 pt-8'>
             <div className='mb-8 p-5 rounded-xl border border-border/40 bg-muted/20'>
               <p className='text-sm text-foreground/70 leading-7'>
-                {lang === 'ar' ? course.ar_longDescription : course.longDescription}
+                {lang === 'ar'
+                  ? course.ar_longDescription
+                  : course.longDescription}
               </p>
             </div>
           </div>
@@ -429,7 +557,9 @@ export function CoursePlatformPreviewTab({ course }: Props) {
         <div className='px-6 pb-10 pt-6 space-y-6'>
           <div className='flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between'>
             <div>
-              <h2 className='text-xl font-bold tracking-tight sm:text-2xl'>Course Curriculum</h2>
+              <h2 className='text-xl font-bold tracking-tight sm:text-2xl'>
+                Course Curriculum
+              </h2>
               <p className='mt-1 text-sm text-muted-foreground'>
                 {topics.length} Topics · Follow the order for best results
               </p>
@@ -444,7 +574,10 @@ export function CoursePlatformPreviewTab({ course }: Props) {
             </div>
           ) : (
             <div className='relative'>
-              <div aria-hidden className='absolute top-5 bottom-5 start-[25px] w-px bg-border/40' />
+              <div
+                aria-hidden
+                className='absolute top-5 bottom-5 start-[25px] w-px bg-border/40'
+              />
               <ol className='space-y-2'>
                 {topics.map((topic, idx) => (
                   <TopicRow
@@ -453,7 +586,9 @@ export function CoursePlatformPreviewTab({ course }: Props) {
                     idx={idx}
                     total={topics.length}
                     isOpen={openId === topic.id}
-                    onToggle={() => setOpenId((p) => (p === topic.id ? null : topic.id))}
+                    onToggle={() =>
+                      setOpenId((p) => (p === topic.id ? null : topic.id))
+                    }
                     lang={lang}
                   />
                 ))}
