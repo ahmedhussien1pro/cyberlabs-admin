@@ -404,7 +404,7 @@ const STATE_STYLES: Record<string, string> = {
   COMING_SOON: 'bg-blue-500/10 border-blue-500/30 text-blue-400',
 };
 
-// ─── Helper: strip UI-only keys before sending to backend ───────────────────
+// ─── Helper: strip UI-only keys before sending topics to backend ───────────────
 function cleanTopicsForApi(topics: Topic[]): object[] {
   return topics.map(({ id, title, elements }) => ({ id, title, elements }));
 }
@@ -554,14 +554,9 @@ export default function CourseCreatePage() {
   const { mutate: saveCurriculum, isPending: isSaving } = useMutation({
     mutationFn: async () => {
       if (!createdCourseId) throw new Error('Create the course first');
-
-      // Step 1: save topics — send only the fields the backend expects
+      // Step 1: save topics — only { id, title, elements }
       await coursesApi.saveCurriculum(createdCourseId, cleanTopicsForApi(topics));
-
-      // Step 2: persist landingData as a JSON patch on the course itself
-      // We store it inside the `topics` field would pollute it, so we store
-      // it as part of the course update using a dedicated field or as metadata.
-      // The backend stores landingData via PATCH /admin/courses/:id
+      // Step 2: persist landingData via PATCH
       if (Object.keys(courseInfo).length > 0) {
         await adminCoursesApi.update(createdCourseId, {
           landingData: courseInfo as any,
@@ -579,19 +574,18 @@ export default function CourseCreatePage() {
     e.preventDefault();
     if (!meta.title.trim()) return toast.error('Title is required');
     if (!meta.slug.trim())  return toast.error('Slug is required');
+    // ✅ Do NOT send isPublished — the backend derives it from state automatically
     const dto: CourseCreateDto = {
-      title:       meta.title.trim(),
-      ar_title:    meta.ar_title.trim() || undefined,
-      slug:        meta.slug.trim(),
-      description: meta.description.trim() || undefined,
-      difficulty:  meta.difficulty,
-      access:      meta.access,
-      category:    meta.category,
-      color:       meta.color,
-      contentType: meta.contentType,
-      state:       meta.state as any,
-      // ✅ keep isPublished in sync with state from day one
-      isPublished: meta.state === 'PUBLISHED',
+      title:        meta.title.trim(),
+      ar_title:     meta.ar_title.trim() || undefined,
+      slug:         meta.slug.trim(),
+      description:  meta.description.trim() || undefined,
+      difficulty:   meta.difficulty,
+      access:       meta.access,
+      category:     meta.category,
+      color:        meta.color,
+      contentType:  meta.contentType,
+      state:        meta.state as any,
       instructorId: meta.instructorId.trim(),
     };
     createCourse(dto);
