@@ -54,16 +54,7 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
   const queryClient = useQueryClient();
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  /**
-   * After a successful mutation we:
-   * 1. Invalidate the LIST so it refetches from server (fine, 304 won't happen
-   *    because list params change each time or staleTime forces it)
-   * 2. For STATS we do NOT invalidate (would get 304) — instead we rely on the
-   *    optimistic update done in onMutate, and we do a forced refetch after a
-   *    short delay so the server has time to commit the change.
-   */
   const refetchStatsLater = useCallback(() => {
-    // Wait 800ms for the backend to persist the change, then force-fetch
     setTimeout(() => {
       queryClient.refetchQueries({
         queryKey: ['admin', 'courses', 'stats'],
@@ -88,7 +79,6 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
       const listSnapshot  = queryClient.getQueriesData({ queryKey: ['admin', 'courses', 'list']  });
       const statsSnapshot = queryClient.getQueriesData({ queryKey: ['admin', 'courses', 'stats'] });
 
-      // Optimistic: update course state in list cache
       queryClient.setQueriesData(
         { queryKey: ['admin', 'courses', 'list'] },
         (old: any) => {
@@ -102,7 +92,6 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
         },
       );
 
-      // Optimistic: update stat counters immediately
       queryClient.setQueriesData(
         { queryKey: ['admin', 'courses', 'stats'] },
         (old: any) => {
@@ -127,8 +116,8 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
         : updated.state === 'COMING_SOON' ? 'toast.comingSoon'
         : 'toast.unpublished';
       toast.success(t(toastKey, { title: course.title }));
-      invalidateList();      // refetch list from server
-      refetchStatsLater();   // force-refetch stats after delay (bypasses 304)
+      invalidateList();
+      refetchStatsLater();
     },
 
     onError: (_e: any, _v: any, ctx: any) => {
@@ -317,7 +306,7 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
               {t('dialogs.cancel')}
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={(e) => { e.preventDefault(); deleteMutation.mutate(); }}
+              onClick={(e) => { e.preventDefault(); deleteMutation.mutate(undefined); }}
               disabled={deleteMutation.isPending}
               className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
             >

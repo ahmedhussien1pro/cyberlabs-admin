@@ -18,18 +18,15 @@ const VALID_TABS = ['card', 'hero', 'curriculum', 'preview'] as const;
 type TabValue = (typeof VALID_TABS)[number];
 
 export default function CourseEditPage() {
-  // Route is /courses/:slug/edit — param name is "slug"
   const { slug } = useParams<{ slug: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  // Derive active tab from ?tab= query param
   const tabParam = searchParams.get('tab') as TabValue | null;
   const [tab, setTab] = useState<TabValue>(
     tabParam && VALID_TABS.includes(tabParam) ? tabParam : 'card',
   );
 
-  // Keep URL in sync when tab changes
   const handleTabChange = (value: string) => {
     const v = value as TabValue;
     setTab(v);
@@ -41,7 +38,6 @@ export default function CourseEditPage() {
     setSearchParams(searchParams, { replace: true });
   };
 
-  // Sync tab when URL changes externally (e.g. back-button)
   useEffect(() => {
     const t = searchParams.get('tab') as TabValue | null;
     if (t && VALID_TABS.includes(t) && t !== tab) setTab(t);
@@ -88,6 +84,9 @@ export default function CourseEditPage() {
     );
   }
 
+  // Derive published state from `state` field (single source of truth)
+  const isPublished = course.state === 'PUBLISHED';
+
   return (
     <div className='space-y-6'>
       {/* Header */}
@@ -106,11 +105,13 @@ export default function CourseEditPage() {
         <span
           className={[
             'rounded-full px-3 py-1 text-xs font-semibold border',
-            course.isPublished
+            isPublished
               ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-              : 'bg-zinc-500/10 border-zinc-500/30 text-zinc-400',
+              : course.state === 'COMING_SOON'
+                ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+                : 'bg-zinc-500/10 border-zinc-500/30 text-zinc-400',
           ].join(' ')}>
-          {course.isPublished ? 'PUBLISHED' : (course.state ?? 'DRAFT').replace('_', ' ')}
+          {(course.state ?? 'DRAFT').replace('_', ' ')}
         </span>
       </div>
 

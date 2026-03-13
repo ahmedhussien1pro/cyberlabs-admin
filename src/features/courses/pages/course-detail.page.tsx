@@ -7,7 +7,7 @@ import {
   ArrowLeft, Edit, Copy,
   AlertCircle, BookOpen, Clock, Users,
   FlaskConical, Crown, Unlock, Shield,
-  CheckCircle2, Globe, Star, Trash2, Loader2, BookText,
+  CheckCircle2, Globe, Trash2, Loader2, BookText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { adminCoursesApi } from '../services/admin-courses.api';
 import { ROUTES } from '@/shared/constants';
-import type { AdminCourse } from '../types/admin-course.types';
+import type { AdminCourse, CourseState } from '../types/admin-course.types';
 
 const COLOR_CLASS: Record<string, string> = {
   EMERALD: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400',
@@ -58,7 +58,6 @@ function StatCard({ label, value, icon: Icon }: { label: string; value: string |
 }
 
 export default function CourseDetailPage() {
-  // Route is /courses/:id/detail — param name is "id" (UUID)
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -93,20 +92,18 @@ export default function CourseDetailPage() {
     onError: () => toast.error('Failed to duplicate'),
   });
 
-  const isPublished = course?.isPublished ?? course?.state === 'PUBLISHED';
+  // Derive published state from `state` field (single source of truth)
+  const isPublished = course?.state === 'PUBLISHED';
 
   const { mutate: togglePublish, isPending: publishing } = useMutation({
     mutationFn: () =>
-      isPublished
-        ? adminCoursesApi.unpublish(id!)
-        : adminCoursesApi.publish(id!),
+      adminCoursesApi.setState(id!, (isPublished ? 'DRAFT' : 'PUBLISHED') as CourseState),
     onSuccess: (updated: AdminCourse) => {
-      // Update cache directly with the returned course — no round-trip needed
       queryClient.setQueryData(queryKey, updated);
       queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'course', 'edit'] });
       toast.success(
-        updated.isPublished ? 'Course published ✓' : 'Course unpublished',
+        updated.state === 'PUBLISHED' ? 'Course published ✓' : 'Course unpublished',
       );
     },
     onError: () => toast.error('Failed to update state'),
@@ -137,9 +134,9 @@ export default function CourseDetailPage() {
     );
   }
 
-  const colorClass = COLOR_CLASS[course.color?.toUpperCase()] ?? COLOR_CLASS.BLUE;
-  const courseState = course.isPublished ? 'PUBLISHED' : (course.state ?? 'DRAFT');
-  const stateClass = STATE_CLASS[courseState] ?? STATE_CLASS.DRAFT;
+  const colorClass  = COLOR_CLASS[course.color?.toUpperCase()] ?? COLOR_CLASS.BLUE;
+  const courseState = course.state ?? 'DRAFT';
+  const stateClass  = STATE_CLASS[courseState] ?? STATE_CLASS.DRAFT;
 
   return (
     <div className='space-y-6'>
@@ -159,7 +156,7 @@ export default function CourseDetailPage() {
             </Badge>
             {course.isFeatured && (
               <Badge variant='outline' className='rounded-full text-xs bg-yellow-500/10 border-yellow-500/30 text-yellow-400'>
-                <Star className='h-3 w-3 mr-1 inline' />Featured
+                Featured
               </Badge>
             )}
           </div>
@@ -274,8 +271,8 @@ export default function CourseDetailPage() {
               <div>
                 <p className='text-xs text-muted-foreground mb-2'>Tags</p>
                 <div className='flex flex-wrap gap-2'>
-                  {course.tags.map((t) => (
-                    <Badge key={t} variant='outline' className='text-xs opacity-70'>{t}</Badge>
+                  {course.tags.map((tag) => (
+                    <Badge key={tag} variant='outline' className='text-xs opacity-70'>{tag}</Badge>
                   ))}
                 </div>
               </div>

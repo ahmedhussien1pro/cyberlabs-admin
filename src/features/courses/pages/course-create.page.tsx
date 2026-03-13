@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import {
   ArrowLeft, Upload, FileJson, CheckCircle2, Loader2,
   Plus, Trash2, ChevronUp, ChevronDown, BookOpen, Eye,
-  Save, X, AlertCircle, Search, User, Layers,
+  Save, AlertCircle, Search, User, Layers,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { adminCoursesApi } from '../services/admin-courses.api';
@@ -80,7 +80,6 @@ function parseJson(content: string): { meta: Partial<CourseMeta>; topics: TopicR
   const parsed = JSON.parse(content);
   const src = Array.isArray(parsed) ? {} : parsed;
 
-  // Extract meta
   const meta: Partial<CourseMeta> = {};
   const setIfString = (key: keyof CourseMeta, val: any) => {
     if (val && typeof val === 'string') (meta as any)[key] = val;
@@ -103,7 +102,6 @@ function parseJson(content: string): { meta: Partial<CourseMeta>; topics: TopicR
   if (src.isFeatured !== undefined) meta.isFeatured = Boolean(src.isFeatured);
   if (src.isNew !== undefined)      meta.isNew      = Boolean(src.isNew);
 
-  // Extract topics
   const rawTopics: any[] = Array.isArray(parsed)
     ? parsed
     : (Array.isArray(src.topics) ? src.topics : Array.isArray(src.curriculum) ? src.curriculum : []);
@@ -156,12 +154,13 @@ function InstructorPicker({ value, onChange }: { value: string; onChange: (id: s
   ].filter((u, i, arr) => arr.findIndex((x) => x.id === u.id) === i);
 
   const filtered = allUsers.filter((u: any) => {
-    const q = `${u.firstName ?? ''} ${u.lastName ?? ''} ${u.email ?? ''}`.toLowerCase();
+    const name = u.name ?? `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim();
+    const q = `${name} ${u.email ?? ''}`.toLowerCase();
     return q.includes(search.toLowerCase());
   });
 
   const handleSelect = (u: any) => {
-    const name = `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || u.email;
+    const name = (u.name ?? `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim()) || u.email;
     onChange(u.id, name);
     setSelectedName(name);
     setOpen(false);
@@ -196,20 +195,24 @@ function InstructorPicker({ value, onChange }: { value: string; onChange: (id: s
           <ul className='max-h-44 overflow-y-auto py-1'>
             {filtered.length === 0
               ? <li className='px-4 py-3 text-xs text-muted-foreground text-center'>No users found</li>
-              : filtered.map((u: any) => (
-                <li key={u.id}
-                  className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors ${u.id === value ? 'bg-primary/10 text-primary' : ''}`}
-                  onClick={() => handleSelect(u)}>
-                  <div className='w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0'>
-                    {(u.firstName?.[0] ?? u.email?.[0] ?? '?').toUpperCase()}
-                  </div>
-                  <div className='min-w-0'>
-                    <p className='text-sm font-medium truncate'>{`${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || 'No name'}</p>
-                    <p className='text-xs text-muted-foreground truncate'>{u.email}</p>
-                  </div>
-                  <span className='ml-auto text-xs bg-muted px-1.5 py-0.5 rounded shrink-0'>{u.role}</span>
-                </li>
-              ))
+              : filtered.map((u: any) => {
+                  const displayName = (u.name ?? `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim()) || 'No name';
+                  const initial = (u.name?.[0] ?? u.firstName?.[0] ?? u.email?.[0] ?? '?').toUpperCase();
+                  return (
+                    <li key={u.id}
+                      className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors ${u.id === value ? 'bg-primary/10 text-primary' : ''}`}
+                      onClick={() => handleSelect(u)}>
+                      <div className='w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0'>
+                        {initial}
+                      </div>
+                      <div className='min-w-0'>
+                        <p className='text-sm font-medium truncate'>{displayName}</p>
+                        <p className='text-xs text-muted-foreground truncate'>{u.email}</p>
+                      </div>
+                      <span className='ml-auto text-xs bg-muted px-1.5 py-0.5 rounded shrink-0'>{u.role}</span>
+                    </li>
+                  );
+                })
             }
           </ul>
         </div>
@@ -301,9 +304,7 @@ export default function CourseCreatePage() {
   const [topics, setTopics] = useState<TopicRow[]>([]);
   const [savedSlug, setSavedSlug] = useState('');
   const [savedTitle, setSavedTitle] = useState('');
-  const [instructorName, setInstructorName] = useState('');
 
-  // auto-slug from title
   const setTitle = (v: string) => setMeta((f) => ({
     ...f, title: v,
     slug: f.slug === slugify(f.title) || f.slug === '' ? slugify(v) : f.slug,
@@ -406,7 +407,6 @@ export default function CourseCreatePage() {
 
   const frontendBase = import.meta.env.VITE_FRONTEND_URL ?? 'http://localhost:3000';
 
-  // ─────────────────────────────────────────────────────────────────────
   return (
     <div className='min-h-[calc(100vh-4rem)] bg-background'>
 
@@ -468,7 +468,6 @@ export default function CourseCreatePage() {
             </p>
           </div>
 
-          {/* Drop zone */}
           <label
             className='flex flex-col items-center justify-center gap-4 w-full h-52 border-2 border-dashed rounded-2xl cursor-pointer hover:bg-muted/20 hover:border-primary/60 transition-all'
             onDrop={handleDrop}
@@ -504,7 +503,6 @@ export default function CourseCreatePage() {
       {step === 'edit' && (
         <div className='max-w-3xl mx-auto px-6 py-8 space-y-8'>
 
-          {/* Warnings */}
           {warnings.length > 0 && (
             <div className='rounded-xl border border-yellow-500/30 bg-yellow-500/8 p-4 space-y-1.5'>
               <p className='text-xs font-semibold text-yellow-400 flex items-center gap-1.5'>
@@ -514,7 +512,6 @@ export default function CourseCreatePage() {
             </div>
           )}
 
-          {/* ─ Section: Core Metadata ─ */}
           <section className='rounded-xl border bg-card p-6 space-y-5'>
             <h2 className='text-sm font-bold flex items-center gap-2'>
               <BookOpen size={15} className='text-primary' /> Course Metadata
@@ -580,7 +577,7 @@ export default function CourseCreatePage() {
 
             <InstructorPicker
               value={meta.instructorId}
-              onChange={(id, name) => { setField('instructorId', id); setInstructorName(name); }}
+              onChange={(id, name) => { setField('instructorId', id); void name; }}
             />
 
             <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
@@ -606,7 +603,6 @@ export default function CourseCreatePage() {
             </div>
           </section>
 
-          {/* ─ Section: Topics / Curriculum ─ */}
           <section className='rounded-xl border bg-card p-6 space-y-4'>
             <div className='flex items-center justify-between'>
               <h2 className='text-sm font-bold flex items-center gap-2'>
@@ -675,7 +671,6 @@ export default function CourseCreatePage() {
             )}
           </section>
 
-          {/* ─ Save Button (bottom) ─ */}
           <div className='flex justify-end pb-8'>
             <Button size='lg' className='gap-2 min-w-[160px]' onClick={() => save()} disabled={isSaving}>
               {isSaving
