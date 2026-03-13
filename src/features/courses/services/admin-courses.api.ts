@@ -58,9 +58,11 @@ function unwrapList<T>(res: any): T {
   } as T;
 }
 
+// ✅ Always normalize color to lowercase so Tailwind class maps work correctly
 function normalizeArrays(course: AdminCourse): AdminCourse {
   return {
     ...course,
+    color:            (course.color as string)?.toLowerCase() as AdminCourse['color'],
     tags:             Array.isArray(course.tags)             ? course.tags             : [],
     skills:           Array.isArray(course.skills)           ? course.skills           : [],
     ar_skills:        Array.isArray(course.ar_skills)        ? course.ar_skills        : [],
@@ -80,9 +82,11 @@ export const adminCoursesApi = {
     };
     if (params.search)                                    query.search     = params.search;
     if (params.difficulty && params.difficulty !== 'ALL') query.difficulty = params.difficulty;
+    // ✅ backend accepts `state` directly
     if (params.state && params.state !== 'all')           query.state      = params.state;
     const res = await adminApiClient.get('/admin/courses', { params: query });
-    return unwrapList<AdminCoursesListResponse>(res);
+    const result = unwrapList<AdminCoursesListResponse>(res);
+    return { ...result, data: result.data.map(normalizeArrays) };
   },
 
   // _t timestamp busts the HTTP 304 cache without adding any custom headers
