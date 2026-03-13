@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Button }         from '@/components/ui/button';
 import { coursesApi }     from '../services/courses.api';
+import { adminCoursesApi } from '../services/admin-courses.api';
 import { usersService }   from '@/core/api/services';
 import { ROUTES }         from '@/shared/constants';
 import type { CourseCreateDto } from '../types/course.types';
@@ -97,16 +98,13 @@ function parseJsonFile(content: string): ImportPreview {
   if (Array.isArray(parsed)) {
     rawTopics = parsed;
   } else if (parsed && typeof parsed === 'object') {
-    // Support { landingData, topics } shape (our standard export format)
     if (parsed.landingData && typeof parsed.landingData === 'object') {
       landingData = parsed.landingData as CourseInfoData;
-      // Also populate meta from landingData for the quick-fill fields
       const ld = parsed.landingData;
       const enTitle = typeof ld.title === 'object' ? ld.title.en : ld.title;
       const arTitle = typeof ld.title === 'object' ? ld.title.ar : '';
       if (enTitle) meta = { ...meta, title: enTitle, ar_title: arTitle ?? '' };
     }
-    // topics array
     if (Array.isArray(parsed.topics)) {
       rawTopics = parsed.topics;
     } else if (Array.isArray(parsed.curriculum)) {
@@ -115,7 +113,6 @@ function parseJsonFile(content: string): ImportPreview {
       warnings.push('No "topics" or "curriculum" array found — treating file as single topic');
       rawTopics = [parsed];
     }
-    // fallback meta from explicit meta/course/metadata keys
     const m = parsed.meta ?? parsed.course ?? parsed.metadata ?? {};
     if (m.title || m.slug) meta = { ...meta, ...m };
   }
@@ -177,7 +174,7 @@ function JsonImportModal({
     if (!preview) return;
     onImport({
       ...preview,
-      meta:   applyMeta ? preview.meta   : undefined,
+      meta:        applyMeta ? preview.meta        : undefined,
       landingData: applyMeta ? preview.landingData : undefined,
       topics: preview.topics.map((tp) => ({ ...tp, _importMode: mode }) as any),
     });
@@ -189,7 +186,6 @@ function JsonImportModal({
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm'>
       <div className='w-full max-w-lg rounded-xl border bg-card shadow-2xl'>
-        {/* Header */}
         <div className='flex items-center justify-between px-5 py-4 border-b'>
           <div className='flex items-center gap-2'>
             <FileJson size={18} className='text-primary' />
@@ -201,7 +197,6 @@ function JsonImportModal({
         </div>
 
         <div className='p-5 space-y-4'>
-          {/* Drop zone */}
           <label
             className='flex flex-col items-center justify-center gap-3 w-full h-32 border-2 border-dashed rounded-xl cursor-pointer hover:bg-muted/30 hover:border-primary/50 transition-all'
             onDrop={handleDrop}
@@ -219,14 +214,12 @@ function JsonImportModal({
             </div>
           </label>
 
-          {/* Error */}
           {error && (
             <div className='flex items-center gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400'>
               <AlertCircle size={14} />{error}
             </div>
           )}
 
-          {/* Preview */}
           {preview && (
             <div className='space-y-3'>
               <div className='rounded-md border bg-muted/20 p-3 space-y-2'>
@@ -244,7 +237,6 @@ function JsonImportModal({
                   </div>
                 </div>
 
-                {/* Landing data badge */}
                 {hasLandingData && (
                   <div className='flex items-center gap-1.5 text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 rounded px-2 py-1'>
                     <GlobeIcon size={11} />
@@ -252,7 +244,6 @@ function JsonImportModal({
                   </div>
                 )}
 
-                {/* Topic list preview */}
                 <ul className='space-y-0.5 max-h-24 overflow-y-auto'>
                   {preview.topics.map((tp, i) => (
                     <li key={i} className='flex items-center gap-2 text-xs px-1'>
@@ -264,7 +255,6 @@ function JsonImportModal({
                 </ul>
               </div>
 
-              {/* Warnings */}
               {preview.warnings.length > 0 && (
                 <div className='rounded-md border border-yellow-500/30 bg-yellow-500/10 p-3 space-y-1'>
                   <p className='text-xs font-medium text-yellow-400'>Warnings ({preview.warnings.length})</p>
@@ -274,7 +264,6 @@ function JsonImportModal({
                 </div>
               )}
 
-              {/* Options */}
               <div className='space-y-2'>
                 <div className='flex gap-2'>
                   {(['replace', 'append'] as const).map((m) => (
@@ -298,7 +287,6 @@ function JsonImportModal({
           )}
         </div>
 
-        {/* Footer */}
         <div className='flex items-center justify-end gap-2 px-5 py-3 border-t'>
           <Button variant='ghost' size='sm' onClick={onClose}>Cancel</Button>
           <Button size='sm' disabled={!preview} onClick={handleConfirm} className='gap-1'>
@@ -416,6 +404,11 @@ const STATE_STYLES: Record<string, string> = {
   COMING_SOON: 'bg-blue-500/10 border-blue-500/30 text-blue-400',
 };
 
+// ─── Helper: strip UI-only keys before sending to backend ───────────────────
+function cleanTopicsForApi(topics: Topic[]): object[] {
+  return topics.map(({ id, title, elements }) => ({ id, title, elements }));
+}
+
 // ─── Main Page ───────────────────────────────────────────────────────────────
 export default function CourseCreatePage() {
   const navigate        = useNavigate();
@@ -461,7 +454,6 @@ export default function CourseCreatePage() {
     reader.readAsDataURL(file);
   };
 
-  // Handle JSON import result
   const handleImport = (preview: ImportPreview) => {
     const isAppend   = (preview.topics[0] as any)?._importMode === 'append';
     const cleanTopics = preview.topics.map(({ _importMode, ...tp }: any) => tp as Topic);
@@ -474,13 +466,11 @@ export default function CourseCreatePage() {
       toast.success(`Imported ${cleanTopics.length} topics`);
     }
 
-    // Apply landingData (full CourseInfoData) if present
     if (preview.landingData) {
       setCourseInfo(preview.landingData);
       toast.info('Landing page content loaded from JSON');
     }
 
-    // Apply meta fields to the quick-create form
     if (preview.meta) {
       setMeta((f) => ({
         ...f,
@@ -560,12 +550,23 @@ export default function CourseCreatePage() {
     },
   });
 
+  // ─── Save: topics first, then patch landingData ──────────────────────────
   const { mutate: saveCurriculum, isPending: isSaving } = useMutation({
     mutationFn: async () => {
       if (!createdCourseId) throw new Error('Create the course first');
-      return coursesApi.saveCurriculum(createdCourseId, topics.map((tp) => ({
-        ...tp, landingData: courseInfo, imageMap,
-      })));
+
+      // Step 1: save topics — send only the fields the backend expects
+      await coursesApi.saveCurriculum(createdCourseId, cleanTopicsForApi(topics));
+
+      // Step 2: persist landingData as a JSON patch on the course itself
+      // We store it inside the `topics` field would pollute it, so we store
+      // it as part of the course update using a dedicated field or as metadata.
+      // The backend stores landingData via PATCH /admin/courses/:id
+      if (Object.keys(courseInfo).length > 0) {
+        await adminCoursesApi.update(createdCourseId, {
+          landingData: courseInfo as any,
+        });
+      }
     },
     onSuccess: () => toast.success('Content saved successfully!'),
     onError: (err: any) => {
@@ -589,6 +590,8 @@ export default function CourseCreatePage() {
       color:       meta.color,
       contentType: meta.contentType,
       state:       meta.state as any,
+      // ✅ keep isPublished in sync with state from day one
+      isPublished: meta.state === 'PUBLISHED',
       instructorId: meta.instructorId.trim(),
     };
     createCourse(dto);
@@ -603,7 +606,6 @@ export default function CourseCreatePage() {
   const showTopicEditor = activeView === 'topic' && currentTopicIndex >= 0;
   const showCourseInfo  = activeView === 'course-info';
 
-  // ─── Select fields config ──────────────────────────────────────────────────
   const SELECT_FIELDS = [
     { key: 'difficulty', label: t('form.difficulty') ?? 'Difficulty', opts: COURSE_DIFFICULTIES },
     { key: 'access',     label: t('form.access')     ?? 'Access',     opts: COURSE_ACCESSES     },
@@ -613,7 +615,6 @@ export default function CourseCreatePage() {
 
   return (
     <div className='flex h-[calc(100vh-4rem)] overflow-hidden'>
-      {/* JSON Import Modal */}
       {showImport && (
         <JsonImportModal onImport={handleImport} onClose={() => setShowImport(false)} />
       )}
@@ -637,7 +638,6 @@ export default function CourseCreatePage() {
         {!sidebarCollapsed && (
           <>
             <nav className='p-2 space-y-1'>
-              {/* Course Info */}
               <button
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
                   activeView === 'course-info'
@@ -652,7 +652,6 @@ export default function CourseCreatePage() {
                 )}
               </button>
 
-              {/* Import JSON */}
               <button
                 className='w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors text-muted-foreground hover:text-foreground'
                 onClick={() => setShowImport(true)}>
@@ -666,7 +665,6 @@ export default function CourseCreatePage() {
               </button>
             </nav>
 
-            {/* Topics list */}
             <div className='flex-1 overflow-y-auto'>
               <div className='flex items-center justify-between px-3 py-2'>
                 <div className='flex items-center gap-1.5'>
@@ -725,7 +723,6 @@ export default function CourseCreatePage() {
               )}
             </div>
 
-            {/* Sidebar footer actions */}
             <div className='p-3 border-t space-y-2'>
               {createdCourseId && (
                 <Button size='sm' className='w-full gap-2'
@@ -747,12 +744,11 @@ export default function CourseCreatePage() {
 
       {/* ── Main Area ─────────────────────────────────────────────────── */}
       <div className='flex-1 flex flex-col min-w-0 overflow-hidden'>
-        {/* Top bar */}
         <div className='flex items-center justify-between px-6 py-3 border-b bg-card shrink-0'>
           <div className='flex items-center gap-3'>
             <Button variant='ghost' size='sm' className='gap-1'
               onClick={() => navigate(ROUTES.COURSES)}>
-              <ArrowLeft size={14} /> {t('actions.edit') === 'Edit' ? 'Back' : 'Back'}
+              <ArrowLeft size={14} /> Back
             </Button>
             <div className='h-4 w-px bg-border' />
             <span className='text-sm font-medium'>{getTopBarTitle()}</span>
@@ -783,7 +779,6 @@ export default function CourseCreatePage() {
           </div>
         </div>
 
-        {/* Content area */}
         <div className='flex-1 overflow-y-auto'>
           <div className='max-w-4xl mx-auto px-6 py-6 space-y-6'>
 
@@ -791,7 +786,6 @@ export default function CourseCreatePage() {
               <>
                 {!createdCourseId && (
                   <div className='rounded-xl border bg-card p-6 space-y-5'>
-                    {/* Step header */}
                     <div className='flex items-center gap-2'>
                       <div className='w-6 h-6 rounded-full bg-primary flex items-center justify-center text-xs font-bold text-primary-foreground'>1</div>
                       <h2 className='text-sm font-semibold'>{t('form.createTitle')}</h2>
@@ -799,7 +793,6 @@ export default function CourseCreatePage() {
                     </div>
 
                     <form onSubmit={handleCreateSubmit} className='space-y-4'>
-                      {/* Title row */}
                       <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
                         <div>
                           <label className='text-xs text-muted-foreground mb-1 block'>{t('form.title')} (EN) *</label>
@@ -818,7 +811,6 @@ export default function CourseCreatePage() {
                         </div>
                       </div>
 
-                      {/* Slug */}
                       <div>
                         <label className='text-xs text-muted-foreground mb-1 block'>{t('form.slug')} *</label>
                         <div className='flex items-center gap-2'>
@@ -831,7 +823,6 @@ export default function CourseCreatePage() {
                         </div>
                       </div>
 
-                      {/* Description */}
                       <div>
                         <label className='text-xs text-muted-foreground mb-1 block'>{t('form.description')}</label>
                         <textarea className='w-full rounded-md border bg-background px-3 py-2 text-sm'
@@ -840,7 +831,6 @@ export default function CourseCreatePage() {
                           onChange={(e) => setMeta_('description', e.target.value)} />
                       </div>
 
-                      {/* Selects grid */}
                       <div className='grid grid-cols-2 sm:grid-cols-3 gap-3'>
                         {SELECT_FIELDS.map(({ key, label, opts }) => (
                           <div key={key}>
@@ -855,7 +845,6 @@ export default function CourseCreatePage() {
                           </div>
                         ))}
 
-                        {/* State — NEW field */}
                         <div>
                           <label className='text-xs text-muted-foreground mb-1 block'>{t('form.state')}</label>
                           <select className='w-full rounded-md border bg-background px-3 py-2 text-sm'
@@ -867,7 +856,6 @@ export default function CourseCreatePage() {
                           </select>
                         </div>
 
-                        {/* Category — full width */}
                         <div className='col-span-2'>
                           <label className='text-xs text-muted-foreground mb-1 block'>{t('form.category')}</label>
                           <select className='w-full rounded-md border bg-background px-3 py-2 text-sm'
@@ -880,7 +868,6 @@ export default function CourseCreatePage() {
                         </div>
                       </div>
 
-                      {/* Instructor picker */}
                       <InstructorPicker
                         value={meta.instructorId}
                         onChange={(id, name) =>
