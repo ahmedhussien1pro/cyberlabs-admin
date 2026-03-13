@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -12,15 +11,12 @@ import { toast } from 'sonner';
 import {
   BookOpen, ChevronDown, Plus, Trash2, Save, X,
   GripVertical, Pencil, Eye, Edit3, ArrowUp, ArrowDown,
-  Upload, FileJson, AlertTriangle,
+  Upload, FileJson, AlertTriangle, ImageIcon, Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// ── Types ─────────────────────────────────────────────────────────────
-interface TopicTitle {
-  en: string;
-  ar: string;
-}
+// ── Types ──────────────────────────────────────────────────────────────────
+interface TopicTitle { en: string; ar: string; }
 
 interface Topic {
   id: string;
@@ -28,17 +24,13 @@ interface Topic {
   elements: CourseElement[];
 }
 
-/** Normalize any title shape coming from DB into { en, ar } */
 function normalizeTitle(raw: any): TopicTitle {
-  if (raw && typeof raw === 'object' && ('en' in raw || 'ar' in raw)) {
+  if (raw && typeof raw === 'object' && ('en' in raw || 'ar' in raw))
     return { en: raw.en ?? '', ar: raw.ar ?? '' };
-  }
-  // plain string
   const str = typeof raw === 'string' ? raw : '';
   return { en: str, ar: '' };
 }
 
-/** Normalize a raw topic from any DB shape */
 function normalizeTopic(raw: any, idx: number): Topic {
   return {
     id:       raw?.id ?? `topic-${Date.now()}-${idx}`,
@@ -47,7 +39,7 @@ function normalizeTopic(raw: any, idx: number): Topic {
   };
 }
 
-// ── Element factory ───────────────────────────────────────────────────
+// ── Element factory ───────────────────────────────────────────────────────
 const ELEMENT_TYPES = [
   'text', 'title', 'subtitle', 'note', 'terminal',
   'code', 'image', 'video', 'list', 'orderedList', 'table', 'button', 'hr',
@@ -71,20 +63,123 @@ const EL_COLORS: Record<string, string> = {
 
 function makeElement(type: string): CourseElement {
   const base: CourseElement = { id: Date.now() + Math.random(), type };
-  if (type === 'hr') return base;
-  if (type === 'code') return { ...base, value: '', language: 'bash' };
-  if (type === 'terminal') return { ...base, value: { en: '', ar: '' }, label: { en: 'Terminal', ar: 'تيرمينال' } };
-  if (type === 'image') return { ...base, imageUrl: '', alt: { en: '', ar: '' }, size: 'full' };
-  if (type === 'video') return { ...base, url: '', title: { en: '', ar: '' } };
-  if (type === 'button') return { ...base, href: '', label: { en: 'Click here', ar: 'اضغط هنا' }, newTab: true };
-  if (type === 'note') return { ...base, noteType: 'info', value: { en: '', ar: '' } };
-  if (type === 'list') return { ...base, title: { en: '', ar: '' }, items: [{ en: '', ar: '' }] };
+  if (type === 'hr')          return base;
+  if (type === 'code')        return { ...base, value: '', language: 'bash' };
+  if (type === 'terminal')    return { ...base, value: { en: '', ar: '' }, label: { en: 'Terminal', ar: 'تيرمينال' } };
+  if (type === 'image')       return { ...base, imageUrl: '', alt: { en: '', ar: '' }, size: 'full', _localFile: null };
+  if (type === 'video')       return { ...base, url: '', title: { en: '', ar: '' } };
+  if (type === 'button')      return { ...base, href: '', label: { en: 'Click here', ar: 'اضغط هنا' }, newTab: true };
+  if (type === 'note')        return { ...base, noteType: 'info', value: { en: '', ar: '' } };
+  if (type === 'list')        return { ...base, title: { en: '', ar: '' }, items: [{ en: '', ar: '' }] };
   if (type === 'orderedList') return { ...base, title: { en: '', ar: '' }, items: [{ subtitle: { en: '', ar: '' }, text: { en: '', ar: '' } }] };
-  if (type === 'table') return { ...base, title: { en: '', ar: '' }, headers: [{ en: 'Header', ar: 'عنوان' }], rows: [[{ en: '', ar: '' }]] };
+  if (type === 'table')       return { ...base, title: { en: '', ar: '' }, headers: [{ en: 'Header', ar: 'عنوان' }], rows: [[{ en: '', ar: '' }]] };
   return { ...base, value: { en: '', ar: '' } };
 }
 
-// ── Element Inline Editor ────────────────────────────────────────────
+// ── Image Element Editor (with local file upload support) ─────────────────────
+function ImageElementEditor({
+  el, onChange,
+}: {
+  el: CourseElement;
+  onChange: (u: CourseElement) => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [preview, setPreview] = useState<string | null>((el.imageUrl as string) || null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Show local preview immediately
+    const localUrl = URL.createObjectURL(file);
+    setPreview(localUrl);
+
+    // Upload to R2
+    setUploading(true);
+    try {
+      const { url } = await adminCoursesApi.uploadImage(file);
+      onChange({ ...el, imageUrl: url, _localFile: null });
+      setPreview(url);
+      toast.success('Image uploaded to Cloudflare ✓');
+    } catch {
+      toast.error('Image upload failed — check your connection');
+      setPreview((el.imageUrl as string) || null);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const setBI = (field: string, lng: 'en' | 'ar', val: string) =>
+    onChange({ ...el, [field]: { ...((el[field] as any) ?? {}), [lng]: val } });
+
+  return (
+    <div className='space-y-3'>
+      {/* Preview */}
+      {preview && (
+        <div className='relative overflow-hidden rounded-lg border border-border/50 bg-muted/20'>
+          <img src={preview} alt='preview' className='max-h-48 w-full object-contain' />
+          {uploading && (
+            <div className='absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg'>
+              <Loader2 className='h-6 w-6 animate-spin text-white' />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* URL input OR upload button */}
+      <div className='flex gap-2'>
+        <Input
+          placeholder='Image URL (paste or upload file ↑)'
+          value={(el.imageUrl as string) ?? ''}
+          onChange={(e) => {
+            onChange({ ...el, imageUrl: e.target.value });
+            setPreview(e.target.value || null);
+          }}
+          className='text-xs h-8 flex-1'
+          disabled={uploading}
+        />
+        <input ref={fileRef} type='file' accept='image/*' className='hidden' onChange={handleFileChange} />
+        <Button
+          variant='outline' size='sm'
+          className='h-8 gap-1.5 shrink-0 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10'
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          title='Upload image to Cloudflare R2'
+        >
+          {uploading
+            ? <Loader2 className='h-3.5 w-3.5 animate-spin' />
+            : <ImageIcon className='h-3.5 w-3.5' />}
+          {uploading ? 'Uploading...' : 'Upload'}
+        </Button>
+      </div>
+
+      {/* Alt text bilingual */}
+      <div className='grid grid-cols-2 gap-2'>
+        {(['en', 'ar'] as const).map((lng) => (
+          <Input key={lng} dir={lng === 'ar' ? 'rtl' : 'ltr'}
+            placeholder={`Alt text (${lng.toUpperCase()})`}
+            value={((el.alt as any)?.[lng]) ?? ''}
+            onChange={(e) => setBI('alt', lng, e.target.value)}
+            className='text-xs h-8' />
+        ))}
+      </div>
+
+      {/* Size */}
+      <select
+        value={(el.size as string) ?? 'full'}
+        onChange={(e) => onChange({ ...el, size: e.target.value })}
+        className='text-xs h-8 w-full rounded-md border border-border bg-background px-2'
+      >
+        {['small', 'medium', 'large', 'full'].map((s) => (
+          <option key={s} value={s}>{s}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+// ── Element Inline Editor ──────────────────────────────────────────────────
 function ElementEditor({ el, onChange }: { el: CourseElement; onChange: (u: CourseElement) => void }) {
   const setBI = (field: string, lng: 'en' | 'ar', val: string) =>
     onChange({ ...el, [field]: { ...((el[field] as any) ?? {}), [lng]: val } });
@@ -107,20 +202,12 @@ function ElementEditor({ el, onChange }: { el: CourseElement; onChange: (u: Cour
     </div>
   );
 
-  if (el.type === 'hr') return <p className='text-xs italic text-muted-foreground'>Horizontal Rule — no content</p>;
+  if (el.type === 'hr')
+    return <p className='text-xs italic text-muted-foreground'>Horizontal Rule — no content</p>;
 
-  if (el.type === 'image') return (
-    <div className='space-y-2'>
-      <Input placeholder='Image URL' value={(el.imageUrl as string) ?? ''}
-        onChange={(e) => onChange({ ...el, imageUrl: e.target.value })} className='text-xs h-8' />
-      <BiField field='alt' label='Alt text' />
-      <select value={(el.size as string) ?? 'full'}
-        onChange={(e) => onChange({ ...el, size: e.target.value })}
-        className='text-xs h-8 w-full rounded-md border border-border bg-background px-2'>
-        {['small', 'medium', 'large', 'full'].map((s) => <option key={s} value={s}>{s}</option>)}
-      </select>
-    </div>
-  );
+  // ✅ image now handled by dedicated component with upload support
+  if (el.type === 'image')
+    return <ImageElementEditor el={el} onChange={onChange} />;
 
   if (el.type === 'video') return (
     <div className='space-y-2'>
@@ -239,7 +326,7 @@ function ElementEditor({ el, onChange }: { el: CourseElement; onChange: (u: Cour
         : []
     );
     const updateHeaders = (nh: typeof headers) => onChange({ ...el, headers: nh });
-    const updateRows = (nr: typeof rows) => onChange({ ...el, rows: nr });
+    const updateRows    = (nr: typeof rows)    => onChange({ ...el, rows: nr });
     return (
       <div className='space-y-2'>
         <BiField field='title' label='Table title (optional)' />
@@ -283,21 +370,15 @@ function ElementEditor({ el, onChange }: { el: CourseElement; onChange: (u: Cour
   return <BiField field='value' label='Content' rows={['text', 'orderedList'].includes(el.type) ? 3 : 0} />;
 }
 
-// ── Topic Row (platform-style + editable) ────────────────────────────
+// ── Topic Row ───────────────────────────────────────────────────────────────
 function TopicRow({
   topic, topicIndex, total, isOpen, onToggle,
   editMode, onUpdate, onDelete, onMoveUp, onMoveDown,
 }: {
-  topic: Topic;
-  topicIndex: number;
-  total: number;
-  isOpen: boolean;
-  onToggle: () => void;
-  editMode: boolean;
-  onUpdate: (t: Topic) => void;
-  onDelete: () => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
+  topic: Topic; topicIndex: number; total: number;
+  isOpen: boolean; onToggle: () => void; editMode: boolean;
+  onUpdate: (t: Topic) => void; onDelete: () => void;
+  onMoveUp: () => void; onMoveDown: () => void;
 }) {
   const [editingElId, setEditingElId] = useState<string | number | null>(null);
   const topicNum = String(topicIndex + 1).padStart(2, '0');
@@ -312,16 +393,15 @@ function TopicRow({
   const moveEl = (elId: string | number, dir: 'up' | 'down') => {
     const els = [...topic.elements];
     const idx = els.findIndex((e) => e.id === elId);
-    if (dir === 'up' && idx > 0) { [els[idx - 1], els[idx]] = [els[idx], els[idx - 1]]; }
-    if (dir === 'down' && idx < els.length - 1) { [els[idx], els[idx + 1]] = [els[idx + 1], els[idx]]; }
+    if (dir === 'up'   && idx > 0)               { [els[idx - 1], els[idx]]     = [els[idx], els[idx - 1]]; }
+    if (dir === 'down' && idx < els.length - 1)  { [els[idx],     els[idx + 1]] = [els[idx + 1], els[idx]]; }
     onUpdate({ ...topic, elements: els });
   };
 
   return (
     <motion.li
       id={`topic-row-${topicIndex}`}
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, delay: topicIndex * 0.04 }}
       className='relative'>
       <div className='flex gap-4'>
@@ -329,15 +409,12 @@ function TopicRow({
         <div className='relative flex shrink-0 flex-col items-center'>
           <div className={cn(
             'relative z-10 flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold transition-all duration-300',
-            isOpen
-              ? 'border-primary bg-primary/15 text-primary shadow-lg shadow-primary/20'
-              : 'border-border/60 bg-muted/50 text-muted-foreground',
+            isOpen ? 'border-primary bg-primary/15 text-primary shadow-lg shadow-primary/20'
+                   : 'border-border/60 bg-muted/50 text-muted-foreground',
           )}>
             <span className='font-black'>{topicNum}</span>
           </div>
-          {!isLast && (
-            <div className='mt-1 min-h-[16px] w-px flex-1 bg-border/30' />
-          )}
+          {!isLast && <div className='mt-1 min-h-[16px] w-px flex-1 bg-border/30' />}
         </div>
 
         {/* Card */}
@@ -347,47 +424,30 @@ function TopicRow({
           editMode && 'ring-1 ring-primary/10',
         )}>
           {/* Header */}
-          <div
-            className='flex w-full items-center gap-3 px-4 py-3.5 text-start'
+          <div className='flex w-full items-center gap-3 px-4 py-3.5 text-start'
             onClick={!editMode ? onToggle : undefined}>
-            {editMode && (
-              <GripVertical className='h-4 w-4 text-muted-foreground/40 shrink-0 cursor-grab' />
-            )}
+            {editMode && <GripVertical className='h-4 w-4 text-muted-foreground/40 shrink-0 cursor-grab' />}
             <span className={cn(
               'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors',
-              isOpen
-                ? 'border-primary/30 bg-primary/10 text-primary'
-                : 'border-border bg-muted text-muted-foreground',
+              isOpen ? 'border-primary/30 bg-primary/10 text-primary'
+                     : 'border-border bg-muted text-muted-foreground',
             )}>
               <BookOpen className='h-4 w-4' />
             </span>
-
             <div className='min-w-0 flex-1'>
               <span className={cn(
                 'inline-flex rounded-full border px-1.5 py-px text-[9px] font-bold uppercase tracking-wide mb-0.5',
-                isOpen
-                  ? 'border-primary/25 bg-primary/10 text-primary'
-                  : 'border-border bg-muted text-muted-foreground',
-              )}>
-                TOPIC {topicNum}
-              </span>
+                isOpen ? 'border-primary/25 bg-primary/10 text-primary'
+                       : 'border-border bg-muted text-muted-foreground',
+              )}>TOPIC {topicNum}</span>
               {editMode ? (
                 <div className='flex gap-2 mt-0.5' onClick={(e) => e.stopPropagation()}>
-                  <Input
-                    value={topic.title.en}
-                    placeholder='Topic title (EN)'
+                  <Input value={topic.title.en} placeholder='Topic title (EN)'
                     onChange={(e) => onUpdate({ ...topic, title: { ...topic.title, en: e.target.value } })}
-                    className='h-7 text-sm font-semibold'
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <Input
-                    value={topic.title.ar}
-                    placeholder='العنوان (AR)'
-                    dir='rtl'
+                    className='h-7 text-sm font-semibold' onClick={(e) => e.stopPropagation()} />
+                  <Input value={topic.title.ar} placeholder='العنوان (AR)' dir='rtl'
                     onChange={(e) => onUpdate({ ...topic, title: { ...topic.title, ar: e.target.value } })}
-                    className='h-7 text-sm font-semibold'
-                    onClick={(e) => e.stopPropagation()}
-                  />
+                    className='h-7 text-sm font-semibold' onClick={(e) => e.stopPropagation()} />
                 </div>
               ) : (
                 <p className='text-sm font-semibold leading-snug text-foreground'>
@@ -400,35 +460,25 @@ function TopicRow({
                 </p>
               )}
             </div>
-
             <div className='flex shrink-0 items-center gap-1.5'>
-              <Badge variant='outline' className='text-xs'>
-                {topic.elements.length} el
-              </Badge>
+              <Badge variant='outline' className='text-xs'>{topic.elements.length} el</Badge>
               {editMode ? (
                 <div className='flex items-center gap-1' onClick={(e) => e.stopPropagation()}>
                   <button onClick={onMoveUp} disabled={topicIndex === 0}
                     className='p-1 rounded text-muted-foreground hover:text-foreground disabled:opacity-30'>
-                    <ArrowUp className='h-3.5 w-3.5' />
-                  </button>
+                    <ArrowUp className='h-3.5 w-3.5' /></button>
                   <button onClick={onMoveDown} disabled={isLast}
                     className='p-1 rounded text-muted-foreground hover:text-foreground disabled:opacity-30'>
-                    <ArrowDown className='h-3.5 w-3.5' />
-                  </button>
+                    <ArrowDown className='h-3.5 w-3.5' /></button>
                   <button onClick={onToggle}
                     className='p-1 rounded text-muted-foreground hover:text-primary'>
-                    <ChevronDown className={cn('h-4 w-4 transition-transform', isOpen && 'rotate-180')} />
-                  </button>
+                    <ChevronDown className={cn('h-4 w-4 transition-transform', isOpen && 'rotate-180')} /></button>
                   <button onClick={onDelete}
                     className='p-1 rounded text-muted-foreground hover:text-destructive'>
-                    <Trash2 className='h-3.5 w-3.5' />
-                  </button>
+                    <Trash2 className='h-3.5 w-3.5' /></button>
                 </div>
               ) : (
-                <ChevronDown className={cn(
-                  'h-4 w-4 text-muted-foreground transition-transform duration-200 ms-1',
-                  isOpen && 'rotate-180',
-                )} />
+                <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform duration-200 ms-1', isOpen && 'rotate-180')} />
               )}
             </div>
           </div>
@@ -436,12 +486,9 @@ function TopicRow({
           {/* Body */}
           <AnimatePresence initial={false}>
             {isOpen && (
-              <motion.div
-                key='body'
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.3, ease: 'easeInOut' }}
+              <motion.div key='body'
+                initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3, ease: 'easeInOut' }}
                 className='overflow-hidden'>
                 <div className='border-t border-border/40 px-5 pb-5 pt-4 space-y-4'>
                   {editMode ? (
@@ -460,12 +507,10 @@ function TopicRow({
                             <div className='flex-1' />
                             <button onClick={() => moveEl(el.id!, 'up')} disabled={elIdx === 0}
                               className='p-1 text-muted-foreground hover:text-foreground disabled:opacity-30'>
-                              <ArrowUp className='h-3 w-3' />
-                            </button>
+                              <ArrowUp className='h-3 w-3' /></button>
                             <button onClick={() => moveEl(el.id!, 'down')} disabled={elIdx === topic.elements.length - 1}
                               className='p-1 text-muted-foreground hover:text-foreground disabled:opacity-30'>
-                              <ArrowDown className='h-3 w-3' />
-                            </button>
+                              <ArrowDown className='h-3 w-3' /></button>
                             <button
                               onClick={() => setEditingElId(editingElId === el.id ? null : el.id!)}
                               className='text-xs text-muted-foreground hover:text-primary flex items-center gap-1'>
@@ -474,8 +519,7 @@ function TopicRow({
                             </button>
                             <button onClick={() => deleteEl(el.id!)}
                               className='text-muted-foreground hover:text-destructive'>
-                              <Trash2 className='h-3.5 w-3.5' />
-                            </button>
+                              <Trash2 className='h-3.5 w-3.5' /></button>
                           </div>
                           {editingElId === el.id ? (
                             <div className='p-3'>
@@ -495,9 +539,7 @@ function TopicRow({
                             className={cn(
                               'rounded-md border px-2 py-0.5 text-[11px] font-medium hover:opacity-80 transition-opacity',
                               EL_COLORS[type] ?? 'bg-muted border-border text-muted-foreground',
-                            )}>
-                            {type}
-                          </button>
+                            )}>{type}</button>
                         ))}
                       </div>
                     </div>
@@ -516,7 +558,7 @@ function TopicRow({
   );
 }
 
-// ── Skeleton ─────────────────────────────────────────────────────────
+// ── Skeleton ─────────────────────────────────────────────────────────────────
 function CurriculumSkeleton() {
   return (
     <div className='space-y-3'>
@@ -530,7 +572,7 @@ function CurriculumSkeleton() {
   );
 }
 
-// ── JSON Import Panel ─────────────────────────────────────────────────
+// ── JSON Import Panel ─────────────────────────────────────────────────────
 function JsonImportPanel({ onImport, onClose }: { onImport: (topics: Topic[]) => void; onClose: () => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [raw, setRaw] = useState('');
@@ -573,7 +615,7 @@ function JsonImportPanel({ onImport, onClose }: { onImport: (topics: Topic[]) =>
       </div>
       <p className='text-xs text-muted-foreground'>
         Upload a <code className='text-primary'>.json</code> file or paste JSON directly.
-        Format: <code className='text-primary'>{'[{id, title:{en,ar}, elements:[...]}]'}</code>
+        Format: <code className='text-primary'>{'{'}[{'{'}id, title:{'{'}en,ar{'}'}, elements:[...]{'}'}]{'}' }</code>
       </p>
       <div>
         <input ref={fileRef} type='file' accept='.json,application/json' className='hidden' onChange={handleFile} />
@@ -599,27 +641,45 @@ function JsonImportPanel({ onImport, onClose }: { onImport: (topics: Topic[]) =>
   );
 }
 
-// ── Main Export ──────────────────────────────────────────────────────
-interface Props {
-  courseId: string;
-  courseSlug: string;
+// ── Strip internal-only fields before sending to backend ─────────────────────
+function sanitizeTopicsForSave(topics: Topic[]): object[] {
+  return topics.map((t) => ({
+    ...t,
+    elements: t.elements.map(({ _localFile, ...el }: any) => el),
+  }));
 }
+
+// ── Source badge ────────────────────────────────────────────────────────────
+function SourceBadge({ source }: { source?: 'json' | 'db' }) {
+  if (!source) return null;
+  return source === 'json' ? (
+    <span className='inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400'>
+      <FileJson className='h-3 w-3' /> JSON file
+    </span>
+  ) : (
+    <span className='inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-400'>
+      DB fallback
+    </span>
+  );
+}
+
+// ── Main Export ───────────────────────────────────────────────────────────────
+interface Props { courseId: string; courseSlug: string; }
 
 export function CurriculumPlatformEditor({ courseId, courseSlug }: Props) {
   const queryClient = useQueryClient();
-  const [editMode, setEditMode] = useState(false);
+  const [editMode, setEditMode]     = useState(false);
   const [localTopics, setLocalTopics] = useState<Topic[] | null>(null);
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId]         = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
 
-  const { data, isLoading } = useQuery<{ topics: Topic[] }>({
+  const { data, isLoading } = useQuery({
     queryKey: ['admin', 'curriculum', courseSlug],
-    queryFn: () => adminCoursesApi.getCurriculum(courseSlug) as any,
+    queryFn:  () => adminCoursesApi.getCurriculum(courseSlug),
   });
 
   useEffect(() => {
     if (data?.topics && localTopics === null) {
-      // Normalize every topic from DB on first load
       const normalized = (data.topics as any[]).map((t, i) => normalizeTopic(t, i));
       setLocalTopics(normalized);
       if (normalized.length > 0) setOpenId(normalized[0].id);
@@ -631,7 +691,7 @@ export function CurriculumPlatformEditor({ courseId, courseSlug }: Props) {
   const toggle = (id: string) => setOpenId((p) => (p === id ? null : id));
 
   const { mutate: save, isPending: saving } = useMutation({
-    mutationFn: () => adminCoursesApi.saveCurriculum(courseId, topics),
+    mutationFn: () => adminCoursesApi.saveCurriculum(courseId, sanitizeTopicsForSave(topics)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'curriculum', courseSlug] });
       toast.success('Curriculum saved!');
@@ -657,8 +717,8 @@ export function CurriculumPlatformEditor({ courseId, courseSlug }: Props) {
   const moveTopic = (id: string, dir: 'up' | 'down') => {
     const arr = [...topics];
     const idx = arr.findIndex((t) => t.id === id);
-    if (dir === 'up' && idx > 0) { [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]]; }
-    if (dir === 'down' && idx < arr.length - 1) { [arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]]; }
+    if (dir === 'up'   && idx > 0)              { [arr[idx - 1], arr[idx]]     = [arr[idx], arr[idx - 1]]; }
+    if (dir === 'down' && idx < arr.length - 1) { [arr[idx],     arr[idx + 1]] = [arr[idx + 1], arr[idx]]; }
     setLocalTopics(arr);
   };
 
@@ -675,7 +735,10 @@ export function CurriculumPlatformEditor({ courseId, courseSlug }: Props) {
       {/* Header */}
       <div className='flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between'>
         <div>
-          <h2 className='text-xl font-bold tracking-tight sm:text-2xl'>Course Curriculum</h2>
+          <div className='flex items-center gap-2 flex-wrap'>
+            <h2 className='text-xl font-bold tracking-tight sm:text-2xl'>Course Curriculum</h2>
+            <SourceBadge source={data?.source} />
+          </div>
           <p className='mt-1 text-sm text-muted-foreground'>
             {total} Topics · Follow the order for best results
           </p>
@@ -705,7 +768,7 @@ export function CurriculumPlatformEditor({ courseId, courseSlug }: Props) {
               </Button>
               <Button size='sm' onClick={() => save()} disabled={saving} className='gap-1.5 h-8'>
                 {saving
-                  ? <span className='h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent' />
+                  ? <Loader2 className='h-3.5 w-3.5 animate-spin' />
                   : <Save className='h-3.5 w-3.5' />}
                 {saving ? 'Saving...' : 'Save'}
               </Button>
@@ -750,14 +813,9 @@ export function CurriculumPlatformEditor({ courseId, courseSlug }: Props) {
           <ol className='space-y-2'>
             {topics.map((topic, idx) => (
               <TopicRow
-                key={topic.id}
-                topic={topic}
-                topicIndex={idx}
-                total={total}
-                isOpen={openId === topic.id}
-                onToggle={() => toggle(topic.id)}
-                editMode={editMode}
-                onUpdate={updateTopic}
+                key={topic.id} topic={topic} topicIndex={idx} total={total}
+                isOpen={openId === topic.id} onToggle={() => toggle(topic.id)}
+                editMode={editMode} onUpdate={updateTopic}
                 onDelete={() => deleteTopic(topic.id)}
                 onMoveUp={() => moveTopic(topic.id, 'up')}
                 onMoveDown={() => moveTopic(topic.id, 'down')}

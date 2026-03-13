@@ -8,6 +8,7 @@ import type {
   AdminCourseStats,
   CurriculumData,
   CourseState,
+  UploadImageResponse,
 } from '../types/admin-course.types';
 
 export interface AdminCourseListParams {
@@ -75,6 +76,7 @@ function normalizeArrays(course: AdminCourse): AdminCourse {
 }
 
 export const adminCoursesApi = {
+  // ─── List ────────────────────────────────────────────────────────────
   list: async (params: AdminCourseListParams = {}): Promise<AdminCoursesListResponse> => {
     const query: Record<string, any> = {
       page:  params.page  ?? 1,
@@ -82,14 +84,13 @@ export const adminCoursesApi = {
     };
     if (params.search)                                    query.search     = params.search;
     if (params.difficulty && params.difficulty !== 'ALL') query.difficulty = params.difficulty;
-    // ✅ backend accepts `state` directly
     if (params.state && params.state !== 'all')           query.state      = params.state;
     const res = await adminApiClient.get('/admin/courses', { params: query });
     const result = unwrapList<AdminCoursesListResponse>(res);
     return { ...result, data: result.data.map(normalizeArrays) };
   },
 
-  // _t timestamp busts the HTTP 304 cache without adding any custom headers
+  // ─── Stats ────────────────────────────────────────────────────────────
   getStats: async (): Promise<AdminCourseStats> => {
     const res = await adminApiClient.get('/admin/courses/stats', {
       params: { _t: Date.now() },
@@ -97,6 +98,7 @@ export const adminCoursesApi = {
     return unwrapItem<AdminCourseStats>(res);
   },
 
+  // ─── Get by ID or slug ────────────────────────────────────────────────
   getById: async (id: string): Promise<AdminCourse> => {
     const res = await adminApiClient.get(`/admin/courses/${id}`);
     return normalizeArrays(unwrapItem<AdminCourse>(res));
@@ -111,6 +113,7 @@ export const adminCoursesApi = {
     return normalizeArrays(course);
   },
 
+  // ─── CRUD ──────────────────────────────────────────────────────────────
   create: async (data: AdminCourseCreateDto): Promise<AdminCourse> => {
     const res = await adminApiClient.post('/admin/courses', data);
     return normalizeArrays(unwrapItem<AdminCourse>(res));
@@ -135,16 +138,27 @@ export const adminCoursesApi = {
     await adminApiClient.delete(`/admin/courses/${id}`);
   },
 
-  getCurriculum: async (courseId: string): Promise<CurriculumData> => {
-    const res = await adminApiClient.get(`/admin/courses/${courseId}/curriculum`);
+  // ─── Curriculum ──────────────────────────────────────────────────────────
+  getCurriculum: async (courseIdOrSlug: string): Promise<CurriculumData> => {
+    const res = await adminApiClient.get(`/admin/courses/${courseIdOrSlug}/curriculum`);
     const payload = unwrapItem<any>(res);
     return {
       topics:      Array.isArray(payload?.topics) ? payload.topics : [],
       totalTopics: Number(payload?.totalTopics)   || 0,
       landingData: payload?.landingData            ?? null,
+      source:      payload?.source                ?? 'db',
+      courseId:    payload?.courseId,
+      courseSlug:  payload?.courseSlug,
+      courseTitle: payload?.courseTitle,
     };
   },
 
+  /**
+   * Save curriculum topics to backend.
+   * Backend will:
+   * 1. Rebuild Section + Lesson in DB
+   * 2. Write JSON file to disk (so platform getCurriculum sees it)
+   */
   saveCurriculum: async (courseId: string, topics: object[]): Promise<any> => {
     const res = await adminApiClient.put(
       `/admin/courses/${courseId}/curriculum`,
@@ -153,6 +167,26 @@ export const adminCoursesApi = {
     return unwrapItem(res);
   },
 
+  // ─── Image Upload ────────────────────────────────────────────────────────
+  /**
+   * POST /admin/upload/image
+   * Uploads an image file to Cloudflare R2.
+   * Returns { url, key } — url is the persistent public CDN URL.
+   *
+   * Use this for curriculum image elements:
+   * - User picks a local file → call uploadImage → get url → save in element.imageUrl
+   * - On saveCurriculum, imageUrl is already a full R2 URL → no extra work needed
+   */
+  uploadImage: async (file: File): Promise<UploadImageResponse> => {
+    const form = new FormData();
+    form.append('file', file);
+    const res = await adminApiClient.post('/admin/upload/image', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return unwrapItem<UploadImageResponse>(res);
+  },
+
+  // ─── Path relations ─────────────────────────────────────────────────────
   getPathModules: async (courseId: string): Promise<any[]> => {
     const res = await adminApiClient.get(`/admin/courses/${courseId}/path-modules`);
     const d = unwrapItem<any>(res);
