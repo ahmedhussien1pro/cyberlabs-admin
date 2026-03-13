@@ -45,8 +45,11 @@ export default function CoursesListPage() {
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['admin', 'courses', 'stats'],
-    queryFn: adminCoursesApi.getStats,
-    staleTime: 30_000,
+    queryFn:  adminCoursesApi.getStats,
+    // No staleTime — always fetch fresh stats on mount
+    // gcTime: 0 ensures no cached value survives after component unmount
+    staleTime: 0,
+    gcTime:    0,
   });
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -54,10 +57,9 @@ export default function CoursesListPage() {
     queryFn: () => adminCoursesApi.list({
       page,
       limit,
-      search: search || undefined,
+      search:     search || undefined,
       difficulty: diff !== 'ALL' ? diff : undefined,
-      // 'all' is NOT sent — API receives no state param = all courses
-      state: state !== 'all' ? state : undefined,
+      state:      state !== 'all' ? state : undefined,
     }),
     staleTime: 10_000,
     retry: 1,
@@ -78,11 +80,11 @@ export default function CoursesListPage() {
       <div className='flex h-full items-center justify-center p-6'>
         <div className='flex flex-col items-center gap-4 max-w-md w-full'>
           <Alert variant='destructive'>
-            <AlertCircle className='h-4 w-4' aria-hidden='true' />
+            <AlertCircle className='h-4 w-4' />
             <AlertDescription>{t('errors.loadFailed')}</AlertDescription>
           </Alert>
           <Button variant='outline' onClick={() => refetch()} className='gap-2'>
-            <RefreshCw className='h-4 w-4' aria-hidden='true' /> {t('actions.tryAgain')}
+            <RefreshCw className='h-4 w-4' /> {t('actions.tryAgain')}
           </Button>
         </div>
       </div>
@@ -100,26 +102,29 @@ export default function CoursesListPage() {
         <div className='flex shrink-0 items-center gap-2'>
           <Button variant='outline' size='sm' className='h-9 gap-2'
             onClick={() => navigate('/courses/import')}>
-            <FileJson className='h-4 w-4' aria-hidden='true' />
+            <FileJson className='h-4 w-4' />
             <span className='hidden sm:inline'>{t('importJson')}</span>
           </Button>
           <Button size='sm' className='h-9 gap-2'
             onClick={() => navigate(ROUTES.COURSE_CREATE)}>
-            <Plus className='h-4 w-4' aria-hidden='true' /> {t('newCourse')}
+            <Plus className='h-4 w-4' /> {t('newCourse')}
           </Button>
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Stat cards — driven by optimistic cache, confirmed by server */}
       <div className='grid grid-cols-2 gap-3 lg:grid-cols-4'>
         {statsLoading
           ? Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className='h-24 rounded-xl' />
             ))
           : STAT_CARDS.map(({ key, labelKey, icon: Icon, color, bg }) => (
-              <Card key={key} className='flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors'>
+              <Card
+                key={key}
+                className='flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors'
+              >
                 <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border', bg)}>
-                  <Icon className={cn('h-5 w-5', color)} aria-hidden='true' />
+                  <Icon className={cn('h-5 w-5', color)} />
                 </div>
                 <div className='min-w-0'>
                   <p className='truncate text-xs text-muted-foreground'>{t(labelKey)}</p>
@@ -132,19 +137,17 @@ export default function CoursesListPage() {
       {/* Filters */}
       <div className='flex items-center gap-2 flex-wrap'>
         <div className='relative flex-1 min-w-[180px]'>
-          <Search className='absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' aria-hidden='true' />
+          <Search className='absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
           <Input
             placeholder={t('filters.searchPlaceholder')}
             value={search}
             onChange={handleSearchChange}
             className='h-9 ps-9 bg-background'
-            aria-label={t('filters.searchPlaceholder')}
           />
         </div>
 
-        {/* State filter — 3 real values + all */}
         <Select value={state} onValueChange={handleStateChange}>
-          <SelectTrigger className='h-9 w-40 bg-background' aria-label={t('filters.allStatuses')}>
+          <SelectTrigger className='h-9 w-40 bg-background'>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -155,9 +158,8 @@ export default function CoursesListPage() {
           </SelectContent>
         </Select>
 
-        {/* Difficulty filter */}
         <Select value={diff} onValueChange={handleDiffChange}>
-          <SelectTrigger className='h-9 w-36 bg-background' aria-label={t('filters.allDifficulties')}>
+          <SelectTrigger className='h-9 w-36 bg-background'>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -169,20 +171,20 @@ export default function CoursesListPage() {
           </SelectContent>
         </Select>
 
-        {/* View toggle */}
-        <div className='flex items-center gap-0.5 rounded-lg border border-border/50 bg-muted/30 p-0.5'
-          role='group' aria-label='View mode'>
+        <div
+          className='flex items-center gap-0.5 rounded-lg border border-border/50 bg-muted/30 p-0.5'
+          role='group'
+          aria-label='View mode'
+        >
           <Button
             variant={view === 'grid' ? 'default' : 'ghost'} size='sm'
-            aria-label={t('filters.gridView')} aria-pressed={view === 'grid'}
             className='h-8 w-8 p-0' onClick={() => setView('grid')}>
-            <LayoutGrid className='h-3.5 w-3.5' aria-hidden='true' />
+            <LayoutGrid className='h-3.5 w-3.5' />
           </Button>
           <Button
             variant={view === 'table' ? 'default' : 'ghost'} size='sm'
-            aria-label={t('filters.tableView')} aria-pressed={view === 'table'}
             className='h-8 w-8 p-0' onClick={() => setView('table')}>
-            <List className='h-3.5 w-3.5' aria-hidden='true' />
+            <List className='h-3.5 w-3.5' />
           </Button>
         </div>
       </div>
@@ -191,16 +193,12 @@ export default function CoursesListPage() {
       {isLoading ? (
         view === 'grid' ? (
           <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
-            {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} className='h-80 rounded-2xl' />
-            ))}
+            {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className='h-80 rounded-2xl' />)}
           </div>
         ) : (
           <Card className='p-6'>
             <div className='space-y-3'>
-              {Array.from({ length: 8 }).map((_, i) => (
-                <Skeleton key={i} className='h-14 rounded-lg' />
-              ))}
+              {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className='h-14 rounded-lg' />)}
             </div>
           </Card>
         )
@@ -208,11 +206,11 @@ export default function CoursesListPage() {
         <>
           {(data?.data ?? []).length === 0 ? (
             <Card className='flex flex-col items-center justify-center gap-3 p-16 text-center'>
-              <BookOpen className='h-8 w-8 text-muted-foreground' aria-hidden='true' />
+              <BookOpen className='h-8 w-8 text-muted-foreground' />
               <p className='font-medium'>{t('table.noResults')}</p>
               <p className='text-sm text-muted-foreground'>{t('table.noResultsHint')}</p>
               <Button size='sm' className='mt-2 gap-2' onClick={() => navigate(ROUTES.COURSE_CREATE)}>
-                <Plus className='h-4 w-4' aria-hidden='true' /> {t('newCourse')}
+                <Plus className='h-4 w-4' /> {t('newCourse')}
               </Button>
             </Card>
           ) : (
@@ -223,7 +221,6 @@ export default function CoursesListPage() {
             </div>
           )}
 
-          {/* Pagination */}
           {data?.meta && data.meta.totalPages > 1 && (
             <div className='flex items-center justify-between border-t pt-4'>
               <p className='text-xs text-muted-foreground'>
@@ -232,18 +229,16 @@ export default function CoursesListPage() {
                 <span className='font-semibold text-foreground'>{data.meta.total}</span>
               </p>
               <div className='flex items-center gap-1'>
-                <Button variant='outline' size='sm' aria-label={t('table.prevPage')}
-                  className='h-8 gap-1 px-3 text-xs'
+                <Button variant='outline' size='sm' className='h-8 gap-1 px-3 text-xs'
                   onClick={() => setPage((p) => p - 1)} disabled={page === 1}>
-                  <ChevronLeft className='h-3.5 w-3.5' aria-hidden='true' /> {t('table.page')}
+                  <ChevronLeft className='h-3.5 w-3.5' /> {t('table.page')}
                 </Button>
                 <div className='flex h-8 min-w-[2rem] items-center justify-center rounded-md border border-primary/30 bg-primary/10 px-2 text-xs font-semibold text-primary'>
                   {page}
                 </div>
-                <Button variant='outline' size='sm' aria-label={t('table.nextPage')}
-                  className='h-8 gap-1 px-3 text-xs'
+                <Button variant='outline' size='sm' className='h-8 gap-1 px-3 text-xs'
                   onClick={() => setPage((p) => p + 1)} disabled={page === data.meta.totalPages}>
-                  {t('table.nextPage')} <ChevronRight className='h-3.5 w-3.5' aria-hidden='true' />
+                  {t('table.nextPage')} <ChevronRight className='h-3.5 w-3.5' />
                 </Button>
               </div>
             </div>

@@ -42,32 +42,53 @@ const STATE_PILL: Record<string, string> = {
   DRAFT:       'bg-zinc-800/80    text-zinc-300    hover:bg-zinc-700',
 };
 
+const STATE_KEY_MAP: Record<string, string> = {
+  PUBLISHED:   'published',
+  DRAFT:       'draft',
+  COMING_SOON: 'comingSoon',
+};
+
 export function AdminOverlayControls({ course, className }: AdminOverlayControlsProps) {
   const { t } = useTranslation('courses');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  // Invalidate BOTH list and stats so stat cards update immediately
-  const invalidateAll = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['admin', 'courses', 'list']  });
-    queryClient.invalidateQueries({ queryKey: ['admin', 'courses', 'stats'] });
+  /**
+   * After a successful mutation we:
+   * 1. Invalidate the LIST so it refetches from server (fine, 304 won't happen
+   *    because list params change each time or staleTime forces it)
+   * 2. For STATS we do NOT invalidate (would get 304) — instead we rely on the
+   *    optimistic update done in onMutate, and we do a forced refetch after a
+   *    short delay so the server has time to commit the change.
+   */
+  const refetchStatsLater = useCallback(() => {
+    // Wait 800ms for the backend to persist the change, then force-fetch
+    setTimeout(() => {
+      queryClient.refetchQueries({
+        queryKey: ['admin', 'courses', 'stats'],
+        type: 'active',
+      });
+    }, 800);
   }, [queryClient]);
 
+  const invalidateList = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['admin', 'courses', 'list'] });
+  }, [queryClient]);
+
+  // ── setState ──────────────────────────────────────────────────────────
   const stateMutation = useMutation({
     mutationFn: (newState: CourseState) =>
       adminCoursesApi.setState(course.id, newState),
 
     onMutate: async (newState) => {
-      // Cancel any outgoing list AND stats refetches
       await queryClient.cancelQueries({ queryKey: ['admin', 'courses', 'list']  });
       await queryClient.cancelQueries({ queryKey: ['admin', 'courses', 'stats'] });
 
-      // Snapshot for rollback
       const listSnapshot  = queryClient.getQueriesData({ queryKey: ['admin', 'courses', 'list']  });
       const statsSnapshot = queryClient.getQueriesData({ queryKey: ['admin', 'courses', 'stats'] });
 
-      // Optimistic list update
+      // Optimistic: update course state in list cache
       queryClient.setQueriesData(
         { queryKey: ['admin', 'courses', 'list'] },
         (old: any) => {
@@ -81,7 +102,7 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
         },
       );
 
-      // Optimistic stats update
+      // Optimistic: update stat counters immediately
       queryClient.setQueriesData(
         { queryKey: ['admin', 'courses', 'stats'] },
         (old: any) => {
@@ -89,17 +110,10 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
           const prev = course.state;
           const next = newState;
           if (prev === next) return old;
-
-          const keyMap: Record<string, string> = {
-            PUBLISHED:   'published',
-            DRAFT:       'draft',
-            COMING_SOON: 'comingSoon',
-          };
-
           return {
             ...old,
-            [keyMap[prev]]: Math.max(0, (old[keyMap[prev]] ?? 0) - 1),
-            [keyMap[next]]: (old[keyMap[next]] ?? 0) + 1,
+            [STATE_KEY_MAP[prev]]: Math.max(0, (old[STATE_KEY_MAP[prev]] ?? 0) - 1),
+            [STATE_KEY_MAP[next]]: (old[STATE_KEY_MAP[next]] ?? 0) + 1,
           };
         },
       );
@@ -113,12 +127,11 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
         : updated.state === 'COMING_SOON' ? 'toast.comingSoon'
         : 'toast.unpublished';
       toast.success(t(toastKey, { title: course.title }));
-      // Refetch from server to confirm real values
-      invalidateAll();
+      invalidateList();      // refetch list from server
+      refetchStatsLater();   // force-refetch stats after delay (bypasses 304)
     },
 
     onError: (_e: any, _v: any, ctx: any) => {
-      // Rollback both
       ctx?.listSnapshot?.forEach(([key, val]: [any, any]) =>
         queryClient.setQueryData(key, val),
       );
@@ -129,21 +142,26 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
     },
   });
 
+  // ── duplicate ─────────────────────────────────────────────────────────
   const duplicateMutation = useMutation({
     mutationFn: () => adminCoursesApi.duplicate(course.id),
     onSuccess: (newCourse) => {
       toast.success(t('toast.duplicated', { title: course.title }));
-      invalidateAll();
+      invalidateList();
+      refetchStatsLater();
       navigate(ROUTES.COURSE_EDIT(newCourse.slug ?? newCourse.id));
     },
     onError: () => toast.error(t('errors.duplicateFailed')),
   });
 
+  // ── delete ────────────────────────────────────────────────────────────
   const deleteMutation = useMutation({
     mutationFn: () => adminCoursesApi.delete(course.id),
+
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: ['admin', 'courses', 'list']  });
       await queryClient.cancelQueries({ queryKey: ['admin', 'courses', 'stats'] });
+
       const listSnapshot  = queryClient.getQueriesData({ queryKey: ['admin', 'courses', 'list']  });
       const statsSnapshot = queryClient.getQueriesData({ queryKey: ['admin', 'courses', 'stats'] });
 
@@ -154,28 +172,29 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
           return { ...old, data: old.data.filter((c: AdminCourse) => c.id !== course.id) };
         },
       );
-      // Optimistic stats: remove 1 from the course's current state bucket + total
+
       queryClient.setQueriesData(
         { queryKey: ['admin', 'courses', 'stats'] },
         (old: any) => {
           if (!old) return old;
-          const keyMap: Record<string, string> = {
-            PUBLISHED: 'published', DRAFT: 'draft', COMING_SOON: 'comingSoon',
-          };
           return {
             ...old,
             total: Math.max(0, (old.total ?? 0) - 1),
-            [keyMap[course.state]]: Math.max(0, (old[keyMap[course.state]] ?? 0) - 1),
+            [STATE_KEY_MAP[course.state]]: Math.max(0, (old[STATE_KEY_MAP[course.state]] ?? 0) - 1),
           };
         },
       );
+
       return { listSnapshot, statsSnapshot };
     },
+
     onSuccess: () => {
       toast.success(t('toast.deleted', { title: course.title }));
-      invalidateAll();
+      invalidateList();
+      refetchStatsLater();
       setDeleteOpen(false);
     },
+
     onError: (err: any, _v: any, ctx: any) => {
       ctx?.listSnapshot?.forEach(([key, val]: [any, any]) => queryClient.setQueryData(key, val));
       ctx?.statsSnapshot?.forEach(([key, val]: [any, any]) => queryClient.setQueryData(key, val));
@@ -189,20 +208,19 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
 
   return (
     <>
-      {/* Overlay bar — visible on hover */}
+      {/* Overlay bar */}
       <div className={cn(
         'absolute inset-0 z-10 flex flex-col justify-between p-2',
         'bg-gradient-to-b from-black/70 via-transparent to-black/70',
         'opacity-0 group-hover:opacity-100 transition-opacity duration-200',
         className,
       )}>
-        {/* Top row: State dropdown + Preview */}
+        {/* Top row */}
         <div className='flex items-center justify-between gap-1'>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                size='sm'
-                variant='ghost'
+                size='sm' variant='ghost'
                 aria-label={t('overlay.setState')}
                 className={cn(
                   'h-7 gap-1.5 text-[11px] font-semibold rounded-full px-2.5',
@@ -211,11 +229,9 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
                 disabled={stateMutation.isPending}
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
               >
-                {stateMutation.isPending ? (
-                  <Loader2 className='h-3 w-3 animate-spin' />
-                ) : (
-                  <><CurrentIcon className='h-3 w-3' /> {t(currentStateOption.labelKey)}</>
-                )}
+                {stateMutation.isPending
+                  ? <Loader2 className='h-3 w-3 animate-spin' />
+                  : <><CurrentIcon className='h-3 w-3' /> {t(currentStateOption.labelKey)}</>}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align='start' className='min-w-[160px]'>
@@ -244,7 +260,7 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
           <Button
             size='sm' variant='ghost'
             aria-label={t('overlay.preview')}
-            className='h-7 w-7 p-0 rounded-full bg-black/40 text-white/70 hover:text-white hover:bg-black/60 transition-colors'
+            className='h-7 w-7 p-0 rounded-full bg-black/40 text-white/70 hover:text-white hover:bg-black/60'
             onClick={(e) => {
               e.preventDefault(); e.stopPropagation();
               navigate(`${ROUTES.COURSE_EDIT(course.slug)}?tab=preview`);
@@ -254,7 +270,7 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
           </Button>
         </div>
 
-        {/* Bottom row: Edit + Duplicate + Delete */}
+        {/* Bottom row */}
         <div className='flex items-center gap-1.5'>
           <Button
             size='sm'
@@ -264,7 +280,6 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
           >
             <Pencil className='h-3 w-3' /> {t('overlay.edit')}
           </Button>
-
           <Button
             size='sm' variant='ghost'
             aria-label={t('overlay.duplicate')}
@@ -276,7 +291,6 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
               ? <Loader2 className='h-3.5 w-3.5 animate-spin' />
               : <Copy className='h-3.5 w-3.5' />}
           </Button>
-
           <Button
             size='sm' variant='ghost'
             aria-label={t('overlay.delete')}
@@ -299,7 +313,9 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
             <AlertDialogDescription>{t('dialogs.deleteDesc')}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMutation.isPending}>{t('dialogs.cancel')}</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>
+              {t('dialogs.cancel')}
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => { e.preventDefault(); deleteMutation.mutate(); }}
               disabled={deleteMutation.isPending}

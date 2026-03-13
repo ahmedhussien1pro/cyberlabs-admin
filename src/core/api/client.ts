@@ -12,21 +12,25 @@ export const apiClient = axios.create({
   withCredentials: false,
 });
 
-// ── Request interceptor — attach JWT ────────────────────────────────────
+// ── Request interceptor — attach JWT + disable HTTP cache on GET ─────────
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = Cookies.get('access_token');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // Prevent 304 Not Modified — always get fresh data from server
+    if (config.method?.toLowerCase() === 'get') {
+      config.headers['Cache-Control'] = 'no-cache, no-store';
+      config.headers['Pragma']        = 'no-cache';
+    }
     return config;
   },
   (error: AxiosError) => Promise.reject(error),
 );
 
-// ── Response interceptor — handle 401 only, return full response ───────────
+// ── Response interceptor — handle 401 only, return full response ─────────
 apiClient.interceptors.response.use(
-  // Return the full AxiosResponse so services can do: const { data } = await apiClient...
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
