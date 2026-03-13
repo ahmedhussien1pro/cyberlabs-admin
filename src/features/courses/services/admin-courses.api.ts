@@ -85,8 +85,11 @@ export const adminCoursesApi = {
     return unwrapList<AdminCoursesListResponse>(res);
   },
 
+  // _t timestamp busts the HTTP 304 cache without adding any custom headers
   getStats: async (): Promise<AdminCourseStats> => {
-    const res = await adminApiClient.get('/admin/courses/stats');
+    const res = await adminApiClient.get('/admin/courses/stats', {
+      params: { _t: Date.now() },
+    });
     return unwrapItem<AdminCourseStats>(res);
   },
 
@@ -114,7 +117,6 @@ export const adminCoursesApi = {
     return normalizeArrays(unwrapItem<AdminCourse>(res));
   },
 
-  // Direct PATCH { state } — backend does not have dedicated /publish /unpublish endpoints
   setState: async (id: string, state: CourseState): Promise<AdminCourse> => {
     const res = await adminApiClient.patch(`/admin/courses/${id}`, { state });
     return normalizeArrays(unwrapItem<AdminCourse>(res));
