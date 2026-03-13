@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import { Button }         from '@/components/ui/button';
 import { coursesApi }     from '../services/courses.api';
-import { adminCoursesApi } from '../services/admin-courses.api';
 import { usersService }   from '@/core/api/services';
 import { ROUTES }         from '@/shared/constants';
 import type { CourseCreateDto } from '../types/course.types';
@@ -550,18 +549,13 @@ export default function CourseCreatePage() {
     },
   });
 
-  // ─── Save: topics first, then patch landingData ──────────────────────────
+  // ─── Save: topics via saveCurriculum (Sections+Lessons) ─────────────────
+  // landingData (courseInfo) is frontend-only rich content — not persisted to DB here.
+  // It travels inside the topics elements via the curriculum editor.
   const { mutate: saveCurriculum, isPending: isSaving } = useMutation({
     mutationFn: async () => {
       if (!createdCourseId) throw new Error('Create the course first');
-      // Step 1: save topics — only { id, title, elements }
       await coursesApi.saveCurriculum(createdCourseId, cleanTopicsForApi(topics));
-      // Step 2: persist landingData via PATCH
-      if (Object.keys(courseInfo).length > 0) {
-        await adminCoursesApi.update(createdCourseId, {
-          landingData: courseInfo as any,
-        });
-      }
     },
     onSuccess: () => toast.success('Content saved successfully!'),
     onError: (err: any) => {
@@ -574,7 +568,6 @@ export default function CourseCreatePage() {
     e.preventDefault();
     if (!meta.title.trim()) return toast.error('Title is required');
     if (!meta.slug.trim())  return toast.error('Slug is required');
-    // ✅ Do NOT send isPublished — the backend derives it from state automatically
     const dto: CourseCreateDto = {
       title:        meta.title.trim(),
       ar_title:     meta.ar_title.trim() || undefined,
@@ -887,6 +880,7 @@ export default function CourseCreatePage() {
                     <div className='flex items-center gap-2'>
                       <div className='w-6 h-6 rounded-full bg-primary flex items-center justify-center text-xs font-bold text-primary-foreground'>2</div>
                       <h2 className='text-sm font-semibold'>Landing Page Content</h2>
+                      <span className='text-xs text-muted-foreground'>— Preview only, saved with curriculum topics</span>
                     </div>
                     <CourseInfoForm courseInfo={courseInfo} onChange={setCourseInfo} />
                   </div>
