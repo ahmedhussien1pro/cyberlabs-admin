@@ -1,6 +1,5 @@
 // src/features/courses/pages/courses-list.page.tsx
 import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -34,10 +33,10 @@ const STAT_CARDS = [
 type StateFilter = CourseState | 'all';
 type DiffFilter  = 'ALL' | 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT';
 
-// Pagination threshold — show pagination when items exceed this
-const PAGINATION_THRESHOLD = 9;
+// Items per page — pagination shows when total > LIMIT
+const LIMIT = 12;
 
-// ── Smart Pagination ──────────────────────────────────────────────────────────
+// ── Pagination ────────────────────────────────────────────────────────────────
 function Pagination({
   page, totalPages, total, limit, onPage,
 }: {
@@ -45,8 +44,9 @@ function Pagination({
   onPage: (p: number) => void;
 }) {
   const { t } = useTranslation('courses');
-  // Only render when total items exceed threshold
-  if (total <= PAGINATION_THRESHOLD) return null;
+
+  // Don't render if everything fits in one page
+  if (total <= limit || totalPages <= 1) return null;
 
   const pages: (number | '...')[] = [];
   const delta = 2;
@@ -65,18 +65,14 @@ function Pagination({
   const to   = Math.min(page * limit, total);
 
   return (
-    <div className='mt-4 flex flex-col items-center gap-3 border-t pt-5 sm:flex-row sm:justify-between'>
-      {/* Count label */}
+    <div className='mt-6 flex flex-col items-center gap-3 border-t pt-5 sm:flex-row sm:justify-between'>
       <p className='text-xs text-muted-foreground order-2 sm:order-1'>
         <span className='font-semibold text-foreground'>{from}</span>–<span className='font-semibold text-foreground'>{to}</span>
         {' '}{t('table.of')}{' '}
         <span className='font-semibold text-foreground'>{total}</span>
         {' '}{t('table.results', 'results')}
       </p>
-
-      {/* Buttons */}
       <div className='flex items-center gap-1 order-1 sm:order-2'>
-        {/* First — hidden on mobile */}
         <Button variant='outline' size='sm' className='hidden sm:flex h-8 w-8 p-0'
           onClick={() => onPage(1)} disabled={page === 1}>
           <ChevronFirst className='h-3.5 w-3.5' />
@@ -85,8 +81,7 @@ function Pagination({
           onClick={() => onPage(page - 1)} disabled={page === 1}>
           <ChevronLeft className='h-3.5 w-3.5' />
         </Button>
-
-        {/* Page numbers — hidden on mobile, show on sm+ */}
+        {/* Desktop page numbers */}
         <div className='hidden sm:flex items-center gap-1'>
           {pages.map((p, i) =>
             p === '...' ? (
@@ -101,23 +96,18 @@ function Pagination({
                     ? 'border-primary bg-primary text-primary-foreground'
                     : 'border-border bg-background text-foreground hover:bg-muted',
                 )}
-              >
-                {p}
-              </button>
+              >{p}</button>
             )
           )}
         </div>
-
-        {/* Mobile: just show current/total */}
+        {/* Mobile: current / total */}
         <span className='sm:hidden text-xs px-3 py-1 rounded-md border border-border bg-muted/40 font-medium'>
           {page} / {totalPages}
         </span>
-
         <Button variant='outline' size='sm' className='h-8 w-8 p-0'
           onClick={() => onPage(page + 1)} disabled={page === totalPages}>
           <ChevronRight className='h-3.5 w-3.5' />
         </Button>
-        {/* Last — hidden on mobile */}
         <Button variant='outline' size='sm' className='hidden sm:flex h-8 w-8 p-0'
           onClick={() => onPage(totalPages)} disabled={page === totalPages}>
           <ChevronLast className='h-3.5 w-3.5' />
@@ -130,14 +120,12 @@ function Pagination({
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function CoursesListPage() {
   const { t } = useTranslation('courses');
-  const navigate = useNavigate();
   const [page,      setPage]      = useState(1);
   const [search,    setSearch]    = useState('');
   const [diff,      setDiff]      = useState<DiffFilter>('ALL');
   const [state,     setState]     = useState<StateFilter>('all');
   const [view,      setView]      = useState<'grid' | 'table'>('grid');
   const [newDialog, setNewDialog] = useState(false);
-  const limit = 20;
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['admin', 'courses', 'stats'],
@@ -149,7 +137,8 @@ export default function CoursesListPage() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['admin', 'courses', 'list', page, search, diff, state],
     queryFn: () => adminCoursesApi.list({
-      page, limit,
+      page,
+      limit: LIMIT,
       search:     search || undefined,
       difficulty: diff !== 'ALL' ? diff : undefined,
       state:      state !== 'all' ? state : undefined,
@@ -187,7 +176,7 @@ export default function CoursesListPage() {
 
   return (
     <div className='space-y-6'>
-      {/* ── Header ── */}
+      {/* Header */}
       <div className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
         <div>
           <h1 className='text-2xl font-bold tracking-tight'>{t('title')}</h1>
@@ -198,7 +187,7 @@ export default function CoursesListPage() {
         </Button>
       </div>
 
-      {/* ── Stat cards ── */}
+      {/* Stat cards */}
       <div className='grid grid-cols-2 gap-3 lg:grid-cols-4'>
         {statsLoading
           ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className='h-24 rounded-xl' />)
@@ -206,7 +195,7 @@ export default function CoursesListPage() {
               const filterVal: StateFilter =
                 key === 'total' ? 'all'
                 : key === 'comingSoon' ? 'COMING_SOON'
-                : key.toUpperCase() as StateFilter;
+                : (key.toUpperCase() as StateFilter);
               const isActive = state === filterVal;
               return (
                 <Card
@@ -229,7 +218,7 @@ export default function CoursesListPage() {
             })}
       </div>
 
-      {/* ── Filters ── */}
+      {/* Filters */}
       <div className='flex items-center gap-2 flex-wrap'>
         <div className='relative flex-1 min-w-[180px]'>
           <Search className='absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
@@ -268,16 +257,16 @@ export default function CoursesListPage() {
         </div>
       </div>
 
-      {/* ── Content ── */}
+      {/* Content */}
       {isLoading ? (
         view === 'grid' ? (
           <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
-            {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className='h-80 rounded-2xl' />)}
+            {Array.from({ length: LIMIT }).map((_, i) => <Skeleton key={i} className='h-80 rounded-2xl' />)}
           </div>
         ) : (
           <Card className='p-6'>
             <div className='space-y-3'>
-              {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className='h-14 rounded-lg' />)}
+              {Array.from({ length: LIMIT }).map((_, i) => <Skeleton key={i} className='h-14 rounded-lg' />)}
             </div>
           </Card>
         )
@@ -299,12 +288,13 @@ export default function CoursesListPage() {
               ))}
             </div>
           )}
+          {/* Pagination — only when total exceeds one page */}
           {data?.meta && (
             <Pagination
               page={page}
               totalPages={data.meta.totalPages}
               total={data.meta.total}
-              limit={limit}
+              limit={LIMIT}
               onPage={goPage}
             />
           )}
