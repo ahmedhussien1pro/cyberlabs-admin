@@ -1,16 +1,15 @@
 // src/features/courses/pages/course-import.page.tsx
-// ✅ Parses both flat format AND landingData-nested format (like the real course JSON files)
-// ✅ Detects missing required fields: instructor, color, access, category, contentType, difficulty
-// ✅ Shows only missing fields in a form — pre-fills what’s detected from JSON
-// ✅ Saves curriculum topics after course creation
-// ✅ FIX: color sent as UPPERCASE to backend (backend enum: BLUE, EMERALD...) then normalize() lowercases on response
+// ✅ Instructor: combobox with live search, filters ADMIN/INSTRUCTOR/CONTENT_CREATOR
+// ✅ Curriculum: uses adminCoursesApi.create (not coursesApi) → returns full course.id
+// ✅ Curriculum: saveCurriculum called after confirmed course.id
+// ✅ color sent UPPERCASE to backend, stored lowercase for Tailwind UI
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Upload, FileJson, AlertTriangle,
-  CheckCircle2, Loader2, BookOpen, AlertCircle,
+  CheckCircle2, Loader2, BookOpen, AlertCircle, Search, User,
 } from 'lucide-react';
 import { Button }   from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -24,19 +23,25 @@ import {
   Select, SelectContent, SelectItem,
   SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import {
+  Command, CommandEmpty, CommandGroup,
+  CommandInput, CommandItem, CommandList,
+} from '@/components/ui/command';
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from '@/components/ui/popover';
 import { adminCoursesApi } from '../services/admin-courses.api';
-import { coursesApi }      from '../services/courses.api';
+import { usersService }    from '@/core/api/services';
 import { ROUTES }          from '@/shared/constants';
 import type {
   CourseDifficulty, CourseAccess,
   CourseColor, CourseCategory, CourseContentType,
 } from '../types/admin-course.types';
-import type { CourseCreateDto } from '../types/course.types';
+import type { AdminCourseCreateDto } from '../types/admin-course.types';
 
-// ══ Enum options ══════════════════════════════════════════════════════
+// ══ Enum options ══════════════════════════════════════════════════════════════
 const DIFFICULTIES: CourseDifficulty[]  = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'EXPERT'];
 const ACCESSES: CourseAccess[]          = ['FREE', 'PRO', 'PREMIUM'];
-// UI uses lowercase for Tailwind classes; we toUpperCase() before sending to backend
 const COLORS: CourseColor[]             = ['blue', 'emerald', 'violet', 'orange', 'rose', 'cyan'];
 const CATEGORIES: CourseCategory[]      = [
   'WEB_SECURITY', 'PENETRATION_TESTING', 'MALWARE_ANALYSIS',
@@ -45,7 +50,9 @@ const CATEGORIES: CourseCategory[]      = [
 ];
 const CONTENT_TYPES: CourseContentType[] = ['PRACTICAL', 'THEORETICAL', 'MIXED'];
 
-// ══ Difficulty text → enum mapper ════════════════════════════════════════
+const INSTRUCTOR_ROLES = ['ADMIN', 'INSTRUCTOR', 'CONTENT_CREATOR'];
+
+// ══ Difficulty mapper ═════════════════════════════════════════════════════════
 function guessDifficulty(raw?: string): CourseDifficulty | '' {
   if (!raw) return '';
   const v = raw.toLowerCase();
@@ -58,27 +65,24 @@ function guessDifficulty(raw?: string): CourseDifficulty | '' {
   return '';
 }
 
-// ══ Smart JSON parser (supports flat format AND landingData format) ═════════
+// ══ JSON extractor ════════════════════════════════════════════════════════════
 interface Extracted {
-  title:          string;
-  ar_title:       string;
-  slug:           string;
-  description:    string;
-  ar_description: string;
-  difficulty:     CourseDifficulty | '';
-  access:         CourseAccess | '';
-  category:       CourseCategory | '';
-  color:          CourseColor | '';   // stored lowercase for UI/Tailwind
-  contentType:    CourseContentType | '';
-  instructorId:   string;
+  title: string; ar_title: string; slug: string;
+  description: string; ar_description: string;
+  difficulty: CourseDifficulty | '';
+  access: CourseAccess | '';
+  category: CourseCategory | '';
+  color: CourseColor | '';
+  contentType: CourseContentType | '';
+  instructorId: string;
   estimatedHours: string;
-  topicsCount:    number;
-  topics:         object[];
+  topicsCount: number;
+  topics: object[];
 }
 
 function extractFromJson(raw: string): Extracted {
   const parsed = JSON.parse(raw);
-  const ld     = parsed.landingData ?? parsed;
+  const ld = parsed.landingData ?? parsed;
 
   const titleEn = ld.title?.en   ?? parsed.title       ?? '';
   const titleAr = ld.title?.ar   ?? parsed.ar_title     ?? '';
@@ -111,7 +115,6 @@ function extractFromJson(raw: string): Extracted {
     ? ((parsed.access as string).toUpperCase() as CourseAccess) : '';
   const category = CATEGORIES.includes(parsed.category as CourseCategory)
     ? (parsed.category as CourseCategory) : '';
-  // store lowercase for UI; toUpperCase() happens in mutationFn before POST
   const color = COLORS.includes((parsed.color ?? '').toLowerCase() as CourseColor)
     ? ((parsed.color as string).toLowerCase() as CourseColor) : '';
   const contentType = CONTENT_TYPES.includes(parsed.contentType as CourseContentType)
@@ -120,19 +123,14 @@ function extractFromJson(raw: string): Extracted {
   if (!titleEn) throw new Error('Could not detect a course title from this JSON');
 
   return {
-    title: titleEn,       ar_title: titleAr,
-    slug: slugRaw,
-    description: descEn,  ar_description: descAr,
-    difficulty, access, category,
-    color, contentType,
+    title: titleEn, ar_title: titleAr, slug: slugRaw,
+    description: descEn, ar_description: descAr,
+    difficulty, access, category, color, contentType,
     instructorId: typeof instructorId === 'string' ? instructorId : '',
-    estimatedHours,
-    topicsCount: topics.length,
-    topics,
+    estimatedHours, topicsCount: topics.length, topics,
   };
 }
 
-// ══ Types ══════════════════════════════════════════════════════════════
 type MissingForm = Omit<Extracted, 'topics' | 'topicsCount'>;
 
 function missingFields(f: MissingForm): (keyof MissingForm)[] {
@@ -142,7 +140,7 @@ function missingFields(f: MissingForm): (keyof MissingForm)[] {
   return required.filter((k) => !f[k]);
 }
 
-// ══ SelectField helper ───────────────────────────────────────────────
+// ══ SelectField ═══════════════════════════════════════════════════════════════
 function SField({
   label, value, options, onChange,
 }: {
@@ -165,7 +163,7 @@ function SField({
   );
 }
 
-// ══ Color swatch picker (UI lowercase, sends UPPERCASE to API) ────────────────
+// ══ Color picker ══════════════════════════════════════════════════════════════
 const COLOR_CLASS: Record<CourseColor, string> = {
   blue: 'bg-blue-500', emerald: 'bg-emerald-500', violet: 'bg-violet-500',
   orange: 'bg-orange-500', rose: 'bg-rose-500', cyan: 'bg-cyan-500',
@@ -178,9 +176,7 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (v: string)
         {COLORS.map((c) => (
           <button key={c} type='button' onClick={() => onChange(c)}
             className={`h-8 w-8 rounded-full border-2 transition-all ${
-              value === c
-                ? 'border-foreground scale-110 shadow-md'
-                : 'border-transparent opacity-60 hover:opacity-100'
+              value === c ? 'border-foreground scale-110 shadow-md' : 'border-transparent opacity-60 hover:opacity-100'
             } ${COLOR_CLASS[c]}`}
             title={c}
           />
@@ -191,7 +187,136 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (v: string)
   );
 }
 
-// ══ ParsedPreview ──────────────────────────────────────────────────────────
+// ══ InstructorPicker — combobox filtered by role ═══════════════════════════════
+function InstructorPicker({
+  value, onChange,
+}: {
+  value: string;
+  onChange: (id: string, name: string) => void;
+}) {
+  const [open, setOpen]       = useState(false);
+  const [search, setSearch]   = useState('');
+  const [displayName, setDisplayName] = useState(value ? `ID: ${value.slice(0, 8)}…` : '');
+
+  // Fetch all ADMIN/INSTRUCTOR/CONTENT_CREATOR users — up to 100 per role
+  const { data: adminData }   = useQuery({
+    queryKey: ['users-picker', 'ADMIN'],
+    queryFn: () => usersService.getAll({ role: 'ADMIN',           limit: 100 }),
+    staleTime: 60_000,
+  });
+  const { data: instrData }   = useQuery({
+    queryKey: ['users-picker', 'INSTRUCTOR'],
+    queryFn: () => usersService.getAll({ role: 'INSTRUCTOR',      limit: 100 }),
+    staleTime: 60_000,
+  });
+  const { data: ccData }      = useQuery({
+    queryKey: ['users-picker', 'CONTENT_CREATOR'],
+    queryFn: () => usersService.getAll({ role: 'CONTENT_CREATOR', limit: 100 }),
+    staleTime: 60_000,
+  });
+
+  // Merge + deduplicate
+  const allUsers = [
+    ...(adminData?.data ?? []),
+    ...(instrData?.data ?? []),
+    ...(ccData?.data   ?? []),
+  ].filter((u, i, arr) => arr.findIndex((x) => x.id === u.id) === i);
+
+  const filtered = search
+    ? allUsers.filter((u) =>
+        (u.name ?? u.email).toLowerCase().includes(search.toLowerCase()) ||
+        u.email.toLowerCase().includes(search.toLowerCase())
+      )
+    : allUsers;
+
+  const ROLE_BADGE: Record<string, string> = {
+    ADMIN:           'bg-rose-500/20 text-rose-400',
+    INSTRUCTOR:      'bg-blue-500/20 text-blue-400',
+    CONTENT_CREATOR: 'bg-violet-500/20 text-violet-400',
+  };
+
+  return (
+    <div className='space-y-1.5'>
+      <Label className='text-sm'>Instructor <span className='text-destructive'>*</span></Label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button variant='outline' role='combobox' aria-expanded={open}
+            className='w-full justify-start h-9 font-normal gap-2'>
+            <User className='h-4 w-4 shrink-0 text-muted-foreground' />
+            <span className='truncate'>
+              {displayName || <span className='text-muted-foreground'>Select instructor…</span>}
+            </span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className='w-80 p-0' align='start'>
+          <Command shouldFilter={false}>
+            <div className='flex items-center border-b px-3'>
+              <Search className='h-4 w-4 mr-2 shrink-0 text-muted-foreground' />
+              <CommandInput
+                placeholder='Search by name or email…'
+                value={search}
+                onValueChange={setSearch}
+                className='border-0 focus:ring-0 h-10'
+              />
+            </div>
+            <CommandList className='max-h-64'>
+              {filtered.length === 0 && (
+                <CommandEmpty className='py-4 text-center text-sm text-muted-foreground'>
+                  {allUsers.length === 0 ? 'Loading…' : 'No users found'}
+                </CommandEmpty>
+              )}
+              {INSTRUCTOR_ROLES.map((role) => {
+                const group = filtered.filter((u) => u.role === role);
+                if (group.length === 0) return null;
+                return (
+                  <CommandGroup key={role} heading={role.replace('_', ' ')}>
+                    {group.map((u) => (
+                      <CommandItem key={u.id} value={u.id}
+                        onSelect={() => {
+                          const label = u.name ? `${u.name} (${u.email})` : u.email;
+                          onChange(u.id, label);
+                          setDisplayName(label);
+                          setOpen(false);
+                          setSearch('');
+                        }}
+                        className='flex items-center gap-2 cursor-pointer'
+                      >
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                          ROLE_BADGE[u.role] ?? 'bg-muted text-muted-foreground'
+                        }`}>{u.role}</span>
+                        <span className='flex-1 truncate'>
+                          {u.name && <span className='font-medium'>{u.name}</span>}
+                          <span className='text-muted-foreground text-xs ml-1'>{u.email}</span>
+                        </span>
+                        {value === u.id && <CheckCircle2 className='h-3.5 w-3.5 text-emerald-400 shrink-0' />}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                );
+              })}
+            </CommandList>
+            {/* Allow manual UUID entry fallback */}
+            <div className='border-t p-2'>
+              <p className='text-[10px] text-muted-foreground mb-1'>Or paste UUID directly:</p>
+              <Input className='h-7 text-xs font-mono' placeholder='xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+                defaultValue={value}
+                onBlur={(e) => {
+                  const v = e.target.value.trim();
+                  if (v) { onChange(v, `ID: ${v.slice(0, 8)}…`); setDisplayName(`ID: ${v.slice(0, 8)}…`); }
+                }}
+              />
+            </div>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      {value && (
+        <p className='text-[10px] text-muted-foreground font-mono'>ID: {value}</p>
+      )}
+    </div>
+  );
+}
+
+// ══ ParsedPreview ═════════════════════════════════════════════════════════════
 function ParsedPreview({ ext }: { ext: Extracted }) {
   return (
     <Card className='border-primary/30 bg-primary/5'>
@@ -241,7 +366,7 @@ function ParsedPreview({ ext }: { ext: Extracted }) {
   );
 }
 
-// ═══ Main page ══════════════════════════════════════════════════════════════
+// ══ Main page ═════════════════════════════════════════════════════════════════
 export default function CourseImportPage() {
   const navigate = useNavigate();
   const fileRef  = useRef<HTMLInputElement>(null);
@@ -264,11 +389,10 @@ export default function CourseImportPage() {
       const ext = extractFromJson(text);
       setExtracted(ext);
       setForm({
-        title: ext.title,           ar_title: ext.ar_title,
-        slug: ext.slug,
+        title: ext.title, ar_title: ext.ar_title, slug: ext.slug,
         description: ext.description, ar_description: ext.ar_description,
-        difficulty: ext.difficulty,   access: ext.access,
-        category: ext.category,       color: ext.color,
+        difficulty: ext.difficulty, access: ext.access,
+        category: ext.category, color: ext.color,
         contentType: ext.contentType, instructorId: ext.instructorId,
         estimatedHours: ext.estimatedHours,
       });
@@ -290,39 +414,55 @@ export default function CourseImportPage() {
     e.target.value = '';
   };
 
-  const missing    = extracted ? missingFields(form) : [];
-  const canImport  = extracted !== null && missing.length === 0;
+  const missing   = extracted ? missingFields(form) : [];
+  const canImport = extracted !== null && missing.length === 0;
 
   const { mutate, isPending } = useMutation({
     mutationFn: async () => {
       if (!extracted || !canImport) throw new Error('Fill all required fields first');
 
-      const dto: CourseCreateDto = {
+      // ─ Build DTO ──────────────────────────────────────────────────────────
+      const dto: AdminCourseCreateDto = {
         title:          form.title,
         ar_title:       form.ar_title     || undefined,
         slug:           form.slug,
         description:    form.description  || undefined,
+        ar_description: form.ar_description || undefined,
         difficulty:     form.difficulty   as CourseDifficulty,
         access:         form.access       as CourseAccess,
         category:       form.category     as CourseCategory,
-        // ✅ backend expects UPPERCASE enum: BLUE, EMERALD, etc.
-        // normalize() in courses.api.ts lowercases it back on response
-        color:          (form.color as string).toUpperCase() as any,
+        color:          (form.color as string).toUpperCase() as any,  // backend = UPPERCASE
         contentType:    form.contentType  as CourseContentType,
         instructorId:   form.instructorId,
         estimatedHours: form.estimatedHours ? Number(form.estimatedHours) : undefined,
       };
 
-      const course = await coursesApi.create(dto);
+      // ─ Create course ──────────────────────────────────────────────────────
+      // Use adminCoursesApi.create (adminApiClient) — returns full AdminCourse with id
+      const course = await adminCoursesApi.create(dto);
 
+      if (!course?.id) {
+        throw new Error('Course created but backend returned no id — check API response');
+      }
+
+      // ─ Save curriculum ────────────────────────────────────────────────────
       if (extracted.topics.length > 0) {
-        await adminCoursesApi.saveCurriculum(course.id, extracted.topics);
+        try {
+          await adminCoursesApi.saveCurriculum(course.id, extracted.topics);
+        } catch (currErr: any) {
+          // Don't block navigation — course exists; show warning
+          const msg = currErr?.response?.data?.message ?? currErr?.message ?? 'Unknown';
+          toast.warning(`Course created ✓ but curriculum failed: ${Array.isArray(msg) ? msg.join(' · ') : msg}`);
+          return course;
+        }
       }
 
       return course;
     },
     onSuccess: (course) => {
-      toast.success(`“${course.title}” imported — ${extracted!.topics.length} topics saved!`);
+      const topicMsg = (extracted?.topics.length ?? 0) > 0
+        ? ` + ${extracted!.topics.length} topics` : '';
+      toast.success(`"${course.title}" imported${topicMsg}!`);
       navigate(`/courses/${course.slug}/edit`);
     },
     onError: (err: any) => {
@@ -382,10 +522,9 @@ export default function CourseImportPage() {
         </CardContent>
       </Card>
 
-      {/* Detected preview */}
       {extracted && <ParsedPreview ext={extracted} />}
 
-      {/* Missing / editable fields form */}
+      {/* Form */}
       {extracted && (
         <Card>
           <CardHeader className='pb-3'>
@@ -396,8 +535,8 @@ export default function CourseImportPage() {
             </CardTitle>
             {missing.length > 0 && (
               <p className='text-xs text-muted-foreground'>
-                Required but not detected:
-                {' '}<span className='text-amber-400 font-mono'>{missing.join(', ')}</span>
+                Required but not detected:{' '}
+                <span className='text-amber-400 font-mono'>{missing.join(', ')}</span>
               </p>
             )}
           </CardHeader>
@@ -418,27 +557,27 @@ export default function CourseImportPage() {
                   onChange={(e) => set('slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))} />
               </div>
               <div className='space-y-1.5'>
-                <Label className='text-sm'>Instructor ID <span className='text-destructive'>*</span></Label>
-                <Input value={form.instructorId} placeholder='instructor-uuid or name'
-                  onChange={(e) => set('instructorId', e.target.value)} />
+                <Label className='text-sm'>Est. Hours</Label>
+                <Input type='number' min={1} value={form.estimatedHours} placeholder='e.g. 3'
+                  onChange={(e) => set('estimatedHours', e.target.value)} />
               </div>
             </div>
 
+            {/* Instructor combobox — full width */}
+            <InstructorPicker
+              value={form.instructorId}
+              onChange={(id) => set('instructorId', id)}
+            />
+
             <div className='grid grid-cols-2 gap-4'>
-              <SField label='Difficulty *'  value={form.difficulty}  options={DIFFICULTIES}
+              <SField label='Difficulty *'   value={form.difficulty}  options={DIFFICULTIES}
                 onChange={(v) => set('difficulty',  v as CourseDifficulty)} />
-              <SField label='Access *'      value={form.access}      options={ACCESSES}
+              <SField label='Access *'       value={form.access}      options={ACCESSES}
                 onChange={(v) => set('access',      v as CourseAccess)} />
-              <SField label='Category *'    value={form.category}    options={CATEGORIES}
+              <SField label='Category *'     value={form.category}    options={CATEGORIES}
                 onChange={(v) => set('category',    v as CourseCategory)} />
               <SField label='Content Type *' value={form.contentType} options={CONTENT_TYPES}
                 onChange={(v) => set('contentType', v as CourseContentType)} />
-            </div>
-
-            <div className='w-40 space-y-1.5'>
-              <Label className='text-sm'>Estimated Hours</Label>
-              <Input type='number' min={1} value={form.estimatedHours}
-                onChange={(e) => set('estimatedHours', e.target.value)} placeholder='e.g. 3' />
             </div>
 
             <ColorPicker value={form.color} onChange={(v) => set('color', v as CourseColor)} />
