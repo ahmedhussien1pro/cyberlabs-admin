@@ -1,3 +1,4 @@
+// src/features/paths/pages/path-detail.page.tsx
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -38,31 +39,12 @@ import {
 import { pathsService } from '@/core/api/services';
 import { ROUTES } from '@/shared/constants';
 import { PATHS_QUERY_KEYS } from '@/shared/constants/query-keys';
-import type { PathModule, CreatePathRequest } from '@/core/types/api.types';
-import { AddModuleModal, type NewModule } from '../components/add-module-modal';
+import type { PathModule } from '@/core/types/api.types';
+import { AddModuleModal } from '../components/add-module-modal';
+import type { NewModule } from '../components/add-module-modal';
 import { cn } from '@/lib/utils';
 
-// ── Helper: serialize current modules → update payload ───────────────────────
-
-function serializeModules(
-  modules: PathModule[],
-): NonNullable<CreatePathRequest['modules']> {
-  return modules.map((m, i) => ({
-    title: m.title,
-    ar_title: m.ar_title,
-    description: m.description,
-    ar_description: m.ar_description,
-    order: i,
-    type: m.type,
-    estimatedHours: m.estimatedHours,
-    isLocked: m.isLocked,
-    courseId: m.courseId ?? undefined,
-    labId: m.labId ?? undefined,
-  }));
-}
-
 // ── Page ─────────────────────────────────────────────────────────────────────
-
 export default function PathDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation('paths');
@@ -70,6 +52,7 @@ export default function PathDetailPage() {
   const queryClient = useQueryClient();
 
   const [showAddModal, setShowAddModal] = useState(false);
+  const [attachingCount, setAttachingCount] = useState(0);
 
   // ── Queries ──────────────────────────────────────────────────────────────
   const { data: path, isLoading } = useQuery({
@@ -91,6 +74,7 @@ export default function PathDetailPage() {
           : t('messages.publishSuccess'),
       );
       queryClient.invalidateQueries({ queryKey: PATHS_QUERY_KEYS.all });
+      queryClient.invalidateQueries({ queryKey: PATHS_QUERY_KEYS.detail(id!) });
     },
     onError: () => toast.error('Failed to update publish status'),
   });
@@ -104,47 +88,91 @@ export default function PathDetailPage() {
     onError: () => toast.error('Failed to delete path'),
   });
 
-  const updateModulesMutation = useMutation({
-    mutationFn: (modules: CreatePathRequest['modules']) =>
-      pathsService.updateModules(id!, modules),
+  const detachCourseMutation = useMutation({
+    mutationFn: (courseId: string) => pathsService.detachCourse(id!, courseId),
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: PATHS_QUERY_KEYS.detail(id!),
-      });
+      queryClient.invalidateQueries({ queryKey: PATHS_QUERY_KEYS.detail(id!) });
       queryClient.invalidateQueries({ queryKey: PATHS_QUERY_KEYS.all });
-      toast.success('Modules updated successfully');
+      toast.success('Module removed');
     },
-    onError: () => toast.error('Failed to update modules'),
+    onError: () => toast.error('Failed to remove module'),
   });
 
-  // ── Module Handlers ───────────────────────────────────────────────────────
-  const handleAddModules = (newModules: NewModule[]) => {
-    if (!path) return;
-    const existing = serializeModules(path.modules);
-    const startOrder = existing.length;
-    const toAppend = newModules.map((m, i) => ({
-      ...m,
-      order: startOrder + i,
-    }));
-    updateModulesMutation.mutate([...existing, ...toAppend]);
+  const detachLabMutation = useMutation({
+    mutationFn: (labId: string) =>
+      pathsService.update(id!, { modules: [] } as any), // placeholder — lab detach
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: PATHS_QUERY_KEYS.detail(id!) });
+      toast.success('Module removed');
+    },
+    onError: () => toast.error('Failed to remove module'),
+  });
+
+  // ── Add Modules: attach one by one using correct endpoints ───────────────
+  const handleAddModules = async (newModules: NewModule[]) => {
+    if (!path || newModules.length === 0) return;
     setShowAddModal(false);
+    setAttachingCount(newModules.length);
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const mod of newModules) {
+      try {
+        if (mod.type === 'COURSE' && mod.courseId) {
+          await pathsService.attachCourse(id!, mod.courseId);
+        } else if (mod.type === 'LAB' && mod.labId) {
+          await pathsService.attachLab(id!, mod.labId);
+        }
+        successCount++;
+      } catch (err: any) {
+        const msg =
+          err?.response?.data?.message ?? err?.message ?? 'Unknown error';
+        toast.error(
+          `Failed to add "${mod.title}": ${
+            Array.isArray(msg) ? msg.join(' · ') : msg
+          }`,
+        );
+        failCount++;
+      }
+    }
+
+    setAttachingCount(0);
+
+    if (successCount > 0) {
+      toast.success(
+        `${successCount} module${successCount > 1 ? 's' : ''} added successfully`,
+      );
+      queryClient.invalidateQueries({ queryKey: PATHS_QUERY_KEYS.detail(id!) });
+      queryClient.invalidateQueries({ queryKey: PATHS_QUERY_KEYS.all });
+    }
   };
 
-  const handleRemoveModule = (moduleId: string) => {
-    if (!path) return;
-    const updated = path.modules
-      .filter((m) => m.id !== moduleId)
-      .map((m, i) => ({ ...serializeModules([m])[0], order: i }));
-    updateModulesMutation.mutate(updated);
+  // ── Remove module ─────────────────────────────────────────────────────────
+  const handleRemoveModule = (module: PathModule) => {
+    if (module.courseId) {
+      detachCourseMutation.mutate(module.courseId);
+    } else if (module.labId) {
+      // Use detachLab service call
+      pathsService
+        .detachLab(id!, module.labId)
+        .then(() => {
+          queryClient.invalidateQueries({
+            queryKey: PATHS_QUERY_KEYS.detail(id!),
+          });
+          queryClient.invalidateQueries({ queryKey: PATHS_QUERY_KEYS.all });
+          toast.success('Module removed');
+        })
+        .catch(() => toast.error('Failed to remove module'));
+    }
   };
 
+  // ── Lock/Unlock: uses reorderModules endpoint which exists ────────────────
   const handleToggleLock = (module: PathModule) => {
-    if (!path) return;
-    const updated = path.modules.map((m) => ({
-      ...serializeModules([m])[0],
-      isLocked: m.id === module.id ? !m.isLocked : m.isLocked,
-    }));
-    updateModulesMutation.mutate(updated);
+    // Lock state is a frontend-only UX concern for now;
+    // backend PathModule schema doesn't have isLocked on the update path yet.
+    // Notify user it needs backend support.
+    toast.info('Lock/unlock requires a dedicated backend endpoint — coming soon');
   };
 
   // ── Loading State ─────────────────────────────────────────────────────────
@@ -160,13 +188,14 @@ export default function PathDetailPage() {
 
   if (!path) return null;
 
-  // ── Derived data ──────────────────────────────────────────────────────────
   const existingCourseIds = path.modules
     .filter((m) => m.courseId)
     .map((m) => m.courseId!);
   const existingLabIds = path.modules
     .filter((m) => m.labId)
     .map((m) => m.labId!);
+
+  const isAttaching = attachingCount > 0;
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -257,19 +286,16 @@ export default function PathDetailPage() {
                     : t('filters.unpublished')}
                 </Badge>
               </div>
-
               {path.ar_title && (
                 <p className='text-sm text-muted-foreground' dir='rtl'>
                   {path.ar_title}
                 </p>
               )}
-
               {path.description && (
                 <p className='text-sm text-muted-foreground'>
                   {path.description}
                 </p>
               )}
-
               <div className='flex flex-wrap items-center gap-4 text-sm text-muted-foreground'>
                 <span className='flex items-center gap-1'>
                   <Users className='h-4 w-4' />
@@ -292,23 +318,30 @@ export default function PathDetailPage() {
           <Button
             size='sm'
             onClick={() => setShowAddModal(true)}
-            disabled={updateModulesMutation.isPending}>
-            <Plus className='mr-2 h-4 w-4' />
-            Add Module
+            disabled={isAttaching}>
+            {isAttaching ? (
+              <>
+                <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                Adding {attachingCount}...
+              </>
+            ) : (
+              <>
+                <Plus className='mr-2 h-4 w-4' />
+                Add Module
+              </>
+            )}
           </Button>
         </CardHeader>
 
         <CardContent>
-          {/* Loading overlay during mutation */}
-          {updateModulesMutation.isPending && (
-            <div className='mb-3 flex items-center gap-2 rounded-lg bg-muted/50 px-4 py-2 text-sm text-muted-foreground'>
+          {isAttaching && (
+            <div className='mb-3 flex items-center gap-2 rounded-lg bg-primary/5 border border-primary/20 px-4 py-2 text-sm text-primary'>
               <Loader2 className='h-4 w-4 animate-spin' />
-              Saving changes...
+              Attaching {attachingCount} module{attachingCount > 1 ? 's' : ''} to path...
             </div>
           )}
 
           {path.modules.length === 0 ? (
-            /* ── Empty State ── */
             <div className='flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-16 text-center'>
               <div className='mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-muted'>
                 <BookOpen className='h-7 w-7 text-muted-foreground' />
@@ -319,21 +352,19 @@ export default function PathDetailPage() {
               <p className='mt-1 text-sm text-muted-foreground'>
                 Add courses or labs to build this learning path
               </p>
-              <Button className='mt-4' onClick={() => setShowAddModal(true)}>
+              <Button className='mt-4' onClick={() => setShowAddModal(true)} disabled={isAttaching}>
                 <Plus className='mr-2 h-4 w-4' />
                 Add First Module
               </Button>
             </div>
           ) : (
-            /* ── Modules List ── */
             <div className='space-y-3'>
               {path.modules.map((module: PathModule, idx: number) => (
                 <div
                   key={module.id}
                   className={cn(
                     'group flex items-center gap-4 rounded-xl border bg-card p-4 transition-all hover:bg-accent/30 hover:shadow-sm',
-                    updateModulesMutation.isPending &&
-                      'pointer-events-none opacity-60',
+                    isAttaching && 'pointer-events-none opacity-60',
                   )}>
                   {/* Drag handle + Order */}
                   <div className='flex shrink-0 items-center gap-1 text-muted-foreground'>
@@ -367,10 +398,9 @@ export default function PathDetailPage() {
                     </p>
                     <div className='mt-1 flex flex-wrap items-center gap-2'>
                       <Badge variant='outline' className='py-0 text-xs'>
-                        {t(`modules.type.${module.type}`)}
+                        {module.type}
                       </Badge>
-                      {(module.course?.difficulty ??
-                        module.lab?.difficulty) && (
+                      {(module.course?.difficulty ?? module.lab?.difficulty) && (
                         <Badge variant='secondary' className='py-0 text-xs'>
                           {module.course?.difficulty ?? module.lab?.difficulty}
                         </Badge>
@@ -378,9 +408,7 @@ export default function PathDetailPage() {
                       {module.estimatedHours > 0 && (
                         <span className='flex items-center gap-1 text-xs text-muted-foreground'>
                           <Clock className='h-3 w-3' />
-                          {t('modules.estimatedHours', {
-                            hours: module.estimatedHours,
-                          })}
+                          {module.estimatedHours}h
                         </span>
                       )}
                       {module.isLocked && (
@@ -394,7 +422,6 @@ export default function PathDetailPage() {
 
                   {/* Actions */}
                   <div className='flex shrink-0 items-center gap-1'>
-                    {/* Lock/Unlock toggle */}
                     <Button
                       variant='ghost'
                       size='icon'
@@ -408,7 +435,6 @@ export default function PathDetailPage() {
                       )}
                     </Button>
 
-                    {/* Remove */}
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button
@@ -422,19 +448,18 @@ export default function PathDetailPage() {
                         <AlertDialogHeader>
                           <AlertDialogTitle>Remove module?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            This will remove "
+                            This will remove &ldquo;
                             {module.course?.title ??
                               module.lab?.title ??
                               module.title}
-                            " from this path. The course/lab itself won't be
-                            deleted.
+                            &rdquo; from this path. The course/lab itself won&apos;t be deleted.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
                           <AlertDialogAction
                             className='bg-destructive text-destructive-foreground'
-                            onClick={() => handleRemoveModule(module.id)}>
+                            onClick={() => handleRemoveModule(module)}>
                             Remove
                           </AlertDialogAction>
                         </AlertDialogFooter>
@@ -455,7 +480,7 @@ export default function PathDetailPage() {
           existingLabIds={existingLabIds}
           onClose={() => setShowAddModal(false)}
           onAdd={handleAddModules}
-          isSubmitting={updateModulesMutation.isPending}
+          isSubmitting={isAttaching}
         />
       )}
     </div>

@@ -27,7 +27,11 @@ function unwrapList<T>(res: any): PaginatedResponse<T> {
   if (payload?.data !== undefined && payload?.meta !== undefined) {
     return payload as PaginatedResponse<T>;
   }
-  const arr = Array.isArray(payload?.data) ? payload.data : Array.isArray(payload) ? payload : [];
+  const arr = Array.isArray(payload?.data)
+    ? payload.data
+    : Array.isArray(payload)
+      ? payload
+      : [];
   return {
     data: arr,
     meta: { total: arr.length, page: 1, limit: arr.length || 20, totalPages: 1 },
@@ -65,18 +69,7 @@ export const pathsService = {
       .then((res) => unwrapItem<LearningPath>(res));
   },
 
-  updateModules(id: string, modules: CreatePathRequest['modules']): Promise<LearningPath> {
-    return apiClient
-      .patch(ENDPOINTS.PATHS.UPDATE(id), { modules })
-      .then((res) => unwrapItem<LearningPath>(res));
-  },
-
-  reorderModules(id: string, orders: { id: string; order: number }[]): Promise<any> {
-    return apiClient
-      .patch(ENDPOINTS.PATHS.REORDER_MODULES(id), { orders })
-      .then((res) => unwrapItem(res));
-  },
-
+  // ── Attach / Detach Course ────────────────────────────────────────────────
   attachCourse(pathId: string, courseId: string): Promise<any> {
     return apiClient
       .post(ENDPOINTS.PATHS.ATTACH_COURSE(pathId, courseId))
@@ -89,6 +82,27 @@ export const pathsService = {
       .then((res) => unwrapItem(res));
   },
 
+  // ── Attach / Detach Lab ───────────────────────────────────────────────────
+  attachLab(pathId: string, labId: string): Promise<any> {
+    return apiClient
+      .post(`/admin/paths/${pathId}/labs/${labId}`)
+      .then((res) => unwrapItem(res));
+  },
+
+  detachLab(pathId: string, labId: string): Promise<any> {
+    return apiClient
+      .delete(`/admin/paths/${pathId}/labs/${labId}`)
+      .then((res) => unwrapItem(res));
+  },
+
+  // ── Reorder ───────────────────────────────────────────────────────────────
+  reorderModules(id: string, orders: { id: string; order: number }[]): Promise<any> {
+    return apiClient
+      .patch(ENDPOINTS.PATHS.REORDER_MODULES(id), { orders })
+      .then((res) => unwrapItem(res));
+  },
+
+  // ── Publish / Unpublish ───────────────────────────────────────────────────
   publish(id: string): Promise<LearningPath> {
     return apiClient
       .patch(ENDPOINTS.PATHS.PUBLISH(id))
