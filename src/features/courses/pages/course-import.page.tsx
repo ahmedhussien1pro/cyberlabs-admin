@@ -2,7 +2,7 @@
 // ✅ Instructor: combobox with live search, filters ADMIN/INSTRUCTOR/CONTENT_CREATOR
 // ✅ Curriculum: uses adminCoursesApi.create (not coursesApi) → returns full course.id
 // ✅ Curriculum: saveCurriculum called after confirmed course.id
-// ✅ color sent UPPERCASE to backend, stored lowercase for Tailwind UI
+// ✅ color sent UPPERCASE to backend, stored UPPERCASE for CourseColor type
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -36,13 +36,13 @@ import { ROUTES }          from '@/shared/constants';
 import type {
   CourseDifficulty, CourseAccess,
   CourseColor, CourseCategory, CourseContentType,
-} from '../types/admin-course.types';
-import type { AdminCourseCreateDto } from '../types/admin-course.types';
+} from '../types';
+import type { AdminCourseCreateDto } from '../types';
 
 // ══ Enum options ══════════════════════════════════════════════════════════════
 const DIFFICULTIES: CourseDifficulty[]  = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'EXPERT'];
 const ACCESSES: CourseAccess[]          = ['FREE', 'PRO', 'PREMIUM'];
-const COLORS: CourseColor[]             = ['blue', 'emerald', 'violet', 'orange', 'rose', 'cyan'];
+const COLORS: CourseColor[]             = ['BLUE', 'EMERALD', 'VIOLET', 'ORANGE', 'ROSE', 'CYAN'];
 const CATEGORIES: CourseCategory[]      = [
   'WEB_SECURITY', 'PENETRATION_TESTING', 'MALWARE_ANALYSIS',
   'CLOUD_SECURITY', 'FUNDAMENTALS', 'CRYPTOGRAPHY',
@@ -115,8 +115,9 @@ function extractFromJson(raw: string): Extracted {
     ? ((parsed.access as string).toUpperCase() as CourseAccess) : '';
   const category = CATEGORIES.includes(parsed.category as CourseCategory)
     ? (parsed.category as CourseCategory) : '';
-  const color = COLORS.includes((parsed.color ?? '').toLowerCase() as CourseColor)
-    ? ((parsed.color as string).toLowerCase() as CourseColor) : '';
+  // Normalize color from JSON: accept both 'blue' and 'BLUE' → store UPPERCASE
+  const rawColor = ((parsed.color as string) ?? '').toUpperCase() as CourseColor;
+  const color: CourseColor | '' = COLORS.includes(rawColor) ? rawColor : '';
   const contentType = CONTENT_TYPES.includes(parsed.contentType as CourseContentType)
     ? (parsed.contentType as CourseContentType) : '';
 
@@ -165,8 +166,12 @@ function SField({
 
 // ══ Color picker ══════════════════════════════════════════════════════════════
 const COLOR_CLASS: Record<CourseColor, string> = {
-  blue: 'bg-blue-500', emerald: 'bg-emerald-500', violet: 'bg-violet-500',
-  orange: 'bg-orange-500', rose: 'bg-rose-500', cyan: 'bg-cyan-500',
+  BLUE:    'bg-blue-500',
+  EMERALD: 'bg-emerald-500',
+  VIOLET:  'bg-violet-500',
+  ORANGE:  'bg-orange-500',
+  ROSE:    'bg-rose-500',
+  CYAN:    'bg-cyan-500',
 };
 function ColorPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
@@ -198,7 +203,6 @@ function InstructorPicker({
   const [search, setSearch]   = useState('');
   const [displayName, setDisplayName] = useState(value ? `ID: ${value.slice(0, 8)}…` : '');
 
-  // Fetch all ADMIN/INSTRUCTOR/CONTENT_CREATOR users — up to 100 per role
   const { data: adminData }   = useQuery({
     queryKey: ['users-picker', 'ADMIN'],
     queryFn: () => usersService.getAll({ role: 'ADMIN',           limit: 100 }),
@@ -215,7 +219,6 @@ function InstructorPicker({
     staleTime: 60_000,
   });
 
-  // Merge + deduplicate
   const allUsers = [
     ...(adminData?.data ?? []),
     ...(instrData?.data ?? []),
@@ -295,7 +298,6 @@ function InstructorPicker({
                 );
               })}
             </CommandList>
-            {/* Allow manual UUID entry fallback */}
             <div className='border-t p-2'>
               <p className='text-[10px] text-muted-foreground mb-1'>Or paste UUID directly:</p>
               <Input className='h-7 text-xs font-mono' placeholder='xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
@@ -421,7 +423,6 @@ export default function CourseImportPage() {
     mutationFn: async () => {
       if (!extracted || !canImport) throw new Error('Fill all required fields first');
 
-      // ─ Build DTO ──────────────────────────────────────────────────────────
       const dto: AdminCourseCreateDto = {
         title:          form.title,
         ar_title:       form.ar_title     || undefined,
@@ -431,26 +432,22 @@ export default function CourseImportPage() {
         difficulty:     form.difficulty   as CourseDifficulty,
         access:         form.access       as CourseAccess,
         category:       form.category     as CourseCategory,
-        color:          (form.color as string).toUpperCase() as any,  // backend = UPPERCASE
+        color:          form.color        as CourseColor,   // already UPPERCASE
         contentType:    form.contentType  as CourseContentType,
         instructorId:   form.instructorId,
         estimatedHours: form.estimatedHours ? Number(form.estimatedHours) : undefined,
       };
 
-      // ─ Create course ──────────────────────────────────────────────────────
-      // Use adminCoursesApi.create (adminApiClient) — returns full AdminCourse with id
       const course = await adminCoursesApi.create(dto);
 
       if (!course?.id) {
         throw new Error('Course created but backend returned no id — check API response');
       }
 
-      // ─ Save curriculum ────────────────────────────────────────────────────
       if (extracted.topics.length > 0) {
         try {
           await adminCoursesApi.saveCurriculum(course.id, extracted.topics);
         } catch (currErr: any) {
-          // Don't block navigation — course exists; show warning
           const msg = currErr?.response?.data?.message ?? currErr?.message ?? 'Unknown';
           toast.warning(`Course created ✓ but curriculum failed: ${Array.isArray(msg) ? msg.join(' · ') : msg}`);
           return course;
@@ -473,7 +470,6 @@ export default function CourseImportPage() {
 
   return (
     <div className='space-y-6 max-w-2xl'>
-      {/* Header */}
       <div className='flex items-center gap-4'>
         <Button variant='ghost' size='sm' className='gap-2'
           onClick={() => navigate(ROUTES.COURSES)}>
@@ -487,7 +483,6 @@ export default function CourseImportPage() {
         </div>
       </div>
 
-      {/* Upload / Paste */}
       <Card>
         <CardHeader>
           <CardTitle className='flex items-center gap-2 text-base'>
@@ -524,7 +519,6 @@ export default function CourseImportPage() {
 
       {extracted && <ParsedPreview ext={extracted} />}
 
-      {/* Form */}
       {extracted && (
         <Card>
           <CardHeader className='pb-3'>
@@ -541,7 +535,6 @@ export default function CourseImportPage() {
             )}
           </CardHeader>
           <CardContent className='space-y-4'>
-
             <div className='grid grid-cols-2 gap-4'>
               <div className='space-y-1.5'>
                 <Label className='text-sm'>Title EN <span className='text-destructive'>*</span></Label>
@@ -563,7 +556,6 @@ export default function CourseImportPage() {
               </div>
             </div>
 
-            {/* Instructor combobox — full width */}
             <InstructorPicker
               value={form.instructorId}
               onChange={(id) => set('instructorId', id)}
@@ -581,12 +573,10 @@ export default function CourseImportPage() {
             </div>
 
             <ColorPicker value={form.color} onChange={(v) => set('color', v as CourseColor)} />
-
           </CardContent>
         </Card>
       )}
 
-      {/* Actions */}
       <div className='flex items-center justify-end gap-3'>
         <Button variant='outline' onClick={() => navigate(ROUTES.COURSES)}>Cancel</Button>
         <Button disabled={!canImport || isPending} className='gap-2 min-w-[160px]'
