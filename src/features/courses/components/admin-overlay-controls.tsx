@@ -254,16 +254,22 @@ export function AdminOverlayControls({ course }: { course: AdminCourse }) {
   const CurrentIcon = currentOpt.icon;
   const currentLabel = isAr ? currentOpt.ar : currentOpt.en;
 
+  // ── preview ──────────────────────────────────────────────────────────────
+  // Uses /admin-preview/courses/:slug (public route in cyberlabs-frontend)
+  // instead of /courses/:slug which is protected by ProtectedRoute and
+  // requires the user to be logged-in, causing a 404 redirect for admins.
   const openPreview = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    const url = `${FRONTEND_BASE}/admin-preview/courses/${course.slug}`;
     if (!previewWindow.current || previewWindow.current.closed) {
       previewWindow.current = window.open(
-        `${FRONTEND_BASE}/courses/${course.slug}`,
+        url,
         `preview_${course.id}`,
         'width=1200,height=800',
       );
     } else {
+      previewWindow.current.location.href = url;
       previewWindow.current.focus();
     }
   };
