@@ -1,61 +1,67 @@
 // src/features/courses/components/new-course-dialog.tsx
-// Dialog shown when admin clicks "Add Course" — lets them choose between
-// building from scratch OR importing a curriculum JSON file.
+import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { FileJson, Pencil } from 'lucide-react';
+import { toast } from 'sonner';
+import { Plus, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input }  from '@/components/ui/input';
+import { Label }  from '@/components/ui/label';
 import {
-  Dialog, DialogContent, DialogHeader,
-  DialogTitle, DialogDescription,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog';
+// ✅ barrel imports
+import { adminCoursesApi } from '../services/admin-courses.api';
 import { ROUTES } from '@/shared/constants';
 
-interface Props {
-  open: boolean;
-  onClose: () => void;
-}
+export function NewCourseDialog() {
+  const [open,  setOpen]  = useState(false);
+  const [title, setTitle] = useState('');
+  const [slug,  setSlug]  = useState('');
+  const navigate      = useNavigate();
+  const queryClient   = useQueryClient();
 
-export function NewCourseDialog({ open, onClose }: Props) {
-  const navigate = useNavigate();
+  const { mutate, isPending } = useMutation({
+    mutationFn: () => adminCoursesApi.create({ title: title.trim(), slug: slug.trim() }),
+    onSuccess: (course) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
+      toast.success(`Course "${course.title}" created!`);
+      setOpen(false); setTitle(''); setSlug('');
+      navigate(ROUTES.COURSE_EDIT(course.slug));
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message ?? 'Failed to create course';
+      toast.error(Array.isArray(msg) ? msg.join(' • ') : msg);
+    },
+  });
 
-  const go = (path: string) => { onClose(); navigate(path); };
+  const handleSlug = (raw: string) => setSlug(raw.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-'));
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className='gap-2'><Plus className='h-4 w-4' />New Course</Button>
+      </DialogTrigger>
       <DialogContent className='sm:max-w-md'>
-        <DialogHeader>
-          <DialogTitle className='text-lg font-bold'>إضافة كورس جديد</DialogTitle>
-          <DialogDescription className='text-sm text-muted-foreground'>
-            اختر طريقة إنشاء الكورس
-          </DialogDescription>
-        </DialogHeader>
-        <div className='grid grid-cols-2 gap-4 pt-2'>
-          {/* Build from scratch */}
-          <button
-            onClick={() => go(ROUTES.COURSE_CREATE)}
-            className='group flex flex-col items-center gap-3 rounded-xl border-2 border-border bg-muted/20 p-6 text-center transition-all hover:border-primary hover:bg-primary/5'
-          >
-            <div className='flex h-12 w-12 items-center justify-center rounded-full border-2 border-border bg-background transition-colors group-hover:border-primary group-hover:bg-primary/10'>
-              <Pencil className='h-5 w-5 text-muted-foreground transition-colors group-hover:text-primary' />
-            </div>
-            <div>
-              <p className='font-semibold text-sm'>بناء من الصفر</p>
-              <p className='text-xs text-muted-foreground mt-0.5'>إنشاء كورس فارغ وملء البيانات يدويًا</p>
-            </div>
-          </button>
-
-          {/* Import JSON */}
-          <button
-            onClick={() => go('/courses/import')}
-            className='group flex flex-col items-center gap-3 rounded-xl border-2 border-border bg-muted/20 p-6 text-center transition-all hover:border-primary hover:bg-primary/5'
-          >
-            <div className='flex h-12 w-12 items-center justify-center rounded-full border-2 border-border bg-background transition-colors group-hover:border-primary group-hover:bg-primary/10'>
-              <FileJson className='h-5 w-5 text-muted-foreground transition-colors group-hover:text-primary' />
-            </div>
-            <div>
-              <p className='font-semibold text-sm'>استيراد JSON</p>
-              <p className='text-xs text-muted-foreground mt-0.5'>رفع ملف JSON لإنشاء الكورس تلقائيًا</p>
-            </div>
-          </button>
+        <DialogHeader><DialogTitle>Create New Course</DialogTitle></DialogHeader>
+        <div className='space-y-4 pt-2'>
+          <div className='space-y-1.5'>
+            <Label>Course Title</Label>
+            <Input placeholder='e.g. Web Security Fundamentals' value={title}
+              onChange={(e) => { setTitle(e.target.value); handleSlug(e.target.value); }} />
+          </div>
+          <div className='space-y-1.5'>
+            <Label>Slug (URL)</Label>
+            <Input placeholder='e.g. web-security-fundamentals' value={slug} onChange={(e) => handleSlug(e.target.value)}
+              className='font-mono text-sm' />
+            <p className='text-xs text-muted-foreground'>/courses/<span className='text-primary'>{slug || '…'}</span></p>
+          </div>
+          <div className='flex gap-2 pt-2'>
+            <Button variant='outline' className='flex-1' onClick={() => setOpen(false)} disabled={isPending}>Cancel</Button>
+            <Button className='flex-1 gap-2' onClick={() => mutate()} disabled={isPending || !title.trim() || !slug.trim()}>
+              {isPending ? <><Loader2 className='h-4 w-4 animate-spin' />Creating…</> : <><Plus className='h-4 w-4' />Create</>}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
