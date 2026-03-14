@@ -21,9 +21,12 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { MatrixRain } from '@/shared/components/common/matrix-rain';
-import { adminCoursesApi } from '../services/admin-courses.api';
-import CourseElementRenderer from './CourseElementRenderer';
-import type { AdminCourse, CurriculumTopic } from '../types/admin-course.types';
+import { adminCoursesApi } from '../../services/admin-courses.api';
+import CourseElementRenderer from '../CourseElementRenderer';
+import type {
+  AdminCourse,
+  CurriculumTopic,
+} from '../../types/admin-course.types';
 
 // ── Color maps ──────────────────────────────────────────────────────
 const MATRIX_COLOR: Record<string, string> = {

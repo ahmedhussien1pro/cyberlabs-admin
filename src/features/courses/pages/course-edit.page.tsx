@@ -12,7 +12,7 @@ import { ROUTES } from '@/shared/constants';
 import { CardInfoTab } from '../components/edit-tabs/card-info-tab';
 import { HeroInfoTab } from '../components/edit-tabs/hero-info-tab';
 import { CurriculumPlatformEditor } from '../components/curriculum-platform-editor';
-import { CoursePlatformPreviewTab } from '../components/course-preview-tab';
+import { CoursePlatformPreviewTab } from '../components/edit-tabs/course-preview-tab';
 
 const VALID_TABS = ['card', 'hero', 'curriculum', 'preview'] as const;
 type TabValue = (typeof VALID_TABS)[number];
@@ -76,7 +76,8 @@ export default function CourseEditPage() {
         <Alert variant='destructive' className='max-w-md'>
           <AlertCircle className='h-4 w-4' />
           <AlertDescription>
-            Could not load course <code className='font-mono text-xs'>{slug}</code>
+            Could not load course{' '}
+            <code className='font-mono text-xs'>{slug}</code>
             {msg ? `: ${msg}` : ''}
           </AlertDescription>
         </Alert>
@@ -100,7 +101,9 @@ export default function CourseEditPage() {
         </Button>
         <div className='flex-1 min-w-0'>
           <h1 className='text-xl font-bold truncate'>{course.title}</h1>
-          <p className='text-xs text-muted-foreground font-mono'>{course.slug}</p>
+          <p className='text-xs text-muted-foreground font-mono'>
+            {course.slug}
+          </p>
         </div>
         <span
           className={[

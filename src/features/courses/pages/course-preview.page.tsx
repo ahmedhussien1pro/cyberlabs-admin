@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Shield, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { adminCoursesApi } from '../services/admin-courses.api';
-import { CoursePlatformPreviewTab } from '../components/course-preview-tab';
+import { CoursePlatformPreviewTab } from '../components/edit-tabs/course-preview-tab';
 
 export default function CoursePreviewPage() {
   const { slug = '' } = useParams<{ slug: string }>();
