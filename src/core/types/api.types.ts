@@ -319,6 +319,27 @@ export interface UpdateLabRequest extends Partial<CreateLabRequest> {}
 // ─── Learning Path Types ───────────────────────────────────────────────────────
 export type PathModuleType = 'COURSE' | 'LAB';
 export type PathModuleStatus = 'PUBLISHED' | 'DRAFT' | 'COMING_SOON';
+export type PathColor = 'BLUE' | 'EMERALD' | 'VIOLET' | 'ORANGE' | 'ROSE' | 'CYAN';
+export type PathDifficulty = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+
+// Icon names used in the frontend to render path icons (Lucide icon names)
+export type PathIconName =
+  | 'shield'
+  | 'eye'
+  | 'crosshair'
+  | 'flame'
+  | 'globe'
+  | 'cloud'
+  | 'lock'
+  | 'terminal'
+  | 'cpu'
+  | 'wifi'
+  | 'database'
+  | 'bug'
+  | 'code'
+  | 'map'
+  | 'target'
+  | 'zap';
 
 export interface PathModule {
   id: string;
@@ -379,13 +400,36 @@ export interface PathStats {
 }
 
 export interface CreatePathRequest {
+  // ── Required ──
   title: string;
   slug: string;
+  // ── Bilingual ──
   ar_title?: string;
   description?: string;
   ar_description?: string;
+  longDescription?: string;
+  ar_longDescription?: string;
+  // ── Visual ──
+  iconName?: PathIconName;
+  color?: PathColor;
   thumbnail?: string;
+  // ── Classification ──
+  difficulty?: PathDifficulty;
+  estimatedHours?: number;
+  order?: number;
+  // ── Tags / Skills / Prerequisites ──
+  tags?: string[];
+  ar_tags?: string[];
+  skills?: string[];
+  ar_skills?: string[];
+  prerequisites?: string[];
+  ar_prerequisites?: string[];
+  // ── Flags ──
   isPublished?: boolean;
+  isFeatured?: boolean;
+  isNew?: boolean;
+  isComingSoon?: boolean;
+  // ── Modules ──
   modules?: Array<{
     title: string;
     ar_title?: string;
