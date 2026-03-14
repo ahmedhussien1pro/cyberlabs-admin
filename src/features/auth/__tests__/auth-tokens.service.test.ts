@@ -1,10 +1,14 @@
 // src/features/auth/__tests__/auth-tokens.service.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock js-cookie before importing the service
-const mockSet    = vi.fn();
-const mockGet    = vi.fn();
-const mockRemove = vi.fn();
+// vi.mock is hoisted to the top of the file by Vitest.
+// Variables defined with vi.hoisted() are also hoisted, so they are safe to
+// reference inside the vi.mock factory.
+const { mockSet, mockGet, mockRemove } = vi.hoisted(() => ({
+  mockSet:    vi.fn(),
+  mockGet:    vi.fn(),
+  mockRemove: vi.fn(),
+}));
 
 vi.mock('js-cookie', () => ({
   default: { set: mockSet, get: mockGet, remove: mockRemove },
@@ -33,7 +37,7 @@ describe('authTokenService.save', () => {
 
   it('does NOT set refresh_token when not provided', () => {
     authTokenService.save('tok_only');
-    const calls = (mockSet as any).mock.calls.map((c: any) => c[0]);
+    const calls = mockSet.mock.calls.map((c) => c[0]);
     expect(calls).not.toContain('refresh_token');
   });
 });
@@ -69,7 +73,7 @@ describe('authTokenService — security', () => {
 
   it('access token expires in 7 days, refresh in 30', () => {
     authTokenService.save('tok', 'ref');
-    const calls: any[][] = (mockSet as any).mock.calls;
+    const calls = mockSet.mock.calls;
     const accessCall  = calls.find((c) => c[0] === 'access_token');
     const refreshCall = calls.find((c) => c[0] === 'refresh_token');
     expect(accessCall?.[2]).toMatchObject({ expires: 7  });
