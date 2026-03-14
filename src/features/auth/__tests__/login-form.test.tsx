@@ -7,7 +7,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { LoginForm } from '../components/login-form';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
-const mockNavigate   = vi.fn();
+const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async (orig) => ({
   ...(await orig<typeof import('react-router-dom')>()),
   useNavigate: () => mockNavigate,
@@ -17,11 +17,11 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (_: string, fallback: string) => fallback }),
 }));
 
-const mockLogin       = vi.fn();
-const mockVerify      = vi.fn();
-const mockSetUser     = vi.fn();
-const mockTokenSave   = vi.fn();
-const mockTokenClear  = vi.fn();
+const mockLogin      = vi.fn();
+const mockVerify     = vi.fn();
+const mockSetUser    = vi.fn();
+const mockTokenSave  = vi.fn();
+const mockTokenClear = vi.fn();
 
 vi.mock('@/core/api/services', () => ({
   authService: {
@@ -41,10 +41,10 @@ vi.mock('../services/auth-tokens.service', () => ({
   },
 }));
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-// Selectors that match the actual DOM (Labels are sr-only, tied by htmlFor)
-const getEmail    = () => screen.getByLabelText(/email/i);
-const getPassword = () => screen.getByLabelText(/password/i);
+// ── Helpers ─────────────────────────────────────────────────────────────────
+// Use exact: true to avoid matching "Show password" button aria-label
+const getEmail    = () => screen.getByLabelText('Email', { exact: true });
+const getPassword = () => screen.getByLabelText('Password', { exact: true });
 const getSubmit   = () => screen.getByRole('button', { name: /sign in/i });
 const getForm     = () => screen.getByRole('form', { name: /login form/i });
 
@@ -63,7 +63,7 @@ function renderForm() {
 
 beforeEach(() => vi.clearAllMocks());
 
-// ── Tests ──────────────────────────────────────────────────────────────────
+// ── Tests ────────────────────────────────────────────────────────────────────
 describe('LoginForm — rendering', () => {
   it('renders email, password fields and submit button', () => {
     renderForm();
