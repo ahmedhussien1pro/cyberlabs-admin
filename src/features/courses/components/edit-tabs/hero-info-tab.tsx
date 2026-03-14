@@ -3,13 +3,14 @@
 // ✅ Toast validation for required fields before save
 // ✅ Preview dialog — hero styled exactly like CoursePlatformPreviewTab
 // ✅ Language driven by admin topbar (i18n.language)
+// ✅ instructorId field added — pre-filled, editable, sent in update payload
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   Save, Eye, AlertTriangle, X,
   BookOpen, Clock, Shield, FlaskConical,
-  Crown, Unlock, Gem, Rocket, Heart, Users,
+  Crown, Unlock, Gem, Rocket, Heart, Users, UserCog,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -96,6 +97,7 @@ interface FormState {
   longDescription:    string;
   ar_longDescription: string;
   labsLink:           string;
+  instructorId:       string;
   skills:             string[];
   ar_skills:          string[];
   topics:             string[];
@@ -111,6 +113,9 @@ const REQUIRED_HERO: Array<{ key: keyof FormState; label: string; labelAr: strin
 ];
 
 const STATE_OPTIONS = ['DRAFT', 'PUBLISHED', 'COMING_SOON'];
+
+// UUID regex for soft validation hint
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // ── TagsInput ────────────────────────────────────────────────────────────────────
 function TagsInput({
@@ -369,6 +374,7 @@ export function HeroInfoTab({ course, onSaved }: Props) {
     longDescription:    course.longDescription    ?? '',
     ar_longDescription: course.ar_longDescription ?? '',
     labsLink:           course.labsLink           ?? '',
+    instructorId:       course.instructorId       ?? '',
     skills:             [...(course.skills             ?? [])],
     ar_skills:          [...(course.ar_skills          ?? [])],
     topics:             [...(course.topics             ?? [])],
@@ -417,6 +423,7 @@ export function HeroInfoTab({ course, onSaved }: Props) {
       longDescription:    form.longDescription    || null,
       ar_longDescription: form.ar_longDescription || null,
       labsLink:           form.labsLink           || null,
+      instructorId:       form.instructorId       || null,
       skills:             form.skills,
       ar_skills:          form.ar_skills,
       topics:             form.topics,
@@ -434,6 +441,8 @@ export function HeroInfoTab({ course, onSaved }: Props) {
 
   const handleSave = () => { if (validate()) mut.mutate(); };
   const lbl = (en: string, ar: string) => isAr ? ar : en;
+
+  const instructorIdInvalid = form.instructorId.length > 0 && !UUID_RE.test(form.instructorId);
 
   return (
     <div className='space-y-6' dir={isAr ? 'rtl' : 'ltr'}>
@@ -561,6 +570,55 @@ export function HeroInfoTab({ course, onSaved }: Props) {
               <Input value={form.thumbnail} onChange={(e) => set('thumbnail', e.target.value)} placeholder='https://...' />
               {form.thumbnail && <img src={form.thumbnail} alt='' className='mt-1 h-20 rounded-lg object-cover border border-border' />}
             </div>
+          </div>
+
+          {/* Instructor ID */}
+          <div className='space-y-1.5'>
+            <Label className='text-xs flex items-center gap-1.5'>
+              <UserCog className='h-3.5 w-3.5 text-muted-foreground' />
+              {lbl('Instructor ID', 'معرف المدرب')}
+              <span className='text-muted-foreground font-normal'>(UUID)</span>
+            </Label>
+            <div className='flex items-center gap-2'>
+              <Input
+                dir='ltr'
+                value={form.instructorId}
+                onChange={(e) => set('instructorId', e.target.value.trim())}
+                placeholder='xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+                className={cn(
+                  'font-mono text-xs',
+                  instructorIdInvalid && 'border-amber-500/60 focus-visible:ring-amber-500/40',
+                )}
+              />
+              {form.instructorId && (
+                <Button
+                  type='button'
+                  variant='ghost'
+                  size='icon'
+                  className='shrink-0 h-9 w-9 text-muted-foreground hover:text-destructive'
+                  onClick={() => set('instructorId', '')}
+                  title={lbl('Clear', 'مسح')}
+                >
+                  <X className='h-4 w-4' />
+                </Button>
+              )}
+            </div>
+            {instructorIdInvalid && (
+              <p className='text-[11px] text-amber-500 flex items-center gap-1'>
+                <AlertTriangle className='h-3 w-3' />
+                {lbl('Not a valid UUID format', 'صيغة UUID غير صحيحة')}
+              </p>
+            )}
+            {form.instructorId && UUID_RE.test(form.instructorId) && (
+              <p className='text-[11px] text-emerald-500/80 flex items-center gap-1'>
+                ✔ {lbl('Valid UUID', 'UUID صحيح')}
+              </p>
+            )}
+            {!form.instructorId && (
+              <p className='text-[11px] text-muted-foreground/50'>
+                {lbl('Leave empty to unassign instructor', 'اتركه فارغاً لإلغاء تعيين المدرب')}
+              </p>
+            )}
           </div>
 
           {/* Flags */}
@@ -712,15 +770,16 @@ export function HeroInfoTab({ course, onSaved }: Props) {
               {lbl('Pending changes', 'التغييرات المعلقة')}
             </p>
             {([
-              { label: lbl('Title EN',    'عنوان EN'),        old: course.title,              cur: form.title },
-              { label: lbl('Title AR',    'عنوان AR'),        old: course.ar_title,           cur: form.ar_title },
-              { label: lbl('Color',       'اللون'),           old: (course.color ?? '').toLowerCase(), cur: form.color },
-              { label: lbl('Access',      'الوصول'),         old: course.access,             cur: form.access },
-              { label: lbl('Difficulty',  'المستوى'),       old: course.difficulty,         cur: form.difficulty },
-              { label: lbl('State',       'الحالة'),           old: course.state,              cur: form.state },
-              { label: lbl('Hours',       'ساعات'),           old: String(course.estimatedHours ?? 0), cur: form.estimatedHours },
-              { label: 'isNew',            old: String(course.isNew ?? false),      cur: String(form.isNew) },
-              { label: 'isFeatured',       old: String(course.isFeatured ?? false), cur: String(form.isFeatured) },
+              { label: lbl('Title EN',       'عنوان EN'),        old: course.title,                          cur: form.title },
+              { label: lbl('Title AR',       'عنوان AR'),        old: course.ar_title,                       cur: form.ar_title },
+              { label: lbl('Color',          'اللون'),           old: (course.color ?? '').toLowerCase(),    cur: form.color },
+              { label: lbl('Access',         'الوصول'),          old: course.access,                         cur: form.access },
+              { label: lbl('Difficulty',     'المستوى'),         old: course.difficulty,                     cur: form.difficulty },
+              { label: lbl('State',          'الحالة'),          old: course.state,                          cur: form.state },
+              { label: lbl('Hours',          'ساعات'),           old: String(course.estimatedHours ?? 0),    cur: form.estimatedHours },
+              { label: lbl('Instructor ID',  'معرف المدرب'),     old: course.instructorId ?? '',             cur: form.instructorId },
+              { label: 'isNew',               old: String(course.isNew ?? false),                             cur: String(form.isNew) },
+              { label: 'isFeatured',          old: String(course.isFeatured ?? false),                        cur: String(form.isFeatured) },
             ] as Array<{ label: string; old: string | undefined | null; cur: string }>)
               .filter((r) => (r.old ?? '') !== r.cur)
               .map((r) => (
