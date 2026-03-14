@@ -35,13 +35,13 @@ import {
 import { cn } from '@/lib/utils';
 import { adminCoursesApi } from '../services/admin-courses.api';
 import { ROUTES } from '@/shared/constants';
-import { ENV } from '@/shared/constants/env';
 import type { AdminCourse, CourseState } from '../types/admin-course.types';
-import { tokenManager } from '@/features/auth/utils/token-manager.util';
 
 const FRONTEND_BASE =
-  (ENV.FRONTEND_URL as string | undefined)?.replace(/\/$/, '') ??
-  'http://localhost:5173';
+  (import.meta.env.VITE_FRONTEND_URL as string | undefined)?.replace(
+    /\/$/,
+    '',
+  ) ?? 'http://localhost:5174';
 
 const STATE_OPTIONS: {
   value: CourseState;
@@ -53,21 +53,21 @@ const STATE_OPTIONS: {
   {
     value: 'PUBLISHED',
     en: 'Published',
-    ar: '\u0645\u0646\u0634\u0648\u0631',
+    ar: 'منشور',
     icon: Globe,
     color: 'text-emerald-400',
   },
   {
     value: 'COMING_SOON',
     en: 'Coming Soon',
-    ar: '\u0642\u0631\u064a\u0628\u0627\u064b',
+    ar: 'قريباً',
     icon: Clock,
     color: 'text-blue-400',
   },
   {
     value: 'DRAFT',
     en: 'Draft',
-    ar: '\u0645\u0633\u0648\u062f\u0629',
+    ar: 'مسودة',
     icon: EyeOff,
     color: 'text-zinc-400',
   },
@@ -95,7 +95,6 @@ export function AdminOverlayControls({ course }: { course: AdminCourse }) {
   const queryClient = useQueryClient();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [previewLoading, setPreviewLoading] = useState(false);
   const previewWindow = useRef<Window | null>(null);
 
   useEffect(() => {
@@ -122,7 +121,7 @@ export function AdminOverlayControls({ course }: { course: AdminCourse }) {
     [queryClient],
   );
 
-  // ── setState (optimistic) ──────────────────────────────────────────
+  // ── setState (optimistic) ────────────────────────────────────────────────
   const stateMutation = useMutation({
     mutationFn: (s: CourseState) => adminCoursesApi.setState(course.id, s),
     onMutate: async (next) => {
@@ -174,26 +173,26 @@ export function AdminOverlayControls({ course }: { course: AdminCourse }) {
     onError: (_e: any, _v: any, ctx: any) => {
       ctx?.listSnap?.forEach(([k, v]: any) => queryClient.setQueryData(k, v));
       ctx?.statsSnap?.forEach(([k, v]: any) => queryClient.setQueryData(k, v));
-      toast.error(isAr ? '\u0641\u0634\u0644 \u062a\u062d\u062f\u064a\u062b \u0627\u0644\u062d\u0627\u0644\u0629' : 'Failed to update state');
+      toast.error(isAr ? 'فشل تحديث الحالة' : 'Failed to update state');
     },
   });
 
-  // ── duplicate ──────────────────────────────────────────────
+  // ── duplicate ────────────────────────────────────────────────────────────
   const duplicateMutation = useMutation<AdminCourse, Error, void>({
     mutationFn: () => adminCoursesApi.duplicate(course.id),
     onSuccess: (c) => {
       toast.success(
-        isAr ? `\u062a\u0645 \u062a\u0643\u0631\u0627\u0631 "${course.title}"` : `"${course.title}" duplicated`,
+        isAr ? `تم تكرار "${course.title}"` : `"${course.title}" duplicated`,
       );
       invalidateList();
       refetchStats();
       navigate(ROUTES.COURSE_EDIT(c.slug ?? c.id));
     },
     onError: () =>
-      toast.error(isAr ? '\u0641\u0634\u0644 \u062a\u0643\u0631\u0627\u0631 \u0627\u0644\u0643\u0648\u0631\u0633' : 'Failed to duplicate course'),
+      toast.error(isAr ? 'فشل تكرار الكورس' : 'Failed to duplicate course'),
   });
 
-  // ── delete ──────────────────────────────────────────────────
+  // ── delete ───────────────────────────────────────────────────────────────
   const deleteMutation = useMutation<void, Error, void>({
     mutationFn: () => adminCoursesApi.delete(course.id),
     onMutate: async () => {
@@ -237,7 +236,7 @@ export function AdminOverlayControls({ course }: { course: AdminCourse }) {
     },
     onSuccess: () => {
       toast.success(
-        isAr ? `\u062a\u0645 \u062d\u0630\u0641 "${course.title}"` : `"${course.title}" deleted`,
+        isAr ? `تم حذف "${course.title}"` : `"${course.title}" deleted`,
       );
       invalidateList();
       refetchStats();
@@ -246,7 +245,7 @@ export function AdminOverlayControls({ course }: { course: AdminCourse }) {
     onError: (_e: any, _v: any, ctx: any) => {
       ctx?.listSnap?.forEach(([k, v]: any) => queryClient.setQueryData(k, v));
       ctx?.statsSnap?.forEach(([k, v]: any) => queryClient.setQueryData(k, v));
-      toast.error(isAr ? '\u0641\u0634\u0644 \u062d\u0630\u0641 \u0627\u0644\u0643\u0648\u0631\u0633' : 'Failed to delete course');
+      toast.error(isAr ? 'فشل حذف الكورس' : 'Failed to delete course');
     },
   });
 
@@ -255,45 +254,17 @@ export function AdminOverlayControls({ course }: { course: AdminCourse }) {
   const CurrentIcon = currentOpt.icon;
   const currentLabel = isAr ? currentOpt.ar : currentOpt.en;
 
-  // ── openPreview: read tokens → open frontend /admin-preview/courses/:slug ──
-  const openPreview = async (e: React.MouseEvent) => {
+  const openPreview = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
-    if (previewLoading) return;
-
-    try {
-      setPreviewLoading(true);
-
-      const at = await tokenManager.getAccessToken();
-      const rt = await tokenManager.getRefreshToken();
-
-      if (!at || !rt) {
-        toast.error(
-          isAr
-            ? '\u062a\u0639\u0630\u0651\u0631 \u062c\u0644\u0628 \u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u062c\u0644\u0633\u0629'
-            : 'Could not read session tokens – please re-login',
-        );
-        return;
-      }
-
-      const url = `${FRONTEND_BASE}/admin-preview/courses/${course.slug}?at=${encodeURIComponent(at)}&rt=${encodeURIComponent(rt)}`;
-
-      if (!previewWindow.current || previewWindow.current.closed) {
-        previewWindow.current = window.open(
-          url,
-          `preview_${course.id}`,
-          'width=1280,height=900,noopener',
-        );
-      } else {
-        previewWindow.current.location.href = url;
-        previewWindow.current.focus();
-      }
-    } catch (err) {
-      console.error('openPreview error', err);
-      toast.error(isAr ? '\u062d\u062f\u062b \u062e\u0637\u0623 \u0623\u062b\u0646\u0627\u0621 \u0641\u062a\u062d \u0627\u0644\u0645\u0639\u0627\u064a\u0646\u0629' : 'Failed to open preview');
-    } finally {
-      setPreviewLoading(false);
+    if (!previewWindow.current || previewWindow.current.closed) {
+      previewWindow.current = window.open(
+        `${FRONTEND_BASE}/courses/${course.slug}`,
+        `preview_${course.id}`,
+        'width=1200,height=800',
+      );
+    } else {
+      previewWindow.current.focus();
     }
   };
 
@@ -319,7 +290,7 @@ export function AdminOverlayControls({ course }: { course: AdminCourse }) {
             navigate(ROUTES.COURSE_EDIT(course.slug));
           }}>
           <Pencil className='h-3.5 w-3.5' />
-          {isAr ? '\u062a\u0639\u062f\u064a\u0644' : 'Edit'}
+          {isAr ? 'تعديل' : 'Edit'}
         </Button>
 
         {/* Preview */}
@@ -327,14 +298,9 @@ export function AdminOverlayControls({ course }: { course: AdminCourse }) {
           size='sm'
           variant='outline'
           className='h-8 w-8 p-0 border-white/20 bg-white/5 text-white/70 hover:bg-white/15 hover:text-white'
-          title={isAr ? '\u0645\u0639\u0627\u064a\u0646\u0629' : 'Preview'}
-          disabled={previewLoading}
+          title={isAr ? 'معاينة' : 'Preview'}
           onClick={openPreview}>
-          {previewLoading ? (
-            <Loader2 className='h-3.5 w-3.5 animate-spin' />
-          ) : (
-            <Eye className='h-3.5 w-3.5' />
-          )}
+          <Eye className='h-3.5 w-3.5' />
         </Button>
 
         {/* Duplicate */}
@@ -342,7 +308,7 @@ export function AdminOverlayControls({ course }: { course: AdminCourse }) {
           size='sm'
           variant='outline'
           className='h-8 w-8 p-0 border-white/20 bg-white/5 text-white/70 hover:bg-white/15 hover:text-white'
-          title={isAr ? '\u062a\u0643\u0631\u0627\u0631' : 'Duplicate'}
+          title={isAr ? 'تكرار' : 'Duplicate'}
           disabled={duplicateMutation.isPending}
           onClick={(e) => {
             e.preventDefault();
@@ -361,7 +327,7 @@ export function AdminOverlayControls({ course }: { course: AdminCourse }) {
           size='sm'
           variant='outline'
           className='h-8 w-8 p-0 border-red-500/30 bg-red-500/5 text-red-400 hover:bg-red-500/20 hover:text-red-300'
-          title={isAr ? '\u062d\u0630\u0641' : 'Delete'}
+          title={isAr ? 'حذف' : 'Delete'}
           disabled={deleteMutation.isPending}
           onClick={(e) => {
             e.preventDefault();
@@ -433,17 +399,17 @@ export function AdminOverlayControls({ course }: { course: AdminCourse }) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {isAr ? `\u062d\u0630\u0641 "${course.title}"\u061f` : `Delete "${course.title}"?`}
+              {isAr ? `حذف "${course.title}"؟` : `Delete "${course.title}"?`}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {isAr
-                ? '\u0633\u064a\u0624\u062f\u064a \u0647\u0630\u0627 \u0625\u0644\u0649 \u062d\u0630\u0641 \u0627\u0644\u0643\u0648\u0631\u0633 \u0648\u062c\u0645\u064a\u0639 \u0628\u064a\u0627\u0646\u0627\u062a\u0647 \u0646\u0647\u0627\u0626\u064a\u0627\u064b. \u0644\u0627 \u064a\u0645\u0643\u0646 \u0627\u0644\u062a\u0631\u0627\u062c\u0639.'
+                ? 'سيؤدي هذا إلى حذف الكورس وجميع بياناته نهائياً. لا يمكن التراجع.'
                 : 'This will permanently delete the course and all its data. This action cannot be undone.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteMutation.isPending}>
-              {isAr ? '\u0625\u0644\u063a\u0627\u0621' : 'Cancel'}
+              {isAr ? 'إلغاء' : 'Cancel'}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
@@ -455,10 +421,10 @@ export function AdminOverlayControls({ course }: { course: AdminCourse }) {
               {deleteMutation.isPending ? (
                 <>
                   <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                  {isAr ? '\u062c\u0627\u0631\u0650 \u0627\u0644\u062d\u0630\u0641\u2026' : 'Deleting\u2026'}
+                  {isAr ? 'جارٍ الحذف…' : 'Deleting…'}
                 </>
               ) : isAr ? (
-                '\u062d\u0630\u0641 \u0627\u0644\u0643\u0648\u0631\u0633'
+                'حذف الكورس'
               ) : (
                 'Delete Course'
               )}
