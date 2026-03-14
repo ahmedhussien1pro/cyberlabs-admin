@@ -4,6 +4,7 @@
 // ✅ Preview dialog — hero styled exactly like CoursePlatformPreviewTab
 // ✅ Language driven by admin topbar (i18n.language)
 // ✅ instructorId field added — pre-filled, editable, sent in update payload
+// ✅ color stored lowercase in form (for UI maps), sent UPPERCASE to backend
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -81,6 +82,7 @@ interface Props { course: AdminCourse; onSaved: () => void; }
 interface FormState {
   title:              string;
   ar_title:           string;
+  /** stored lowercase internally for UI color maps; sent .toUpperCase() to backend */
   color:              string;
   image:              string;
   thumbnail:          string;
@@ -182,13 +184,8 @@ function LiveHeroPreview({ form, course, isAr }: {
     <div className='rounded-xl overflow-hidden border border-border/50 bg-background' dir={isAr ? 'rtl' : 'ltr'}>
       {/* ━━━ HERO ━━━ */}
       <section className='relative overflow-hidden border-b border-white/8 bg-zinc-950'>
-        {/* Color stripe */}
         <div className={cn('absolute inset-x-0 top-0 z-[3] h-[3px]', STRIPE[col] ?? 'bg-blue-500')} />
-
-        {/* MatrixRain — same as frontend */}
         <MatrixRain color={matrixHex} opacity={0.07} speed={6} />
-
-        {/* Bloom */}
         <div
           aria-hidden
           className={cn(
@@ -196,21 +193,15 @@ function LiveHeroPreview({ form, course, isAr }: {
             BLOOM[col] ?? 'bg-blue-500',
           )}
         />
-
-        {/* Content */}
         <div className='container relative z-[4] mx-auto px-4'>
           <div className='py-6'>
-            {/* Breadcrumb */}
             <nav className='mb-4 flex items-center gap-1 text-[11px] text-white/35'>
               <span>{isAr ? 'الكورسات' : 'Courses'}</span>
               <span className='mx-1 text-white/20'>/</span>
               <span className='truncate text-white/65'>{title || (isAr ? 'عنوان الكورس' : 'Course Title')}</span>
             </nav>
-
-            {/* Icon + Text row */}
             <div className='flex flex-col gap-5 min-w-0'>
               <div className='flex items-start gap-4'>
-                {/* Thumbnail */}
                 <div className='hidden sm:block shrink-0'>
                   <div className='h-14 w-14 shrink-0 overflow-hidden rounded-2xl ring-1 ring-white/10'>
                     {imgSrc ? (
@@ -227,10 +218,7 @@ function LiveHeroPreview({ form, course, isAr }: {
                     )}
                   </div>
                 </div>
-
-                {/* Text block */}
                 <div className='min-w-0 flex-1 space-y-2'>
-                  {/* Badges */}
                   <div className='flex flex-wrap items-center gap-1.5'>
                     <Badge
                       variant='outline'
@@ -259,13 +247,9 @@ function LiveHeroPreview({ form, course, isAr }: {
                       </span>
                     )}
                   </div>
-
-                  {/* Title */}
                   <h1 className='text-xl font-black leading-tight tracking-tight text-white sm:text-2xl'>
                     {title || <span className='opacity-30 italic'>{isAr ? 'عنوان الكورس' : 'Course Title'}</span>}
                   </h1>
-
-                  {/* Description */}
                   {desc && (
                     <p className='mt-2 max-w-2xl text-sm leading-relaxed text-white/60'>{desc}</p>
                   )}
@@ -273,8 +257,6 @@ function LiveHeroPreview({ form, course, isAr }: {
               </div>
             </div>
           </div>
-
-          {/* Bottom stats bar */}
           <div className='flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-white/10 py-3'>
             <div className='flex flex-wrap items-center gap-x-5 gap-y-1.5'>
               {(course.totalTopics ?? 0) > 0 && (
@@ -308,7 +290,6 @@ function LiveHeroPreview({ form, course, isAr }: {
         </div>
       </section>
 
-      {/* Long description preview */}
       {(isAr ? form.ar_longDescription : form.longDescription) && (
         <div className='px-5 pt-6'>
           <div className='p-4 rounded-xl border border-border/40 bg-muted/20'>
@@ -319,7 +300,6 @@ function LiveHeroPreview({ form, course, isAr }: {
         </div>
       )}
 
-      {/* Skills / Prerequisites teaser */}
       {(form.skills.length > 0 || form.prerequisites.length > 0) && (
         <div className='bg-zinc-900/60 px-5 py-3 flex flex-wrap gap-4 border-t border-white/5 mt-4'>
           {form.skills.length > 0 && (
@@ -358,6 +338,7 @@ export function HeroInfoTab({ course, onSaved }: Props) {
   const [form, setForm] = useState<FormState>({
     title:              course.title              ?? '',
     ar_title:           course.ar_title           ?? '',
+    // store lowercase so UI color-maps (MATRIX_COLOR, STRIPE …) work correctly
     color:              (course.color             ?? 'blue').toLowerCase(),
     image:              course.image              ?? '',
     thumbnail:          course.thumbnail          ?? '',
@@ -407,7 +388,8 @@ export function HeroInfoTab({ course, onSaved }: Props) {
 
   const mut = useMutation({
     mutationFn: () => adminCoursesApi.update(course.id, {
-      color:              form.color              as any,
+      // ✅ backend expects UPPERCASE enum — convert here, keep lowercase in form state
+      color:              form.color.toUpperCase() as any,
       image:              form.image              || null,
       thumbnail:          form.thumbnail          || null,
       access:             form.access             as any,
@@ -455,7 +437,7 @@ export function HeroInfoTab({ course, onSaved }: Props) {
         <CardContent className='space-y-4'>
           <div className='grid grid-cols-2 gap-4 sm:grid-cols-3'>
 
-            {/* Color */}
+            {/* Color — value kept lowercase for UI maps */}
             <div className='space-y-1.5'>
               <Label>{lbl('Color', 'اللون')}</Label>
               <Select value={form.color} onValueChange={(v) => set('color', v.toLowerCase())}>
