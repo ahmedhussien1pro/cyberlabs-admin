@@ -1,4 +1,6 @@
 // src/features/courses/components/admin-overlay-controls.tsx
+// Professional bottom-docked action bar — slides up on hover.
+// Does NOT cover the card thumbnail or body content.
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -10,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -19,11 +22,6 @@ import { cn } from '@/lib/utils';
 import { adminCoursesApi } from '../services/admin-courses.api';
 import { ROUTES } from '@/shared/constants';
 import type { AdminCourse, CourseState } from '../types/admin-course.types';
-
-interface AdminOverlayControlsProps {
-  course: AdminCourse;
-  className?: string;
-}
 
 const STATE_OPTIONS: {
   value: CourseState;
@@ -37,9 +35,9 @@ const STATE_OPTIONS: {
 ];
 
 const STATE_PILL: Record<string, string> = {
-  PUBLISHED:   'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/40',
-  COMING_SOON: 'bg-blue-500/20    text-blue-300    hover:bg-blue-500/40',
-  DRAFT:       'bg-zinc-800/80    text-zinc-300    hover:bg-zinc-700',
+  PUBLISHED:   'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30',
+  COMING_SOON: 'bg-blue-500/15    text-blue-400    border-blue-500/30    hover:bg-blue-500/30',
+  DRAFT:       'bg-zinc-500/15    text-zinc-400    border-zinc-500/30    hover:bg-zinc-500/30',
 };
 
 const STATE_KEY_MAP: Record<string, string> = {
@@ -48,253 +46,205 @@ const STATE_KEY_MAP: Record<string, string> = {
   COMING_SOON: 'comingSoon',
 };
 
+interface AdminOverlayControlsProps {
+  course: AdminCourse;
+  className?: string;
+}
+
 export function AdminOverlayControls({ course, className }: AdminOverlayControlsProps) {
   const { t } = useTranslation('courses');
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
   const queryClient = useQueryClient();
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const refetchStatsLater = useCallback(() => {
-    setTimeout(() => {
-      queryClient.refetchQueries({
-        queryKey: ['admin', 'courses', 'stats'],
-        type: 'active',
-      });
-    }, 800);
+    setTimeout(() => queryClient.refetchQueries({ queryKey: ['admin', 'courses', 'stats'], type: 'active' }), 800);
   }, [queryClient]);
 
-  const invalidateList = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['admin', 'courses', 'list'] });
-  }, [queryClient]);
+  const invalidateList = useCallback(() =>
+    queryClient.invalidateQueries({ queryKey: ['admin', 'courses', 'list'] }),
+  [queryClient]);
 
-  // ── setState ──────────────────────────────────────────────────────────
+  // ── setState (optimistic) ──────────────────────────────────────────────────
   const stateMutation = useMutation({
-    mutationFn: (newState: CourseState) =>
-      adminCoursesApi.setState(course.id, newState),
-
+    mutationFn: (newState: CourseState) => adminCoursesApi.setState(course.id, newState),
     onMutate: async (newState) => {
       await queryClient.cancelQueries({ queryKey: ['admin', 'courses', 'list']  });
       await queryClient.cancelQueries({ queryKey: ['admin', 'courses', 'stats'] });
-
       const listSnapshot  = queryClient.getQueriesData({ queryKey: ['admin', 'courses', 'list']  });
       const statsSnapshot = queryClient.getQueriesData({ queryKey: ['admin', 'courses', 'stats'] });
-
-      queryClient.setQueriesData(
-        { queryKey: ['admin', 'courses', 'list'] },
-        (old: any) => {
-          if (!old?.data) return old;
-          return {
-            ...old,
-            data: old.data.map((c: AdminCourse) =>
-              c.id === course.id ? { ...c, state: newState } : c,
-            ),
-          };
-        },
-      );
-
-      queryClient.setQueriesData(
-        { queryKey: ['admin', 'courses', 'stats'] },
-        (old: any) => {
-          if (!old) return old;
-          const prev = course.state;
-          const next = newState;
-          if (prev === next) return old;
-          return {
-            ...old,
-            [STATE_KEY_MAP[prev]]: Math.max(0, (old[STATE_KEY_MAP[prev]] ?? 0) - 1),
-            [STATE_KEY_MAP[next]]: (old[STATE_KEY_MAP[next]] ?? 0) + 1,
-          };
-        },
-      );
-
+      queryClient.setQueriesData({ queryKey: ['admin', 'courses', 'list'] }, (old: any) => {
+        if (!old?.data) return old;
+        return { ...old, data: old.data.map((c: AdminCourse) => c.id === course.id ? { ...c, state: newState } : c) };
+      });
+      queryClient.setQueriesData({ queryKey: ['admin', 'courses', 'stats'] }, (old: any) => {
+        if (!old) return old;
+        const prev = course.state; const next = newState;
+        if (prev === next) return old;
+        return {
+          ...old,
+          [STATE_KEY_MAP[prev]]: Math.max(0, (old[STATE_KEY_MAP[prev]] ?? 0) - 1),
+          [STATE_KEY_MAP[next]]: (old[STATE_KEY_MAP[next]] ?? 0) + 1,
+        };
+      });
       return { listSnapshot, statsSnapshot };
     },
-
     onSuccess: (updated) => {
-      const toastKey =
-        updated.state === 'PUBLISHED'   ? 'toast.published'
-        : updated.state === 'COMING_SOON' ? 'toast.comingSoon'
-        : 'toast.unpublished';
-      toast.success(t(toastKey, { title: course.title }));
-      invalidateList();
-      refetchStatsLater();
+      const key = updated.state === 'PUBLISHED' ? 'toast.published' : updated.state === 'COMING_SOON' ? 'toast.comingSoon' : 'toast.unpublished';
+      toast.success(t(key, { title: course.title }));
+      invalidateList(); refetchStatsLater();
     },
-
     onError: (_e: any, _v: any, ctx: any) => {
-      ctx?.listSnapshot?.forEach(([key, val]: [any, any]) =>
-        queryClient.setQueryData(key, val),
-      );
-      ctx?.statsSnapshot?.forEach(([key, val]: [any, any]) =>
-        queryClient.setQueryData(key, val),
-      );
+      ctx?.listSnapshot?.forEach(([k, v]: [any, any])  => queryClient.setQueryData(k, v));
+      ctx?.statsSnapshot?.forEach(([k, v]: [any, any]) => queryClient.setQueryData(k, v));
       toast.error(t('errors.publishFailed'));
     },
   });
 
-  // ── duplicate ─────────────────────────────────────────────────────────
+  // ── duplicate ──────────────────────────────────────────────────────────────
   const duplicateMutation = useMutation({
     mutationFn: () => adminCoursesApi.duplicate(course.id),
     onSuccess: (newCourse) => {
       toast.success(t('toast.duplicated', { title: course.title }));
-      invalidateList();
-      refetchStatsLater();
+      invalidateList(); refetchStatsLater();
       navigate(ROUTES.COURSE_EDIT(newCourse.slug ?? newCourse.id));
     },
     onError: () => toast.error(t('errors.duplicateFailed')),
   });
 
-  // ── delete ────────────────────────────────────────────────────────────
+  // ── delete ─────────────────────────────────────────────────────────────────
   const deleteMutation = useMutation({
     mutationFn: () => adminCoursesApi.delete(course.id),
-
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: ['admin', 'courses', 'list']  });
       await queryClient.cancelQueries({ queryKey: ['admin', 'courses', 'stats'] });
-
       const listSnapshot  = queryClient.getQueriesData({ queryKey: ['admin', 'courses', 'list']  });
       const statsSnapshot = queryClient.getQueriesData({ queryKey: ['admin', 'courses', 'stats'] });
-
-      queryClient.setQueriesData(
-        { queryKey: ['admin', 'courses', 'list'] },
-        (old: any) => {
-          if (!old?.data) return old;
-          return { ...old, data: old.data.filter((c: AdminCourse) => c.id !== course.id) };
-        },
-      );
-
-      queryClient.setQueriesData(
-        { queryKey: ['admin', 'courses', 'stats'] },
-        (old: any) => {
-          if (!old) return old;
-          return {
-            ...old,
-            total: Math.max(0, (old.total ?? 0) - 1),
-            [STATE_KEY_MAP[course.state]]: Math.max(0, (old[STATE_KEY_MAP[course.state]] ?? 0) - 1),
-          };
-        },
-      );
-
+      queryClient.setQueriesData({ queryKey: ['admin', 'courses', 'list'] }, (old: any) => {
+        if (!old?.data) return old;
+        return { ...old, data: old.data.filter((c: AdminCourse) => c.id !== course.id) };
+      });
+      queryClient.setQueriesData({ queryKey: ['admin', 'courses', 'stats'] }, (old: any) => {
+        if (!old) return old;
+        return { ...old, total: Math.max(0, (old.total ?? 0) - 1), [STATE_KEY_MAP[course.state]]: Math.max(0, (old[STATE_KEY_MAP[course.state]] ?? 0) - 1) };
+      });
       return { listSnapshot, statsSnapshot };
     },
-
     onSuccess: () => {
       toast.success(t('toast.deleted', { title: course.title }));
-      invalidateList();
-      refetchStatsLater();
+      invalidateList(); refetchStatsLater();
       setDeleteOpen(false);
     },
-
     onError: (err: any, _v: any, ctx: any) => {
-      ctx?.listSnapshot?.forEach(([key, val]: [any, any]) => queryClient.setQueryData(key, val));
-      ctx?.statsSnapshot?.forEach(([key, val]: [any, any]) => queryClient.setQueryData(key, val));
-      const msg = err?.response?.data?.message ?? err?.message ?? 'Unknown error';
-      toast.error(t('errors.deleteFailed', { message: msg }));
+      ctx?.listSnapshot?.forEach(([k, v]: [any, any])  => queryClient.setQueryData(k, v));
+      ctx?.statsSnapshot?.forEach(([k, v]: [any, any]) => queryClient.setQueryData(k, v));
+      toast.error(t('errors.deleteFailed', { message: err?.response?.data?.message ?? err?.message ?? '' }));
     },
   });
 
-  const currentStateOption = STATE_OPTIONS.find((o) => o.value === course.state) ?? STATE_OPTIONS[2];
-  const CurrentIcon = currentStateOption.icon;
+  const currentState = STATE_OPTIONS.find((o) => o.value === course.state) ?? STATE_OPTIONS[2];
+  const CurrentIcon  = currentState.icon;
+
+  // ── Open preview in new window/tab ───────────────────────────────────────
+  const openPreview = (e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    const url = `${ROUTES.COURSE_EDIT(course.slug)}?tab=preview`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <>
-      {/* Overlay bar */}
-      <div className={cn(
-        'absolute inset-0 z-10 flex flex-col justify-between p-2',
-        'bg-gradient-to-b from-black/70 via-transparent to-black/70',
-        'opacity-0 group-hover:opacity-100 transition-opacity duration-200',
-        className,
-      )}>
-        {/* Top row */}
-        <div className='flex items-center justify-between gap-1'>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                size='sm' variant='ghost'
-                aria-label={t('overlay.setState')}
-                className={cn(
-                  'h-7 gap-1.5 text-[11px] font-semibold rounded-full px-2.5',
-                  STATE_PILL[course.state] ?? STATE_PILL.DRAFT,
-                )}
-                disabled={stateMutation.isPending}
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              >
-                {stateMutation.isPending
-                  ? <Loader2 className='h-3 w-3 animate-spin' />
-                  : <><CurrentIcon className='h-3 w-3' /> {t(currentStateOption.labelKey)}</>}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align='start' className='min-w-[160px]'>
-              {STATE_OPTIONS.map((opt) => {
-                const Icon = opt.icon;
-                const isCurrent = course.state === opt.value;
-                return (
-                  <DropdownMenuItem
-                    key={opt.value}
-                    disabled={isCurrent}
-                    className={cn('gap-2 text-xs', isCurrent && 'opacity-50 cursor-default')}
-                    onSelect={(e) => {
-                      e.preventDefault();
-                      if (!isCurrent) stateMutation.mutate(opt.value);
-                    }}
-                  >
-                    <Icon className={cn('h-3.5 w-3.5', opt.color)} />
-                    {t(opt.labelKey)}
-                    {isCurrent && <span className='ms-auto text-[10px] text-muted-foreground'>✓</span>}
-                  </DropdownMenuItem>
-                );
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+      {/*
+       * ACTION BAR — docked to bottom of card, zero height when hidden.
+       * The card must have `overflow-hidden` + `group` classes.
+       * Bar translates up from below the card on group-hover.
+       */}
+      <div
+        className={cn(
+          'absolute bottom-0 inset-x-0 z-20',
+          'translate-y-full group-hover:translate-y-0',
+          'transition-transform duration-200 ease-out',
+          'bg-card/95 backdrop-blur-sm border-t border-border/50',
+          'flex items-center gap-1.5 px-3 py-2',
+          className,
+        )}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Edit button (primary) */}
+        <Button
+          size='sm'
+          className='flex-1 h-8 text-xs gap-1.5'
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(ROUTES.COURSE_EDIT(course.slug)); }}
+        >
+          <Pencil className='h-3.5 w-3.5' /> {t('overlay.edit')}
+        </Button>
 
-          <Button
-            size='sm' variant='ghost'
-            aria-label={t('overlay.preview')}
-            className='h-7 w-7 p-0 rounded-full bg-black/40 text-white/70 hover:text-white hover:bg-black/60'
-            onClick={(e) => {
-              e.preventDefault(); e.stopPropagation();
-              navigate(`${ROUTES.COURSE_EDIT(course.slug)}?tab=preview`);
-            }}
-          >
-            <Eye className='h-3.5 w-3.5' />
-          </Button>
-        </div>
+        {/* Preview — opens new tab */}
+        <Button
+          size='sm' variant='outline'
+          className='h-8 w-8 p-0'
+          title={t('overlay.preview')}
+          onClick={openPreview}
+        >
+          <Eye className='h-3.5 w-3.5' />
+        </Button>
 
-        {/* Bottom row */}
-        <div className='flex items-center gap-1.5'>
-          <Button
-            size='sm'
-            aria-label={t('overlay.edit')}
-            className='flex-1 h-8 text-[11px] gap-1.5 bg-primary/80 hover:bg-primary text-white rounded-lg'
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(ROUTES.COURSE_EDIT(course.slug)); }}
-          >
-            <Pencil className='h-3 w-3' /> {t('overlay.edit')}
-          </Button>
-          <Button
-            size='sm' variant='ghost'
-            aria-label={t('overlay.duplicate')}
-            className='h-8 w-8 p-0 bg-white/10 text-white hover:bg-white/20 rounded-lg'
-            disabled={duplicateMutation.isPending}
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); duplicateMutation.mutate(); }}
-          >
-            {duplicateMutation.isPending
-              ? <Loader2 className='h-3.5 w-3.5 animate-spin' />
-              : <Copy className='h-3.5 w-3.5' />}
-          </Button>
-          <Button
-            size='sm' variant='ghost'
-            aria-label={t('overlay.delete')}
-            className='h-8 w-8 p-0 bg-red-500/20 text-red-300 hover:bg-red-500/40 rounded-lg'
-            disabled={deleteMutation.isPending}
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteOpen(true); }}
-          >
-            {deleteMutation.isPending
-              ? <Loader2 className='h-3.5 w-3.5 animate-spin' />
-              : <Trash2 className='h-3.5 w-3.5' />}
-          </Button>
-        </div>
+        {/* State dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              size='sm' variant='outline'
+              className={cn('h-8 gap-1 px-2 text-[11px] font-semibold border', STATE_PILL[course.state] ?? STATE_PILL.DRAFT)}
+              disabled={stateMutation.isPending}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              title={t('overlay.setState')}
+            >
+              {stateMutation.isPending
+                ? <Loader2 className='h-3 w-3 animate-spin' />
+                : <><CurrentIcon className='h-3 w-3' /> <span className='hidden sm:inline'>{t(currentState.labelKey)}</span></>}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align='end' className='min-w-[160px]'>
+            {STATE_OPTIONS.map((opt) => {
+              const Icon = opt.icon;
+              const isCurrent = course.state === opt.value;
+              return (
+                <DropdownMenuItem
+                  key={opt.value}
+                  disabled={isCurrent}
+                  className={cn('gap-2 text-xs', isCurrent && 'opacity-50 cursor-default')}
+                  onSelect={(e) => { e.preventDefault(); if (!isCurrent) stateMutation.mutate(opt.value); }}
+                >
+                  <Icon className={cn('h-3.5 w-3.5', opt.color)} />
+                  {t(opt.labelKey)}
+                  {isCurrent && <span className='ms-auto text-[10px] text-muted-foreground'>✓</span>}
+                </DropdownMenuItem>
+              );
+            })}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className='gap-2 text-xs text-muted-foreground'
+              disabled={duplicateMutation.isPending}
+              onSelect={(e) => { e.preventDefault(); duplicateMutation.mutate(); }}
+            >
+              {duplicateMutation.isPending
+                ? <Loader2 className='h-3.5 w-3.5 animate-spin' />
+                : <Copy className='h-3.5 w-3.5' />}
+              {t('overlay.duplicate')}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className='gap-2 text-xs text-destructive focus:text-destructive'
+              disabled={deleteMutation.isPending}
+              onSelect={(e) => { e.preventDefault(); setDeleteOpen(true); }}
+            >
+              <Trash2 className='h-3.5 w-3.5' />
+              {t('overlay.delete')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      {/* Delete confirm */}
+      {/* Delete confirmation */}
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -302,9 +252,7 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
             <AlertDialogDescription>{t('dialogs.deleteDesc')}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMutation.isPending}>
-              {t('dialogs.cancel')}
-            </AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>{t('dialogs.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => { e.preventDefault(); deleteMutation.mutate(undefined); }}
               disabled={deleteMutation.isPending}

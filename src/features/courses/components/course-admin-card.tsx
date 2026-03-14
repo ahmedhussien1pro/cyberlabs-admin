@@ -22,37 +22,21 @@ const CONTENT_ICON: Record<string, { Icon: React.ElementType; labelKey: string }
   MIXED:       { Icon: BookOpen,     labelKey: 'contentType.MIXED'       },
 };
 
-function CourseThumbnail({
-  course,
-  activeTitle,
-  className,
-}: {
-  course: AdminCourse;
-  activeTitle: string;   // already resolved to active language
-  className?: string;
+function CourseThumbnail({ course, activeTitle, className }: {
+  course: AdminCourse; activeTitle: string; className?: string;
 }) {
-  const img = course.image ?? course.thumbnail;
-  const color = (course.color ?? 'BLUE').toLowerCase();
-  if (img) {
-    return (
-      <img
-        src={img}
-        alt={activeTitle}
-        loading='lazy'
-        className={cn('w-full h-full object-cover', className)}
-      />
-    );
-  }
+  const img   = course.image ?? course.thumbnail;
+  const color = (course.color ?? 'blue').toLowerCase();
+  if (img) return (
+    <img src={img} alt={activeTitle} loading='lazy'
+      className={cn('w-full h-full object-cover', className)} />
+  );
   return (
     <div className={cn(
       'w-full h-full flex items-center justify-center bg-gradient-to-br border',
       FALLBACK_BG[color] ?? 'from-zinc-900 to-zinc-800 border-zinc-700',
     )}>
-      {/* Use activeTitle so AR title shows when lang=ar */}
-      <p className={cn(
-        'font-black text-center px-3 leading-tight text-lg',
-        FALLBACK_TEXT[color] ?? 'text-zinc-400',
-      )}>
+      <p className={cn('font-black text-center px-3 leading-tight text-lg', FALLBACK_TEXT[color] ?? 'text-zinc-400')}>
         {activeTitle}
       </p>
     </div>
@@ -67,14 +51,14 @@ interface Props {
 
 export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
   const { t, i18n } = useTranslation('courses');
-  const queryClient = useQueryClient();
+  const queryClient   = useQueryClient();
   const isAr = i18n.language === 'ar';
 
-  // Resolved active-language fields
+  // Active-language resolved fields
   const activeTitle       = isAr && course.ar_title       ? course.ar_title       : course.title;
   const activeDescription = isAr && course.ar_description ? course.ar_description : course.description;
 
-  const color      = (course.color ?? 'BLUE').toLowerCase();
+  const color      = (course.color ?? 'blue').toLowerCase();
   const comingSoon = course.state === 'COMING_SOON';
   const ct         = CONTENT_ICON[course.contentType ?? 'MIXED'];
   const AccessIcon = ACCESS_ICON[course.access ?? 'FREE'] ?? Unlock;
@@ -87,32 +71,30 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
   const updateMutation = useMutation({
     mutationFn: (data: Partial<AdminCourse>) => adminCoursesApi.update(course.id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] }),
-    onError: () => toast.error('Failed to save changes'),
+    onError:   () => toast.error('Failed to save changes'),
   });
 
-  // ── List view ─────────────────────────────────────────────────────────
+  // ── List view ──────────────────────────────────────────────────────────────
   if (view === 'list') {
     return (
-      <div className='group relative flex items-center gap-4 rounded-lg border border-border/50 bg-card px-4 py-3 hover:border-border transition-colors'>
+      <div
+        dir={isAr ? 'rtl' : 'ltr'}
+        className='group relative flex items-center gap-4 rounded-lg border border-border/50 bg-card px-4 py-3 hover:border-border transition-colors overflow-hidden'
+      >
         <AdminOverlayControls course={course} />
         <div className={cn('h-2 w-2 shrink-0 rounded-full', stateDot)} />
         <div className='relative w-16 h-10 shrink-0 overflow-hidden rounded bg-muted'>
           <CourseThumbnail course={course} activeTitle={activeTitle} />
         </div>
         <div className='min-w-0 flex-1'>
-          {/* Primary title (active lang) */}
           <p className='font-medium text-sm truncate'>{activeTitle}</p>
-          {/* Secondary title (other lang) */}
           {isAr
             ? <p className='truncate text-xs text-muted-foreground'>{course.title}</p>
             : course.ar_title && <p className='truncate text-xs text-muted-foreground' dir='rtl'>{course.ar_title}</p>
           }
-          {/* Description (active lang, fallback EN) */}
           {activeDescription && (
-            <p
-              className='truncate text-xs text-muted-foreground/60 mt-0.5'
-              dir={isAr && course.ar_description ? 'rtl' : 'ltr'}
-            >
+            <p className='truncate text-xs text-muted-foreground/60 mt-0.5'
+              dir={isAr && course.ar_description ? 'rtl' : 'ltr'}>
               {activeDescription}
             </p>
           )}
@@ -125,17 +107,16 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
           <Badge variant='outline' className={cn('text-[10px]', ACCESS_BADGE[course.access])}>
             <AccessIcon className='h-3 w-3 me-1' />{t(`access.${course.access}`, course.access)}
           </Badge>
-          <Badge variant='outline' className='text-[10px]'>
-            {t(`state.${course.state}`, course.state)}
-          </Badge>
+          <Badge variant='outline' className='text-[10px]'>{t(`state.${course.state}`, course.state)}</Badge>
         </div>
       </div>
     );
   }
 
-  // ── Grid view ─────────────────────────────────────────────────────────
+  // ── Grid view ──────────────────────────────────────────────────────────────
   return (
     <motion.div
+      dir={isAr ? 'rtl' : 'ltr'}
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: Math.min(index * 0.04, 0.3) }}
@@ -144,6 +125,8 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
         'transition-all duration-300 ring-1 ring-transparent',
         HOVER_RING[color] ?? 'hover:ring-primary/20',
         'hover:shadow-xl hover:-translate-y-0.5',
+        // Extra padding-bottom so the action bar has room when it slides up
+        'pb-12',
       )}
     >
       <AdminOverlayControls course={course} />
@@ -151,12 +134,9 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
       {/* Thumbnail */}
       <div className='relative aspect-video overflow-hidden bg-muted'>
         <CourseThumbnail
-          course={course}
-          activeTitle={activeTitle}
+          course={course} activeTitle={activeTitle}
           className='transition-transform duration-500 group-hover:scale-105'
         />
-
-        {/* Coming Soon overlay — z-10 so it sits above thumbnail */}
         {comingSoon && (
           <div className='absolute inset-0 z-10 flex items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-none'>
             <span className='flex items-center gap-1.5 rounded-full border border-white/20 px-3 py-1 text-xs font-bold uppercase tracking-widest text-white/80'>
@@ -164,8 +144,6 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
             </span>
           </div>
         )}
-
-        {/* State badge — z-20 above coming-soon overlay */}
         <div className='absolute top-2 start-2 z-20 pointer-events-none'>
           <span className={cn(
             'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold border',
@@ -177,8 +155,6 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
             {t(`state.${course.state}`, course.state)}
           </span>
         </div>
-
-        {/* Featured badge */}
         {course.isFeatured && (
           <div className='absolute top-2 end-2 z-20 pointer-events-none'>
             <span className='inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold border bg-yellow-500/20 border-yellow-500/40 text-yellow-300'>
@@ -191,17 +167,18 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
       {/* Card body */}
       <div className='flex flex-col flex-1 p-4 gap-2'>
 
-        {/* ─ Title row ─ */}
+        {/* Title — active lang as primary */}
         <div className='flex items-start justify-between gap-2'>
           <div className='flex-1 min-w-0'>
-            {/* EN title — always shown & editable */}
             <InlineEditable
-              value={course.title}
-              onSave={(val) => void updateMutation.mutateAsync({ title: val })}
+              value={activeTitle}
+              onSave={(val) => void updateMutation.mutateAsync(isAr ? { ar_title: val } : { title: val })}
               className='text-sm font-bold text-foreground leading-snug'
             />
-            {/* AR title — editable if present, placeholder if missing */}
-            {course.ar_title ? (
+            {/* Secondary lang subtitle */}
+            {isAr ? (
+              <p className='mt-0.5 text-xs text-muted-foreground/60 truncate' dir='ltr'>{course.title}</p>
+            ) : course.ar_title ? (
               <div className='mt-0.5' dir='rtl'>
                 <InlineEditable
                   value={course.ar_title}
@@ -211,8 +188,7 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
               </div>
             ) : (
               <p className='mt-0.5 text-xs text-muted-foreground/30 italic flex items-center gap-1'>
-                <PenLine className='h-3 w-3' />
-                {t('card.noArTitle', 'Add Arabic title…')}
+                <PenLine className='h-3 w-3' /> {t('card.noArTitle', 'Add Arabic title…')}
               </p>
             )}
           </div>
@@ -223,34 +199,19 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
           )}
         </div>
 
-        {/* ─ Description row ─ */}
-        {/* EN desc: always render so admin can click & add it even if null */}
+        {/* Description — active lang */}
         <InlineEditable
-          value={course.description ?? ''}
-          onSave={(val) => void updateMutation.mutateAsync({ description: val || null })}
+          value={activeDescription ?? ''}
+          onSave={(val) => void updateMutation.mutateAsync(isAr ? { ar_description: val || null } : { description: val || null })}
           as='textarea'
           className={cn(
             'text-xs leading-relaxed line-clamp-2',
-            course.description
-              ? 'text-muted-foreground'
-              : 'text-muted-foreground/30 italic',   // visually distinct placeholder
+            activeDescription ? 'text-muted-foreground' : 'text-muted-foreground/30 italic',
           )}
           placeholder={t('card.noDescription', 'Add description…')}
         />
-        {/* AR desc: shown if present */}
-        {course.ar_description && (
-          <div dir='rtl'>
-            <InlineEditable
-              value={course.ar_description}
-              onSave={(val) => void updateMutation.mutateAsync({ ar_description: val || null })}
-              as='textarea'
-              className='text-xs text-muted-foreground/70 leading-relaxed line-clamp-2'
-              placeholder=''
-            />
-          </div>
-        )}
 
-        {/* ─ Badges ─ */}
+        {/* Badges */}
         <div className='flex flex-wrap items-center gap-1.5 mt-1'>
           {diff && (
             <Badge variant='outline' className='gap-1 text-[10px] font-semibold border-border/60 bg-muted/40'>
@@ -274,7 +235,7 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
           )}
         </div>
 
-        {/* ─ Footer ─ */}
+        {/* Footer */}
         <div className='mt-auto flex items-center gap-3 text-xs text-muted-foreground pt-2 border-t border-border/30'>
           <span className='flex items-center gap-1'>
             <Users className='h-3 w-3' />{course.enrollmentCount ?? 0} {t('card.enrolled')}
@@ -290,9 +251,7 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
             </span>
           )}
           {course.isNew && (
-            <span className='ms-auto inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold bg-primary/10 text-primary border border-primary/20'>
-              NEW
-            </span>
+            <span className='ms-auto inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold bg-primary/10 text-primary border border-primary/20'>NEW</span>
           )}
         </div>
       </div>
