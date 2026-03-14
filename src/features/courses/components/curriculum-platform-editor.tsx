@@ -31,11 +31,38 @@ function normalizeTitle(raw: any): TopicTitle {
   return { en: str, ar: '' };
 }
 
+/**
+ * FIX: Normalize an element's bilingual fields.
+ * Some JSON files store value as a plain string (legacy) — convert to {en, ar}.
+ */
+function normalizeElement(el: any): CourseElement {
+  if (!el || typeof el !== 'object') return el;
+  const out = { ...el };
+  // Fields that should be {en, ar} objects
+  const bilingualFields = ['value', 'title', 'label', 'alt'];
+  for (const field of bilingualFields) {
+    if (out[field] !== undefined && typeof out[field] === 'string') {
+      out[field] = { en: out[field], ar: '' };
+    }
+  }
+  // Normalize list items
+  if (Array.isArray(out.items)) {
+    out.items = out.items.map((item: any) => {
+      if (typeof item === 'string') return { en: item, ar: '' };
+      return item;
+    });
+  }
+  return out as CourseElement;
+}
+
 function normalizeTopic(raw: any, idx: number): Topic {
+  const elements: CourseElement[] = Array.isArray(raw?.elements)
+    ? raw.elements.map((el: any) => normalizeElement(el))
+    : [];
   return {
-    id:       raw?.id ?? `topic-${Date.now()}-${idx}`,
-    title:    normalizeTitle(raw?.title),
-    elements: Array.isArray(raw?.elements) ? raw.elements : [],
+    id:    raw?.id ?? `topic-${Date.now()}-${idx}`,
+    title: normalizeTitle(raw?.title),
+    elements,
   };
 }
 
@@ -90,12 +117,8 @@ function ImageElementEditor({
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Show local preview immediately
     const localUrl = URL.createObjectURL(file);
     setPreview(localUrl);
-
-    // Upload to R2
     setUploading(true);
     try {
       const { url } = await adminCoursesApi.uploadImage(file);
@@ -115,7 +138,6 @@ function ImageElementEditor({
 
   return (
     <div className='space-y-3'>
-      {/* Preview */}
       {preview && (
         <div className='relative overflow-hidden rounded-lg border border-border/50 bg-muted/20'>
           <img src={preview} alt='preview' className='max-h-48 w-full object-contain' />
@@ -126,35 +148,23 @@ function ImageElementEditor({
           )}
         </div>
       )}
-
-      {/* URL input OR upload button */}
       <div className='flex gap-2'>
         <Input
           placeholder='Image URL (paste or upload file ↑)'
           value={(el.imageUrl as string) ?? ''}
-          onChange={(e) => {
-            onChange({ ...el, imageUrl: e.target.value });
-            setPreview(e.target.value || null);
-          }}
+          onChange={(e) => { onChange({ ...el, imageUrl: e.target.value }); setPreview(e.target.value || null); }}
           className='text-xs h-8 flex-1'
           disabled={uploading}
         />
         <input ref={fileRef} type='file' accept='image/*' className='hidden' onChange={handleFileChange} />
-        <Button
-          variant='outline' size='sm'
+        <Button variant='outline' size='sm'
           className='h-8 gap-1.5 shrink-0 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10'
-          onClick={() => fileRef.current?.click()}
-          disabled={uploading}
-          title='Upload image to Cloudflare R2'
-        >
-          {uploading
-            ? <Loader2 className='h-3.5 w-3.5 animate-spin' />
-            : <ImageIcon className='h-3.5 w-3.5' />}
+          onClick={() => fileRef.current?.click()} disabled={uploading}
+          title='Upload image to Cloudflare R2'>
+          {uploading ? <Loader2 className='h-3.5 w-3.5 animate-spin' /> : <ImageIcon className='h-3.5 w-3.5' />}
           {uploading ? 'Uploading...' : 'Upload'}
         </Button>
       </div>
-
-      {/* Alt text bilingual */}
       <div className='grid grid-cols-2 gap-2'>
         {(['en', 'ar'] as const).map((lng) => (
           <Input key={lng} dir={lng === 'ar' ? 'rtl' : 'ltr'}
@@ -164,13 +174,10 @@ function ImageElementEditor({
             className='text-xs h-8' />
         ))}
       </div>
-
-      {/* Size */}
       <select
         value={(el.size as string) ?? 'full'}
         onChange={(e) => onChange({ ...el, size: e.target.value })}
-        className='text-xs h-8 w-full rounded-md border border-border bg-background px-2'
-      >
+        className='text-xs h-8 w-full rounded-md border border-border bg-background px-2'>
         {['small', 'medium', 'large', 'full'].map((s) => (
           <option key={s} value={s}>{s}</option>
         ))}
@@ -204,11 +211,8 @@ function ElementEditor({ el, onChange }: { el: CourseElement; onChange: (u: Cour
 
   if (el.type === 'hr')
     return <p className='text-xs italic text-muted-foreground'>Horizontal Rule — no content</p>;
-
-  // ✅ image now handled by dedicated component with upload support
   if (el.type === 'image')
     return <ImageElementEditor el={el} onChange={onChange} />;
-
   if (el.type === 'video') return (
     <div className='space-y-2'>
       <Input placeholder='Video embed URL' value={(el.url as string) ?? ''}
@@ -216,7 +220,6 @@ function ElementEditor({ el, onChange }: { el: CourseElement; onChange: (u: Cour
       <BiField field='title' label='Title' />
     </div>
   );
-
   if (el.type === 'code') return (
     <div className='space-y-2'>
       <Input placeholder='Language (bash, python, js...)' value={(el.language as string) ?? ''}
@@ -225,7 +228,6 @@ function ElementEditor({ el, onChange }: { el: CourseElement; onChange: (u: Cour
         onChange={(e) => onChange({ ...el, value: e.target.value })} className='text-xs font-mono resize-none' />
     </div>
   );
-
   if (el.type === 'note') return (
     <div className='space-y-2'>
       <select value={(el.noteType as string) ?? 'info'}
@@ -238,14 +240,12 @@ function ElementEditor({ el, onChange }: { el: CourseElement; onChange: (u: Cour
         onChange={(e) => onChange({ ...el, link: e.target.value })} className='text-xs h-8' />
     </div>
   );
-
   if (el.type === 'terminal') return (
     <div className='space-y-2'>
       <BiField field='label' label='Label' />
       <BiField field='value' label='Command' rows={3} />
     </div>
   );
-
   if (el.type === 'button') return (
     <div className='space-y-2'>
       <BiField field='label' label='Button text' />
@@ -253,7 +253,6 @@ function ElementEditor({ el, onChange }: { el: CourseElement; onChange: (u: Cour
         onChange={(e) => onChange({ ...el, href: e.target.value })} className='text-xs h-8' />
     </div>
   );
-
   if (el.type === 'list') {
     const items: { en: string; ar: string }[] = Array.isArray(el.items)
       ? (el.items as any[]).map((i) => (typeof i === 'object' && 'en' in i ? i : { en: String(i), ar: '' }))
@@ -278,7 +277,6 @@ function ElementEditor({ el, onChange }: { el: CourseElement; onChange: (u: Cour
       </div>
     );
   }
-
   if (el.type === 'orderedList') {
     const items: { subtitle: { en: string; ar: string }; text: { en: string; ar: string } }[] =
       Array.isArray(el.items)
@@ -315,7 +313,6 @@ function ElementEditor({ el, onChange }: { el: CourseElement; onChange: (u: Cour
       </div>
     );
   }
-
   if (el.type === 'table') {
     const headers: { en: string; ar: string }[] = Array.isArray(el.headers)
       ? (el.headers as any[]).map((h) => (typeof h === 'object' && 'en' in h ? h : { en: String(h), ar: '' }))
@@ -366,7 +363,6 @@ function ElementEditor({ el, onChange }: { el: CourseElement; onChange: (u: Cour
       </div>
     );
   }
-
   return <BiField field='value' label='Content' rows={['text', 'orderedList'].includes(el.type) ? 3 : 0} />;
 }
 
@@ -393,8 +389,8 @@ function TopicRow({
   const moveEl = (elId: string | number, dir: 'up' | 'down') => {
     const els = [...topic.elements];
     const idx = els.findIndex((e) => e.id === elId);
-    if (dir === 'up'   && idx > 0)               { [els[idx - 1], els[idx]]     = [els[idx], els[idx - 1]]; }
-    if (dir === 'down' && idx < els.length - 1)  { [els[idx],     els[idx + 1]] = [els[idx + 1], els[idx]]; }
+    if (dir === 'up'   && idx > 0)              { [els[idx - 1], els[idx]]     = [els[idx], els[idx - 1]]; }
+    if (dir === 'down' && idx < els.length - 1) { [els[idx],     els[idx + 1]] = [els[idx + 1], els[idx]]; }
     onUpdate({ ...topic, elements: els });
   };
 
@@ -668,22 +664,27 @@ interface Props { courseId: string; courseSlug: string; }
 
 export function CurriculumPlatformEditor({ courseId, courseSlug }: Props) {
   const queryClient = useQueryClient();
-  const [editMode, setEditMode]     = useState(false);
+  const [editMode, setEditMode]       = useState(false);
   const [localTopics, setLocalTopics] = useState<Topic[] | null>(null);
-  const [openId, setOpenId]         = useState<string | null>(null);
-  const [showImport, setShowImport] = useState(false);
+  const [openId, setOpenId]           = useState<string | null>(null);
+  const [showImport, setShowImport]   = useState(false);
 
+  // FIX: use courseId (stable) as queryKey so it matches CurriculumTab's key
   const { data, isLoading } = useQuery({
-    queryKey: ['admin', 'curriculum', courseSlug],
-    queryFn:  () => adminCoursesApi.getCurriculum(courseSlug),
+    queryKey: ['admin', 'curriculum', courseId],
+    queryFn:  () => adminCoursesApi.getCurriculum(courseId),
   });
 
+  // FIX: reset localTopics when server data changes (e.g. after save + invalidate)
   useEffect(() => {
-    if (data?.topics && localTopics === null) {
+    if (!data?.topics) return;
+    // Only auto-sync when not currently editing
+    if (localTopics === null) {
       const normalized = (data.topics as any[]).map((t, i) => normalizeTopic(t, i));
       setLocalTopics(normalized);
       if (normalized.length > 0) setOpenId(normalized[0].id);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
 
   const topics: Topic[] = localTopics ?? [];
@@ -693,7 +694,10 @@ export function CurriculumPlatformEditor({ courseId, courseSlug }: Props) {
   const { mutate: save, isPending: saving } = useMutation({
     mutationFn: () => adminCoursesApi.saveCurriculum(courseId, sanitizeTopicsForSave(topics)),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'curriculum', courseSlug] });
+      // FIX: invalidate by courseId key
+      queryClient.invalidateQueries({ queryKey: ['admin', 'curriculum', courseId] });
+      // FIX: also reset localTopics so useEffect re-syncs from fresh server data
+      setLocalTopics(null);
       toast.success('Curriculum saved!');
       setEditMode(false);
     },
@@ -774,8 +778,7 @@ export function CurriculumPlatformEditor({ courseId, courseSlug }: Props) {
               </Button>
               <Button variant='ghost' size='sm'
                 onClick={() => {
-                  const normalized = ((data?.topics ?? []) as any[]).map((t, i) => normalizeTopic(t, i));
-                  setLocalTopics(normalized);
+                  setLocalTopics(null);
                   setEditMode(false);
                 }}
                 className='h-8 gap-1.5 text-muted-foreground'>
