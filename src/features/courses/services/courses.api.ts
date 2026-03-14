@@ -1,9 +1,13 @@
 // src/features/courses/services/courses.api.ts
 import { adminApiClient } from '@/core/api/admin-client';
 import type {
-  Course, CourseCreateDto, CourseUpdateDto,
-  CoursesListResponse, CourseStats, CourseState,
-} from '../types/course.types';
+  AdminCourse,
+  AdminCourseCreateDto,
+  AdminCourseUpdateDto,
+  AdminCoursesListResponse,
+  AdminCourseStats,
+  CourseState,
+} from '../types';
 
 export interface CourseListParams {
   page?: number;
@@ -13,23 +17,21 @@ export interface CourseListParams {
   difficulty?: string;
 }
 
-function unwrapItem<T>(res: any): T {
-  const p = res?.data ?? res;
-  return (p?.data ?? p) as T;
+function unwrapItem<T>(res: unknown): T {
+  const p = (res as any)?.data ?? res;
+  return ((p as any)?.data ?? p) as T;
 }
 
-function unwrapList<T>(res: any): T {
-  const p = res?.data ?? res;
-  if (p?.data !== undefined && p?.meta !== undefined) return p as T;
-  const arr = Array.isArray(p?.data) ? p.data : Array.isArray(p) ? p : [];
+function unwrapList<T>(res: unknown): T {
+  const p = (res as any)?.data ?? res;
+  if ((p as any)?.data !== undefined && (p as any)?.meta !== undefined) return p as T;
+  const arr = Array.isArray((p as any)?.data) ? (p as any).data : Array.isArray(p) ? p : [];
   return { data: arr, meta: { total: arr.length, page: 1, limit: 20, totalPages: 1 } } as T;
 }
 
-function normalize(c: Course): Course {
+function normalize(c: AdminCourse): AdminCourse {
   return {
     ...c,
-    // ✅ color must be lowercase for Tailwind class generation
-    color:            (c.color as string)?.toLowerCase() as Course['color'],
     tags:             Array.isArray(c.tags)             ? c.tags             : [],
     skills:           Array.isArray(c.skills)           ? c.skills           : [],
     ar_skills:        Array.isArray(c.ar_skills)        ? c.ar_skills        : [],
@@ -38,74 +40,74 @@ function normalize(c: Course): Course {
     prerequisites:    Array.isArray(c.prerequisites)    ? c.prerequisites    : [],
     ar_prerequisites: Array.isArray(c.ar_prerequisites) ? c.ar_prerequisites : [],
     labSlugs:         Array.isArray(c.labSlugs)         ? c.labSlugs         : [],
+    // Normalize color to UPPERCASE to match CourseColor type
+    color: ((c.color as string)?.toUpperCase() ?? 'BLUE') as AdminCourse['color'],
   };
 }
 
 export const coursesApi = {
-  list: async (p: CourseListParams = {}): Promise<CoursesListResponse> => {
-    const q: Record<string, any> = { page: p.page ?? 1, limit: p.limit ?? 20 };
+  list: async (p: CourseListParams = {}): Promise<AdminCoursesListResponse> => {
+    const q: Record<string, unknown> = { page: p.page ?? 1, limit: p.limit ?? 20 };
     if (p.search)     q.search = p.search;
     if (p.difficulty) q.difficulty = p.difficulty;
-    // ✅ backend accepts `state` directly — not `isPublished`
     if (p.state && p.state !== 'all') q.state = p.state;
     const res = await adminApiClient.get('/admin/courses', { params: q });
-    return unwrapList<CoursesListResponse>(res);
+    return unwrapList<AdminCoursesListResponse>(res);
   },
 
-  getStats: async (): Promise<CourseStats> => {
+  getStats: async (): Promise<AdminCourseStats> => {
     const res = await adminApiClient.get('/admin/courses/stats');
-    return unwrapItem<CourseStats>(res);
+    return unwrapItem<AdminCourseStats>(res);
   },
 
-  getBySlug: async (slug: string): Promise<Course> => {
+  getBySlug: async (slug: string): Promise<AdminCourse> => {
     try {
       const res = await adminApiClient.get(`/admin/courses/${slug}`);
-      const c = unwrapItem<Course>(res);
+      const c = unwrapItem<AdminCourse>(res);
       if (c && 'id' in c) return normalize(c);
-    } catch (e: any) {
-      const s = e?.response?.status ?? e?.status;
+    } catch (e: unknown) {
+      const s = (e as any)?.response?.status ?? (e as any)?.status;
       if (s !== 404 && s !== 400) throw e;
     }
-    // fallback: search by slug
     const list = await coursesApi.list({ search: slug, limit: 50 });
-    const match = (list.data ?? []).find((c) => c.slug === slug || c.id === slug);
+    const match = (list.data ?? []).find((c: AdminCourse) => c.slug === slug || c.id === slug);
     if (!match) throw Object.assign(new Error(`Course not found: ${slug}`), { statusCode: 404 });
     const res = await adminApiClient.get(`/admin/courses/${match.id}`);
-    return normalize(unwrapItem<Course>(res));
+    return normalize(unwrapItem<AdminCourse>(res));
   },
 
-  create: async (data: CourseCreateDto): Promise<Course> => {
+  create: async (data: AdminCourseCreateDto): Promise<AdminCourse> => {
     const res = await adminApiClient.post('/admin/courses', data);
-    return normalize(unwrapItem<Course>(res));
+    return normalize(unwrapItem<AdminCourse>(res));
   },
 
-  update: async (id: string, data: CourseUpdateDto): Promise<Course> => {
+  update: async (id: string, data: AdminCourseUpdateDto): Promise<AdminCourse> => {
     const res = await adminApiClient.patch(`/admin/courses/${id}`, data);
-    return normalize(unwrapItem<Course>(res));
+    return normalize(unwrapItem<AdminCourse>(res));
   },
 
-  publish: async (id: string): Promise<Course> => {
+  publish: async (id: string): Promise<AdminCourse> => {
     const res = await adminApiClient.patch(`/admin/courses/${id}/publish`);
-    return normalize(unwrapItem<Course>(res));
+    return normalize(unwrapItem<AdminCourse>(res));
   },
 
-  unpublish: async (id: string): Promise<Course> => {
+  unpublish: async (id: string): Promise<AdminCourse> => {
     const res = await adminApiClient.patch(`/admin/courses/${id}/unpublish`);
-    return normalize(unwrapItem<Course>(res));
+    return normalize(unwrapItem<AdminCourse>(res));
   },
 
   delete: async (id: string): Promise<void> => {
     await adminApiClient.delete(`/admin/courses/${id}`);
   },
 
-  duplicate: async (id: string): Promise<Course> => {
+  duplicate: async (id: string): Promise<AdminCourse> => {
     const res = await adminApiClient.post(`/admin/courses/${id}/duplicate`);
-    return normalize(unwrapItem<Course>(res));
+    return normalize(unwrapItem<AdminCourse>(res));
   },
 
-  getCurriculum: async (courseId: string): Promise<any> => {
+  getCurriculum: async (courseId: string): Promise<unknown> => {
     const res = await adminApiClient.get(`/admin/courses/${courseId}/curriculum`);
-    const p = unwrapItem<any>(res);
+    const p = unwrapItem<Record<string, unknown>>(res);
     return {
       topics:      Array.isArray(p?.topics) ? p.topics : [],
       totalTopics: Number(p?.totalTopics)   || 0,
@@ -113,7 +115,7 @@ export const coursesApi = {
     };
   },
 
-  saveCurriculum: async (courseId: string, topics: object[]): Promise<any> => {
+  saveCurriculum: async (courseId: string, topics: object[]): Promise<unknown> => {
     const res = await adminApiClient.put(`/admin/courses/${courseId}/curriculum`, { topics });
     return unwrapItem(res);
   },

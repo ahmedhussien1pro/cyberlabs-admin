@@ -6,7 +6,7 @@ import type {
   CurriculumTopic,
   CurriculumElement,
   CurriculumElementType,
-} from '../types/admin-course.types';
+} from '../types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -27,7 +27,9 @@ import { cn } from '@/lib/utils';
 const ELEMENT_TYPES: CurriculumElementType[] = [
   'text', 'title', 'image', 'note', 'terminal',
   'table', 'orderedList', 'list', 'quiz', 'hr',
+  'code', 'video', 'lab',
 ];
+
 const ELEMENT_COLORS: Record<CurriculumElementType, string> = {
   text:        'bg-blue-500/10 text-blue-400',
   title:       'bg-purple-500/10 text-purple-400',
@@ -39,6 +41,9 @@ const ELEMENT_COLORS: Record<CurriculumElementType, string> = {
   list:        'bg-cyan-500/10 text-cyan-300',
   quiz:        'bg-rose-500/10 text-rose-400',
   hr:          'bg-muted text-muted-foreground',
+  code:        'bg-green-500/10 text-green-400',
+  video:       'bg-pink-500/10 text-pink-400',
+  lab:         'bg-indigo-500/10 text-indigo-400',
 };
 
 interface CurriculumData {
@@ -57,10 +62,9 @@ export function CourseCurriculumEditor({ courseId, courseSlug }: Props) {
 
   const { data, isLoading } = useQuery<CurriculumData>({
     queryKey: ['admin', 'curriculum', courseSlug],
-    queryFn:  () => adminCoursesApi.getCurriculum(courseSlug),
+    queryFn:  () => adminCoursesApi.getCurriculum(courseSlug) as Promise<CurriculumData>,
   });
 
-  // Sync server data into local state (once, on first load)
   useEffect(() => {
     if (data?.topics && localTopics === null) {
       setLocalTopics(data.topics);
@@ -210,40 +214,52 @@ export function CourseCurriculumEditor({ courseId, courseSlug }: Props) {
               </div>
 
               <div className='space-y-2'>
-                {topic.elements.map((el: CurriculumElement) => (
-                  <div key={el.id} className='rounded-lg border bg-muted/20 p-3 space-y-2'>
-                    <div className='flex items-center gap-2'>
-                      <Badge className={cn('text-xs', ELEMENT_COLORS[el.type as CurriculumElementType])}>
-                        {el.type}
-                      </Badge>
-                      <button
-                        onClick={() => deleteElement(topic.id, el.id)}
-                        className='ml-auto rounded p-1 text-muted-foreground hover:text-destructive'
-                      >
-                        <Trash2 className='h-3 w-3' />
-                      </button>
-                    </div>
-                    {el.type !== 'hr' && el.value !== undefined && (
-                      <div className='grid grid-cols-2 gap-2'>
-                        <Textarea
-                          rows={3}
-                          placeholder='Content (EN)'
-                          value={el.value?.en ?? ''}
-                          onChange={(e) => updateElement(topic.id, el.id, { value: { ...el.value!, en: e.target.value } })}
-                          className='text-xs'
-                        />
-                        <Textarea
-                          rows={3}
-                          dir='rtl'
-                          placeholder='المحتوى (AR)'
-                          value={el.value?.ar ?? ''}
-                          onChange={(e) => updateElement(topic.id, el.id, { value: { ...el.value!, ar: e.target.value } })}
-                          className='text-xs'
-                        />
+                {topic.elements.map((el: CurriculumElement) => {
+                  const elId   = el.id as string | number;
+                  const elType = el.type as CurriculumElementType;
+                  const elVal  = typeof el.value === 'object' && el.value !== null
+                    ? (el.value as { en: string; ar?: string | null })
+                    : null;
+
+                  return (
+                    <div key={elId} className='rounded-lg border bg-muted/20 p-3 space-y-2'>
+                      <div className='flex items-center gap-2'>
+                        <Badge className={cn('text-xs', ELEMENT_COLORS[elType])}>
+                          {el.type}
+                        </Badge>
+                        <button
+                          onClick={() => deleteElement(topic.id, elId)}
+                          className='ml-auto rounded p-1 text-muted-foreground hover:text-destructive'
+                        >
+                          <Trash2 className='h-3 w-3' />
+                        </button>
                       </div>
-                    )}
-                  </div>
-                ))}
+                      {el.type !== 'hr' && elVal !== null && (
+                        <div className='grid grid-cols-2 gap-2'>
+                          <Textarea
+                            rows={3}
+                            placeholder='Content (EN)'
+                            value={elVal.en ?? ''}
+                            onChange={(e) => updateElement(topic.id, elId, {
+                              value: { ...elVal, en: e.target.value },
+                            })}
+                            className='text-xs'
+                          />
+                          <Textarea
+                            rows={3}
+                            dir='rtl'
+                            placeholder='المحتوى (AR)'
+                            value={elVal.ar ?? ''}
+                            onChange={(e) => updateElement(topic.id, elId, {
+                              value: { ...elVal, ar: e.target.value },
+                            })}
+                            className='text-xs'
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
               <div className='flex flex-wrap gap-1.5 border-t pt-3'>

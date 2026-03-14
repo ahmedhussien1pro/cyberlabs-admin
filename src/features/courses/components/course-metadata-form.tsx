@@ -10,7 +10,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label }    from '@/components/ui/label';
 import { Badge }    from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-// ✅ barrel imports
 import { adminCoursesApi } from '../services/admin-courses.api';
 import type {
   AdminCourse, AdminCourseUpdateDto,
@@ -25,9 +24,14 @@ const COLOR_OPTIONS: { value: CourseColor; dot: string; label: string }[] = [
   { value: 'ROSE',    dot: 'bg-rose-500',    label: 'Rose'    },
   { value: 'CYAN',    dot: 'bg-cyan-500',    label: 'Cyan'    },
 ];
+
 const COLOR_DOT: Record<CourseColor, string> = {
-  EMERALD: 'bg-emerald-500', BLUE: 'bg-blue-500', VIOLET: 'bg-violet-500',
-  ORANGE:  'bg-orange-500',  ROSE: 'bg-rose-500', CYAN:   'bg-cyan-500',
+  EMERALD: 'bg-emerald-500',
+  BLUE:    'bg-blue-500',
+  VIOLET:  'bg-violet-500',
+  ORANGE:  'bg-orange-500',
+  ROSE:    'bg-rose-500',
+  CYAN:    'bg-cyan-500',
 };
 
 interface Props { course: AdminCourse; }
@@ -62,9 +66,12 @@ export function CourseMetadataForm({ course }: Props) {
 
   const { mutate, isPending } = useMutation({
     mutationFn: () => adminCoursesApi.update(course.id, form),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] }); toast.success('Course updated successfully'); },
-    onError: (err: any) => {
-      const msg = err?.response?.data?.message ?? 'Failed to update course';
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
+      toast.success('Course updated successfully');
+    },
+    onError: (err: unknown) => {
+      const msg = (err as any)?.response?.data?.message ?? 'Failed to update course';
       toast.error(Array.isArray(msg) ? msg.join(' • ') : msg);
     },
   });
