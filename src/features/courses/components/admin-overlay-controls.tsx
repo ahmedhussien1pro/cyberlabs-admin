@@ -37,12 +37,6 @@ import { adminCoursesApi } from '../services/admin-courses.api';
 import { ROUTES } from '@/shared/constants';
 import type { AdminCourse, CourseState } from '../types/admin-course.types';
 
-const FRONTEND_BASE =
-  (import.meta.env.VITE_FRONTEND_URL as string | undefined)?.replace(
-    /\/$/,
-    '',
-  ) ?? 'http://localhost:5174';
-
 const STATE_OPTIONS: {
   value: CourseState;
   en: string;
@@ -255,13 +249,12 @@ export function AdminOverlayControls({ course }: { course: AdminCourse }) {
   const currentLabel = isAr ? currentOpt.ar : currentOpt.en;
 
   // ── preview ──────────────────────────────────────────────────────────────
-  // Uses /admin-preview/courses/:slug (public route in cyberlabs-frontend)
-  // instead of /courses/:slug which is protected by ProtectedRoute and
-  // requires the user to be logged-in, causing a 404 redirect for admins.
+  // Opens the standalone preview route inside cyberlabs-admin itself.
+  // No tokens needed — AdminGate already protects the whole admin app.
   const openPreview = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const url = `${FRONTEND_BASE}/admin-preview/courses/${course.slug}`;
+    const url = `/preview/courses/${course.slug}`;
     if (!previewWindow.current || previewWindow.current.closed) {
       previewWindow.current = window.open(
         url,
