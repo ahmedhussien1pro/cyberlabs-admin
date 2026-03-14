@@ -10,6 +10,7 @@ export const ENV = {
   ENABLE_DEVTOOLS: import.meta.env.VITE_ENABLE_DEVTOOLS === 'true',
   ENABLE_MOCK_API: import.meta.env.VITE_ENABLE_MOCK_API === 'true',
   NODE_ENV: import.meta.env.MODE,
-
   LABS_URL: import.meta.env.VITE_LABS_URL as string,
+  // URL of the main cyberlabs-frontend app used for course preview
+  FRONTEND_URL: (import.meta.env.VITE_FRONTEND_URL as string) ?? 'http://localhost:5173',
 } as const;

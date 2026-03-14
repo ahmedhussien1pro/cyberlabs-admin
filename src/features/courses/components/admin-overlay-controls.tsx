@@ -1,6 +1,5 @@
 // src/features/courses/components/admin-overlay-controls.tsx
-// Professional bottom-docked action bar — slides up on hover.
-// Does NOT cover the card thumbnail or body content.
+// Slide-up action bar — docked to bottom, slides over content on hover.
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -11,8 +10,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-  DropdownMenuSeparator,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuTrigger, DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -21,14 +20,10 @@ import {
 import { cn } from '@/lib/utils';
 import { adminCoursesApi } from '../services/admin-courses.api';
 import { ROUTES } from '@/shared/constants';
+import { ENV } from '@/shared/constants/env';
 import type { AdminCourse, CourseState } from '../types/admin-course.types';
 
-const STATE_OPTIONS: {
-  value: CourseState;
-  labelKey: string;
-  icon: React.ElementType;
-  color: string;
-}[] = [
+const STATE_OPTIONS: { value: CourseState; labelKey: string; icon: React.ElementType; color: string }[] = [
   { value: 'PUBLISHED',   labelKey: 'state.PUBLISHED',   icon: Globe,  color: 'text-emerald-400' },
   { value: 'COMING_SOON', labelKey: 'state.COMING_SOON', icon: Clock,  color: 'text-blue-400'    },
   { value: 'DRAFT',       labelKey: 'state.DRAFT',       icon: EyeOff, color: 'text-zinc-400'    },
@@ -41,9 +36,7 @@ const STATE_PILL: Record<string, string> = {
 };
 
 const STATE_KEY_MAP: Record<string, string> = {
-  PUBLISHED:   'published',
-  DRAFT:       'draft',
-  COMING_SOON: 'comingSoon',
+  PUBLISHED: 'published', DRAFT: 'draft', COMING_SOON: 'comingSoon',
 };
 
 interface AdminOverlayControlsProps {
@@ -53,7 +46,7 @@ interface AdminOverlayControlsProps {
 
 export function AdminOverlayControls({ course, className }: AdminOverlayControlsProps) {
   const { t } = useTranslation('courses');
-  const navigate  = useNavigate();
+  const navigate    = useNavigate();
   const queryClient = useQueryClient();
   const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -62,10 +55,9 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
   }, [queryClient]);
 
   const invalidateList = useCallback(() =>
-    queryClient.invalidateQueries({ queryKey: ['admin', 'courses', 'list'] }),
-  [queryClient]);
+    queryClient.invalidateQueries({ queryKey: ['admin', 'courses', 'list'] }), [queryClient]);
 
-  // ── setState (optimistic) ──────────────────────────────────────────────────
+  // ── setState (optimistic) ──────────────────────────────────────────────
   const stateMutation = useMutation({
     mutationFn: (newState: CourseState) => adminCoursesApi.setState(course.id, newState),
     onMutate: async (newState) => {
@@ -101,7 +93,7 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
     },
   });
 
-  // ── duplicate ──────────────────────────────────────────────────────────────
+  // ── duplicate ──────────────────────────────────────────────────────────
   const duplicateMutation = useMutation({
     mutationFn: () => adminCoursesApi.duplicate(course.id),
     onSuccess: (newCourse) => {
@@ -112,7 +104,7 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
     onError: () => toast.error(t('errors.duplicateFailed')),
   });
 
-  // ── delete ─────────────────────────────────────────────────────────────────
+  // ── delete ─────────────────────────────────────────────────────────────
   const deleteMutation = useMutation({
     mutationFn: () => adminCoursesApi.delete(course.id),
     onMutate: async () => {
@@ -126,7 +118,11 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
       });
       queryClient.setQueriesData({ queryKey: ['admin', 'courses', 'stats'] }, (old: any) => {
         if (!old) return old;
-        return { ...old, total: Math.max(0, (old.total ?? 0) - 1), [STATE_KEY_MAP[course.state]]: Math.max(0, (old[STATE_KEY_MAP[course.state]] ?? 0) - 1) };
+        return {
+          ...old,
+          total: Math.max(0, (old.total ?? 0) - 1),
+          [STATE_KEY_MAP[course.state]]: Math.max(0, (old[STATE_KEY_MAP[course.state]] ?? 0) - 1),
+        };
       });
       return { listSnapshot, statsSnapshot };
     },
@@ -145,66 +141,70 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
   const currentState = STATE_OPTIONS.find((o) => o.value === course.state) ?? STATE_OPTIONS[2];
   const CurrentIcon  = currentState.icon;
 
-  // ── Open preview in new window/tab ───────────────────────────────────────
+  // Preview → opens on the main frontend app
   const openPreview = (e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation();
-    const url = `${ROUTES.COURSE_EDIT(course.slug)}?tab=preview`;
-    window.open(url, '_blank', 'noopener,noreferrer');
+    const base = (ENV.FRONTEND_URL ?? '').replace(/\/$/, '');
+    window.open(`${base}/courses/${course.slug}`, '_blank', 'noopener,noreferrer');
   };
 
   return (
     <>
       {/*
-       * ACTION BAR — docked to bottom of card, zero height when hidden.
-       * The card must have `overflow-hidden` + `group` classes.
-       * Bar translates up from below the card on group-hover.
+       * SLIDE-UP BAR
+       * Positioned absolute at bottom-0, starts translate-y-full (hidden below),
+       * slides to translate-y-0 on group-hover.
+       * Semi-transparent bg with blur so card content shows through slightly.
        */}
       <div
         className={cn(
           'absolute bottom-0 inset-x-0 z-20',
           'translate-y-full group-hover:translate-y-0',
           'transition-transform duration-200 ease-out',
-          'bg-card/95 backdrop-blur-sm border-t border-border/50',
-          'flex items-center gap-1.5 px-3 py-2',
+          // Frosted-glass background — matches dark card theme
+          'bg-zinc-900/85 backdrop-blur-md border-t border-white/10',
+          'flex items-center gap-1.5 px-3 py-2.5',
           className,
         )}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Edit button (primary) */}
+        {/* Edit (primary) */}
         <Button
           size='sm'
-          className='flex-1 h-8 text-xs gap-1.5'
+          className='flex-1 h-8 text-xs gap-1.5 bg-primary/90 hover:bg-primary'
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(ROUTES.COURSE_EDIT(course.slug)); }}
         >
           <Pencil className='h-3.5 w-3.5' /> {t('overlay.edit')}
         </Button>
 
-        {/* Preview — opens new tab */}
+        {/* Preview → main frontend */}
         <Button
           size='sm' variant='outline'
-          className='h-8 w-8 p-0'
+          className='h-8 w-8 p-0 border-white/20 bg-white/5 text-white/70 hover:bg-white/15 hover:text-white'
           title={t('overlay.preview')}
           onClick={openPreview}
         >
           <Eye className='h-3.5 w-3.5' />
         </Button>
 
-        {/* State dropdown */}
+        {/* State + more actions dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               size='sm' variant='outline'
-              className={cn('h-8 gap-1 px-2 text-[11px] font-semibold border', STATE_PILL[course.state] ?? STATE_PILL.DRAFT)}
+              className={cn(
+                'h-8 gap-1.5 px-2.5 text-[11px] font-semibold border',
+                STATE_PILL[course.state] ?? STATE_PILL.DRAFT,
+              )}
               disabled={stateMutation.isPending}
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              title={t('overlay.setState')}
             >
               {stateMutation.isPending
                 ? <Loader2 className='h-3 w-3 animate-spin' />
-                : <><CurrentIcon className='h-3 w-3' /> <span className='hidden sm:inline'>{t(currentState.labelKey)}</span></>}
+                : <><CurrentIcon className='h-3 w-3' /><span className='hidden sm:inline ms-1'>{t(currentState.labelKey)}</span></>}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align='end' className='min-w-[160px]'>
+          <DropdownMenuContent align='end' className='min-w-[170px]'>
             {STATE_OPTIONS.map((opt) => {
               const Icon = opt.icon;
               const isCurrent = course.state === opt.value;
@@ -223,7 +223,7 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
             })}
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              className='gap-2 text-xs text-muted-foreground'
+              className='gap-2 text-xs'
               disabled={duplicateMutation.isPending}
               onSelect={(e) => { e.preventDefault(); duplicateMutation.mutate(); }}
             >
@@ -259,7 +259,7 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
               className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
             >
               {deleteMutation.isPending
-                ? <><Loader2 className='mr-2 h-4 w-4 animate-spin' /> {t('dialogs.deleting')}</>
+                ? <><Loader2 className='mr-2 h-4 w-4 animate-spin' />{t('dialogs.deleting')}</>
                 : t('dialogs.deleteConfirm')}
             </AlertDialogAction>
           </AlertDialogFooter>

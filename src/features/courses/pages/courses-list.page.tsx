@@ -22,7 +22,6 @@ import { adminCoursesApi } from '../services/admin-courses.api';
 import { CourseAdminCard } from '../components/course-admin-card';
 import { CoursesTable } from '../components/courses-table';
 import { NewCourseDialog } from '../components/new-course-dialog';
-import { ROUTES } from '@/shared/constants';
 import type { CourseState } from '../types/admin-course.types';
 
 const STAT_CARDS = [
@@ -35,20 +34,20 @@ const STAT_CARDS = [
 type StateFilter = CourseState | 'all';
 type DiffFilter  = 'ALL' | 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT';
 
-// ── Smart Pagination ─────────────────────────────────────────────────────────
+// Pagination threshold — show pagination when items exceed this
+const PAGINATION_THRESHOLD = 9;
+
+// ── Smart Pagination ──────────────────────────────────────────────────────────
 function Pagination({
   page, totalPages, total, limit, onPage,
 }: {
-  page: number;
-  totalPages: number;
-  total: number;
-  limit: number;
+  page: number; totalPages: number; total: number; limit: number;
   onPage: (p: number) => void;
 }) {
   const { t } = useTranslation('courses');
-  if (totalPages <= 1) return null;
+  // Only render when total items exceed threshold
+  if (total <= PAGINATION_THRESHOLD) return null;
 
-  // Build page number buttons — always show first/last + up to 5 around current
   const pages: (number | '...')[] = [];
   const delta = 2;
   for (let i = 1; i <= totalPages; i++) {
@@ -66,42 +65,61 @@ function Pagination({
   const to   = Math.min(page * limit, total);
 
   return (
-    <div className='flex flex-col items-center gap-3 border-t pt-5 sm:flex-row sm:justify-between'>
-      <p className='text-xs text-muted-foreground'>
+    <div className='mt-4 flex flex-col items-center gap-3 border-t pt-5 sm:flex-row sm:justify-between'>
+      {/* Count label */}
+      <p className='text-xs text-muted-foreground order-2 sm:order-1'>
         <span className='font-semibold text-foreground'>{from}</span>–<span className='font-semibold text-foreground'>{to}</span>
         {' '}{t('table.of')}{' '}
         <span className='font-semibold text-foreground'>{total}</span>
         {' '}{t('table.results', 'results')}
       </p>
-      <div className='flex items-center gap-1'>
-        <Button variant='outline' size='sm' className='h-8 w-8 p-0' onClick={() => onPage(1)} disabled={page === 1}>
+
+      {/* Buttons */}
+      <div className='flex items-center gap-1 order-1 sm:order-2'>
+        {/* First — hidden on mobile */}
+        <Button variant='outline' size='sm' className='hidden sm:flex h-8 w-8 p-0'
+          onClick={() => onPage(1)} disabled={page === 1}>
           <ChevronFirst className='h-3.5 w-3.5' />
         </Button>
-        <Button variant='outline' size='sm' className='h-8 w-8 p-0' onClick={() => onPage(page - 1)} disabled={page === 1}>
+        <Button variant='outline' size='sm' className='h-8 w-8 p-0'
+          onClick={() => onPage(page - 1)} disabled={page === 1}>
           <ChevronLeft className='h-3.5 w-3.5' />
         </Button>
-        {pages.map((p, i) =>
-          p === '...' ? (
-            <span key={`dots-${i}`} className='px-1 text-sm text-muted-foreground select-none'>…</span>
-          ) : (
-            <button
-              key={p}
-              onClick={() => onPage(p as number)}
-              className={cn(
-                'h-8 min-w-[2rem] rounded-md border px-2 text-xs font-medium transition-colors',
-                p === page
-                  ? 'border-primary bg-primary text-primary-foreground'
-                  : 'border-border bg-background text-foreground hover:bg-muted',
-              )}
-            >
-              {p}
-            </button>
-          )
-        )}
-        <Button variant='outline' size='sm' className='h-8 w-8 p-0' onClick={() => onPage(page + 1)} disabled={page === totalPages}>
+
+        {/* Page numbers — hidden on mobile, show on sm+ */}
+        <div className='hidden sm:flex items-center gap-1'>
+          {pages.map((p, i) =>
+            p === '...' ? (
+              <span key={`d${i}`} className='px-1 text-sm text-muted-foreground select-none'>…</span>
+            ) : (
+              <button
+                key={p}
+                onClick={() => onPage(p as number)}
+                className={cn(
+                  'h-8 min-w-[2rem] rounded-md border px-2 text-xs font-medium transition-colors',
+                  p === page
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border bg-background text-foreground hover:bg-muted',
+                )}
+              >
+                {p}
+              </button>
+            )
+          )}
+        </div>
+
+        {/* Mobile: just show current/total */}
+        <span className='sm:hidden text-xs px-3 py-1 rounded-md border border-border bg-muted/40 font-medium'>
+          {page} / {totalPages}
+        </span>
+
+        <Button variant='outline' size='sm' className='h-8 w-8 p-0'
+          onClick={() => onPage(page + 1)} disabled={page === totalPages}>
           <ChevronRight className='h-3.5 w-3.5' />
         </Button>
-        <Button variant='outline' size='sm' className='h-8 w-8 p-0' onClick={() => onPage(totalPages)} disabled={page === totalPages}>
+        {/* Last — hidden on mobile */}
+        <Button variant='outline' size='sm' className='hidden sm:flex h-8 w-8 p-0'
+          onClick={() => onPage(totalPages)} disabled={page === totalPages}>
           <ChevronLast className='h-3.5 w-3.5' />
         </Button>
       </div>
@@ -109,7 +127,7 @@ function Pagination({
   );
 }
 
-// ── Page ─────────────────────────────────────────────────────────────────────
+// ── Page ──────────────────────────────────────────────────────────────────────
 export default function CoursesListPage() {
   const { t } = useTranslation('courses');
   const navigate = useNavigate();
@@ -146,6 +164,11 @@ export default function CoursesListPage() {
   const handleStateChange = useCallback((v: string) => { setState(v as StateFilter); setPage(1); }, []);
   const handleDiffChange  = useCallback((v: string) => { setDiff(v as DiffFilter); setPage(1); }, []);
 
+  const goPage = useCallback((p: number) => {
+    setPage(p);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
   if (error) {
     return (
       <div className='flex h-full items-center justify-center p-6'>
@@ -170,7 +193,6 @@ export default function CoursesListPage() {
           <h1 className='text-2xl font-bold tracking-tight'>{t('title')}</h1>
           <p className='mt-1 text-sm text-muted-foreground'>{t('subtitle')}</p>
         </div>
-        {/* Single "Add Course" button → opens dialog */}
         <Button size='sm' className='h-9 gap-2 shrink-0' onClick={() => setNewDialog(true)}>
           <Plus className='h-4 w-4' /> {t('newCourse')}
         </Button>
@@ -180,29 +202,31 @@ export default function CoursesListPage() {
       <div className='grid grid-cols-2 gap-3 lg:grid-cols-4'>
         {statsLoading
           ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className='h-24 rounded-xl' />)
-          : STAT_CARDS.map(({ key, labelKey, icon: Icon, color, bg }) => (
-              <Card
-                key={key}
-                className={cn(
-                  'flex items-center gap-4 p-4 cursor-pointer hover:bg-muted/30 transition-colors',
-                  state === key.replace('comingSoon', 'COMING_SOON').toUpperCase() && 'ring-1 ring-primary/30',
-                )}
-                onClick={() => {
-                  const map: Record<string, StateFilter> = {
-                    total: 'all', published: 'PUBLISHED', draft: 'DRAFT', comingSoon: 'COMING_SOON',
-                  };
-                  setState(map[key]); setPage(1);
-                }}
-              >
-                <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border', bg)}>
-                  <Icon className={cn('h-5 w-5', color)} />
-                </div>
-                <div className='min-w-0'>
-                  <p className='truncate text-xs text-muted-foreground'>{t(labelKey)}</p>
-                  <p className='mt-0.5 text-2xl font-bold leading-none'>{stats?.[key] ?? 0}</p>
-                </div>
-              </Card>
-            ))}
+          : STAT_CARDS.map(({ key, labelKey, icon: Icon, color, bg }) => {
+              const filterVal: StateFilter =
+                key === 'total' ? 'all'
+                : key === 'comingSoon' ? 'COMING_SOON'
+                : key.toUpperCase() as StateFilter;
+              const isActive = state === filterVal;
+              return (
+                <Card
+                  key={key}
+                  className={cn(
+                    'flex items-center gap-4 p-4 cursor-pointer hover:bg-muted/30 transition-all',
+                    isActive && 'ring-2 ring-primary/40',
+                  )}
+                  onClick={() => { setState(filterVal); setPage(1); }}
+                >
+                  <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border', bg)}>
+                    <Icon className={cn('h-5 w-5', color)} />
+                  </div>
+                  <div className='min-w-0'>
+                    <p className='truncate text-xs text-muted-foreground'>{t(labelKey)}</p>
+                    <p className='mt-0.5 text-2xl font-bold leading-none'>{stats?.[key] ?? 0}</p>
+                  </div>
+                </Card>
+              );
+            })}
       </div>
 
       {/* ── Filters ── */}
@@ -211,8 +235,7 @@ export default function CoursesListPage() {
           <Search className='absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
           <Input
             placeholder={t('filters.searchPlaceholder')}
-            value={search}
-            onChange={handleSearchChange}
+            value={search} onChange={handleSearchChange}
             className='h-9 ps-9 bg-background'
           />
         </div>
@@ -282,7 +305,7 @@ export default function CoursesListPage() {
               totalPages={data.meta.totalPages}
               total={data.meta.total}
               limit={limit}
-              onPage={(p) => { setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              onPage={goPage}
             />
           )}
         </>
@@ -291,12 +314,11 @@ export default function CoursesListPage() {
           data={data?.data ?? []}
           meta={data?.meta}
           page={page}
-          onPageChange={(p) => { setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+          onPageChange={goPage}
           onRefetch={refetch}
         />
       )}
 
-      {/* ── New Course Dialog ── */}
       <NewCourseDialog open={newDialog} onClose={() => setNewDialog(false)} />
     </div>
   );
