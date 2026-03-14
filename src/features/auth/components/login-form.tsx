@@ -11,6 +11,7 @@ import { useAuthStore }     from '@/core/store/auth.store';
 import { ROUTES }           from '@/shared/constants';
 import { Button }           from '@/components/ui/button';
 import { Input }            from '@/components/ui/input';
+import { Label }            from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { authTokenService } from '../services/auth-tokens.service';
 import type { LoginFormData } from '../types';
@@ -27,30 +28,21 @@ export function LoginForm() {
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginFormData) => {
       const data = await authService.login(credentials);
-
-      // Normalise token field (backend may use different keys)
       const token = data.accessToken ?? (data as any).access_token ?? (data as any).token;
       if (!token) throw new Error('Authentication failed — no token received');
-
-      // ✅ Security: tokens stored via centralised service (SameSite=strict, secure in prod)
       authTokenService.save(token, data.refreshToken);
-
-      // Verify the user actually has admin access before proceeding
       try {
         await authService.verifyAdminHealth();
       } catch {
         authTokenService.clear();
         throw new Error(t('login.error.notAdmin', 'Access denied: Admin role required'));
       }
-
       return data;
     },
-
     onSuccess: (data) => {
       setUser(data.user);
       navigate(ROUTES.DASHBOARD, { replace: true });
     },
-
     onError: (err: any) => {
       setError(
         err.message ??
@@ -66,11 +58,18 @@ export function LoginForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className='space-y-4' noValidate>
-
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className='space-y-4'
+      noValidate
+      aria-label='Login form'
+    >
       {/* Email */}
       <div>
         <div className='auth-form__input-box'>
+          <Label htmlFor='email' className='sr-only'>
+            {t('login.emailLabel', 'Email')}
+          </Label>
           <Input
             id='email'
             type='email'
@@ -100,6 +99,9 @@ export function LoginForm() {
       {/* Password */}
       <div>
         <div className='auth-form__input-box'>
+          <Label htmlFor='password' className='sr-only'>
+            {t('login.passwordLabel', 'Password')}
+          </Label>
           <Input
             id='password'
             type={showPassword ? 'text' : 'password'}
