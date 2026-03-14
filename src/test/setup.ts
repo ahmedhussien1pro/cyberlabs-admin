@@ -1,22 +1,31 @@
-// Plain TS setup — no JSX here.
-// All JSX mocks live in setup.tsx which is loaded after this file.
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
 
 afterEach(() => cleanup());
 
-// Silence matchMedia (not available in jsdom)
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: vi.fn().mockImplementation((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
-});
+// Radix UI Select / Popover use PointerEvent APIs not available in jsdom
+if (typeof window !== 'undefined') {
+  window.PointerEvent = window.PointerEvent ??
+    class PointerEvent extends MouseEvent {
+      constructor(type: string, params?: PointerEventInit) {
+        super(type, params);
+      }
+    } as typeof PointerEvent;
+
+  // hasPointerCapture / setPointerCapture / releasePointerCapture
+  if (!HTMLElement.prototype.hasPointerCapture) {
+    HTMLElement.prototype.hasPointerCapture = () => false;
+  }
+  if (!HTMLElement.prototype.setPointerCapture) {
+    HTMLElement.prototype.setPointerCapture = () => {};
+  }
+  if (!HTMLElement.prototype.releasePointerCapture) {
+    HTMLElement.prototype.releasePointerCapture = () => {};
+  }
+
+  // scrollIntoView not implemented in jsdom
+  if (!HTMLElement.prototype.scrollIntoView) {
+    HTMLElement.prototype.scrollIntoView = vi.fn();
+  }
+}

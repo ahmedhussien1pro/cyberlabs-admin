@@ -1,49 +1,51 @@
-// src/features/users/__tests__/user-filters.test.tsx
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { UserFilters } from '../components/user-filters';
 
-function renderFilters(overrides = {}) {
-  const props = {
-    search: '',
-    onSearchChange: vi.fn(),
-    roleFilter: 'ALL' as const,
-    onRoleFilterChange: vi.fn(),
-    statusFilter: 'all' as const,
-    onStatusFilterChange: vi.fn(),
-    ...overrides,
-  };
-  return { ...render(<UserFilters {...props} />), ...props };
+const mockOnChange = vi.fn();
+
+const defaultFilters = { search: '', role: '', status: '' };
+
+function renderFilters(filters = defaultFilters) {
+  return render(<UserFilters filters={filters} onChange={mockOnChange} />);
 }
 
-describe('UserFilters — rendering', () => {
-  it('renders search input', () => {
-    renderFilters();
-    expect(screen.getByRole('textbox', { name: /search users/i })).toBeInTheDocument();
-  });
+beforeEach(() => vi.clearAllMocks());
 
-  it('renders role and status selects', () => {
+describe('UserFilters', () => {
+  it('renders search input and two selects', () => {
     renderFilters();
+    expect(screen.getByRole('textbox', { name: /search/i })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: /filter by role/i })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: /filter by status/i })).toBeInTheDocument();
   });
-});
 
-describe('UserFilters — search', () => {
-  it('calls onSearchChange on input', async () => {
-    const onSearchChange = vi.fn();
-    renderFilters({ onSearchChange });
-    await userEvent.type(screen.getByRole('textbox', { name: /search users/i }), 'ali');
-    expect(onSearchChange).toHaveBeenCalled();
-  });
-});
-
-describe('UserFilters — role options', () => {
-  it('includes INSTRUCTOR and CONTENT_CREATOR options', async () => {
+  it('calls onChange when search input changes', async () => {
     renderFilters();
-    await userEvent.click(screen.getByRole('combobox', { name: /filter by role/i }));
-    expect(screen.getByText('Instructor')).toBeInTheDocument();
-    expect(screen.getByText('Content Creator')).toBeInTheDocument();
+    await userEvent.type(screen.getByRole('textbox', { name: /search/i }), 'John');
+    expect(mockOnChange).toHaveBeenCalled();
+  });
+
+  it('includes INSTRUCTOR and CONTENT_CREATOR options in role select', async () => {
+    renderFilters();
+    const roleCombobox = screen.getByRole('combobox', { name: /filter by role/i });
+    // Open Radix Select via pointer events (jsdom requires this)
+    await userEvent.pointer([{ keys: '[PointerDown]', target: roleCombobox }]);
+    // Options render in a portal — query from document.body
+    const body = within(document.body);
+    expect(body.getByText('Instructor')).toBeInTheDocument();
+    expect(body.getByText('Content Creator')).toBeInTheDocument();
+  });
+
+  it('includes all role options', async () => {
+    renderFilters();
+    const roleCombobox = screen.getByRole('combobox', { name: /filter by role/i });
+    await userEvent.pointer([{ keys: '[PointerDown]', target: roleCombobox }]);
+    const body = within(document.body);
+    expect(body.getByText('Admin')).toBeInTheDocument();
+    expect(body.getByText('User')).toBeInTheDocument();
+    expect(body.getByText('Instructor')).toBeInTheDocument();
+    expect(body.getByText('Content Creator')).toBeInTheDocument();
   });
 });
