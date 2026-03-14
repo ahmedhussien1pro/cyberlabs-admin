@@ -38,8 +38,8 @@ describe('resolveTitle', () => {
   it('falls back to title if ar_title is empty', () => {
     expect(resolveTitle({ title: 'English', ar_title: '' }, 'ar')).toBe('English');
   });
-  it('falls back to title if ar_title is undefined', () => {
-    expect(resolveTitle({ title: 'English', ar_title: undefined }, 'ar')).toBe('English');
+  it('falls back to title if ar_title is null', () => {
+    expect(resolveTitle({ title: 'English', ar_title: null }, 'ar')).toBe('English');
   });
 });
 
@@ -61,10 +61,10 @@ describe('resolveThumbnail', () => {
     expect(resolveThumbnail({ image: 'img.png', thumbnail: 'thumb.png' })).toBe('img.png');
   });
   it('falls back to thumbnail', () => {
-    expect(resolveThumbnail({ image: undefined, thumbnail: 'thumb.png' })).toBe('thumb.png');
+    expect(resolveThumbnail({ image: null, thumbnail: 'thumb.png' })).toBe('thumb.png');
   });
   it('returns null when both absent', () => {
-    expect(resolveThumbnail({ image: undefined, thumbnail: undefined })).toBeNull();
+    expect(resolveThumbnail({ image: null, thumbnail: null })).toBeNull();
   });
 });
 

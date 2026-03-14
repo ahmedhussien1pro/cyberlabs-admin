@@ -1,4 +1,4 @@
-// ── CurriculumPlatformEditor — Main Component ─────────────────────────────
+// ── CurriculumPlatformEditor — Main Component ─────────────────────────────────────────
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -40,9 +40,9 @@ function SourceBadge({ source }: { source?: 'json' | 'db' }) {
   );
 }
 
-interface Props { courseId: string; courseSlug: string; }
+interface Props { courseId: string; courseSlug?: string; }
 
-export function CurriculumPlatformEditor({ courseId, courseSlug }: Props) {
+export function CurriculumPlatformEditor({ courseId }: Props) {
   const queryClient = useQueryClient();
   const [editMode, setEditMode]       = useState(false);
   const [localTopics, setLocalTopics] = useState<Topic[] | null>(null);
@@ -55,9 +55,9 @@ export function CurriculumPlatformEditor({ courseId, courseSlug }: Props) {
   });
 
   useEffect(() => {
-    if (!data?.topics) return;
+    if (!(data as any)?.topics) return;
     if (localTopics === null) {
-      const normalized = (data.topics as any[]).map((t, i) => normalizeTopic(t, i));
+      const normalized = ((data as any).topics as any[]).map((t: unknown, i: number) => normalizeTopic(t as any, i));
       setLocalTopics(normalized);
       if (normalized.length > 0) setOpenId(normalized[0].id);
     }
@@ -115,7 +115,7 @@ export function CurriculumPlatformEditor({ courseId, courseSlug }: Props) {
         <div>
           <div className='flex items-center gap-2 flex-wrap'>
             <h2 className='text-xl font-bold tracking-tight sm:text-2xl'>Course Curriculum</h2>
-            <SourceBadge source={data?.source} />
+            <SourceBadge source={(data as any)?.source} />
           </div>
           <p className='mt-1 text-sm text-muted-foreground'>
             {total} Topics · Follow the order for best results

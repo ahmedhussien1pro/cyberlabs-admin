@@ -17,9 +17,7 @@ import { adminCoursesApi } from '../services/admin-courses.api';
 import { ROUTES } from '@/shared/constants';
 
 interface Props {
-  /** Controlled open state. If provided, the internal trigger button is hidden. */
   open?: boolean;
-  /** Called when the dialog should close (controlled mode). */
   onClose?: () => void;
 }
 
@@ -38,15 +36,25 @@ export function NewCourseDialog({ open: controlledOpen, onClose }: Props = {}) {
   const queryClient = useQueryClient();
 
   const { mutate, isPending } = useMutation({
-    mutationFn: () => adminCoursesApi.create({ title: title.trim(), slug: slug.trim() }),
+    mutationFn: () => adminCoursesApi.create({
+      title:       title.trim(),
+      slug:        slug.trim(),
+      // required fields with safe defaults
+      difficulty:  'BEGINNER',
+      access:      'FREE',
+      category:    'FUNDAMENTALS',
+      color:       'BLUE',
+      contentType: 'MIXED',
+      instructorId: '',
+    }),
     onSuccess: (course) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
       toast.success(`Course "${course.title}" created!`);
       setOpen(false); setTitle(''); setSlug('');
       navigate(ROUTES.COURSE_EDIT(course.slug));
     },
-    onError: (err: any) => {
-      const msg = err?.response?.data?.message ?? 'Failed to create course';
+    onError: (err: unknown) => {
+      const msg = (err as any)?.response?.data?.message ?? 'Failed to create course';
       toast.error(Array.isArray(msg) ? msg.join(' • ') : msg);
     },
   });

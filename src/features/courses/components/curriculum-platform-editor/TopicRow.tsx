@@ -1,7 +1,7 @@
-// ── TopicRow ───────────────────────────────────────────────────────────────
+// ── TopicRow ───────────────────────────────────────────────────────────────────────
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, ChevronDown, Plus, Trash2, ArrowUp, ArrowDown, GripVertical, Pencil } from 'lucide-react';
+import { BookOpen, ChevronDown, Trash2, ArrowUp, ArrowDown, GripVertical, Pencil } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';

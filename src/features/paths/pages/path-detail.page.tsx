@@ -44,7 +44,6 @@ import { AddModuleModal } from '../components/add-module-modal';
 import type { NewModule } from '../components/add-module-modal';
 import { cn } from '@/lib/utils';
 
-// ── Page ─────────────────────────────────────────────────────────────────────
 export default function PathDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation('paths');
@@ -54,14 +53,12 @@ export default function PathDetailPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [attachingCount, setAttachingCount] = useState(0);
 
-  // ── Queries ──────────────────────────────────────────────────────────────
   const { data: path, isLoading } = useQuery({
     queryKey: PATHS_QUERY_KEYS.detail(id!),
     queryFn: () => pathsService.getById(id!),
     enabled: !!id,
   });
 
-  // ── Mutations ─────────────────────────────────────────────────────────────
   const publishMutation = useMutation({
     mutationFn: () =>
       path?.isPublished
@@ -98,24 +95,12 @@ export default function PathDetailPage() {
     onError: () => toast.error('Failed to remove module'),
   });
 
-  const detachLabMutation = useMutation({
-    mutationFn: (labId: string) =>
-      pathsService.update(id!, { modules: [] } as any), // placeholder — lab detach
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: PATHS_QUERY_KEYS.detail(id!) });
-      toast.success('Module removed');
-    },
-    onError: () => toast.error('Failed to remove module'),
-  });
-
-  // ── Add Modules: attach one by one using correct endpoints ───────────────
   const handleAddModules = async (newModules: NewModule[]) => {
     if (!path || newModules.length === 0) return;
     setShowAddModal(false);
     setAttachingCount(newModules.length);
 
     let successCount = 0;
-    let failCount = 0;
 
     for (const mod of newModules) {
       try {
@@ -125,41 +110,29 @@ export default function PathDetailPage() {
           await pathsService.attachLab(id!, mod.labId);
         }
         successCount++;
-      } catch (err: any) {
-        const msg =
-          err?.response?.data?.message ?? err?.message ?? 'Unknown error';
-        toast.error(
-          `Failed to add "${mod.title}": ${
-            Array.isArray(msg) ? msg.join(' · ') : msg
-          }`,
-        );
-        failCount++;
+      } catch (err: unknown) {
+        const msg = (err as any)?.response?.data?.message ?? (err as any)?.message ?? 'Unknown error';
+        toast.error(`Failed to add "${mod.title}": ${Array.isArray(msg) ? msg.join(' · ') : msg}`);
       }
     }
 
     setAttachingCount(0);
 
     if (successCount > 0) {
-      toast.success(
-        `${successCount} module${successCount > 1 ? 's' : ''} added successfully`,
-      );
+      toast.success(`${successCount} module${successCount > 1 ? 's' : ''} added successfully`);
       queryClient.invalidateQueries({ queryKey: PATHS_QUERY_KEYS.detail(id!) });
       queryClient.invalidateQueries({ queryKey: PATHS_QUERY_KEYS.all });
     }
   };
 
-  // ── Remove module ─────────────────────────────────────────────────────────
   const handleRemoveModule = (module: PathModule) => {
     if (module.courseId) {
       detachCourseMutation.mutate(module.courseId);
     } else if (module.labId) {
-      // Use detachLab service call
       pathsService
         .detachLab(id!, module.labId)
         .then(() => {
-          queryClient.invalidateQueries({
-            queryKey: PATHS_QUERY_KEYS.detail(id!),
-          });
+          queryClient.invalidateQueries({ queryKey: PATHS_QUERY_KEYS.detail(id!) });
           queryClient.invalidateQueries({ queryKey: PATHS_QUERY_KEYS.all });
           toast.success('Module removed');
         })
@@ -167,15 +140,10 @@ export default function PathDetailPage() {
     }
   };
 
-  // ── Lock/Unlock: uses reorderModules endpoint which exists ────────────────
-  const handleToggleLock = (module: PathModule) => {
-    // Lock state is a frontend-only UX concern for now;
-    // backend PathModule schema doesn't have isLocked on the update path yet.
-    // Notify user it needs backend support.
+  const handleToggleLock = (_module: PathModule) => {
     toast.info('Lock/unlock requires a dedicated backend endpoint — coming soon');
   };
 
-  // ── Loading State ─────────────────────────────────────────────────────────
   if (isLoading) {
     return (
       <div className='space-y-6'>
@@ -188,16 +156,10 @@ export default function PathDetailPage() {
 
   if (!path) return null;
 
-  const existingCourseIds = path.modules
-    .filter((m) => m.courseId)
-    .map((m) => m.courseId!);
-  const existingLabIds = path.modules
-    .filter((m) => m.labId)
-    .map((m) => m.labId!);
-
+  const existingCourseIds = path.modules.filter((m) => m.courseId).map((m) => m.courseId!);
+  const existingLabIds    = path.modules.filter((m) => m.labId).map((m) => m.labId!);
   const isAttaching = attachingCount > 0;
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className='space-y-6'>
       {/* ── Back + Actions ── */}
@@ -208,10 +170,7 @@ export default function PathDetailPage() {
         </Button>
 
         <div className='flex flex-wrap items-center gap-2'>
-          <Button
-            variant='outline'
-            onClick={() => publishMutation.mutate()}
-            disabled={publishMutation.isPending}>
+          <Button variant='outline' onClick={() => publishMutation.mutate()} disabled={publishMutation.isPending}>
             {publishMutation.isPending ? (
               <Loader2 className='mr-2 h-4 w-4 animate-spin' />
             ) : path.isPublished ? (
@@ -238,12 +197,8 @@ export default function PathDetailPage() {
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>
-                  {t('messages.deleteConfirm')}
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  {t('messages.deleteWarning')}
-                </AlertDialogDescription>
+                <AlertDialogTitle>{t('messages.deleteConfirm')}</AlertDialogTitle>
+                <AlertDialogDescription>{t('messages.deleteWarning')}</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>{t('actions.cancel')}</AlertDialogCancel>
@@ -251,9 +206,7 @@ export default function PathDetailPage() {
                   className='bg-destructive text-destructive-foreground'
                   onClick={() => deleteMutation.mutate()}
                   disabled={deleteMutation.isPending}>
-                  {deleteMutation.isPending && (
-                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                  )}
+                  {deleteMutation.isPending && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
                   {t('actions.delete')}
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -267,11 +220,7 @@ export default function PathDetailPage() {
         <CardContent className='p-6'>
           <div className='flex items-start gap-6'>
             {path.thumbnail ? (
-              <img
-                src={path.thumbnail}
-                alt={path.title}
-                className='h-24 w-24 shrink-0 rounded-xl object-cover'
-              />
+              <img src={path.thumbnail} alt={path.title} className='h-24 w-24 shrink-0 rounded-xl object-cover' />
             ) : (
               <div className='flex h-24 w-24 shrink-0 items-center justify-center rounded-xl bg-primary/10'>
                 <MapPin className='h-10 w-10 text-primary' />
@@ -281,30 +230,14 @@ export default function PathDetailPage() {
               <div className='flex flex-wrap items-center gap-3'>
                 <h1 className='text-2xl font-bold'>{path.title}</h1>
                 <Badge variant={path.isPublished ? 'default' : 'secondary'}>
-                  {path.isPublished
-                    ? t('filters.published')
-                    : t('filters.unpublished')}
+                  {path.isPublished ? t('filters.published') : t('filters.unpublished')}
                 </Badge>
               </div>
-              {path.ar_title && (
-                <p className='text-sm text-muted-foreground' dir='rtl'>
-                  {path.ar_title}
-                </p>
-              )}
-              {path.description && (
-                <p className='text-sm text-muted-foreground'>
-                  {path.description}
-                </p>
-              )}
+              {path.ar_title && <p className='text-sm text-muted-foreground' dir='rtl'>{path.ar_title}</p>}
+              {path.description && <p className='text-sm text-muted-foreground'>{path.description}</p>}
               <div className='flex flex-wrap items-center gap-4 text-sm text-muted-foreground'>
-                <span className='flex items-center gap-1'>
-                  <Users className='h-4 w-4' />
-                  {path._count.enrollments} {t('enrollments')}
-                </span>
-                <span className='flex items-center gap-1'>
-                  <MapPin className='h-4 w-4' />
-                  {t('modulesCount', { count: path._count.modules })}
-                </span>
+                <span className='flex items-center gap-1'><Users className='h-4 w-4' />{path._count.enrollments} {t('enrollments')}</span>
+                <span className='flex items-center gap-1'><MapPin className='h-4 w-4' />{t('modulesCount', { count: path._count.modules })}</span>
               </div>
             </div>
           </div>
@@ -315,20 +248,11 @@ export default function PathDetailPage() {
       <Card>
         <CardHeader className='flex flex-row items-center justify-between pb-4'>
           <CardTitle>{t('modules.title')}</CardTitle>
-          <Button
-            size='sm'
-            onClick={() => setShowAddModal(true)}
-            disabled={isAttaching}>
+          <Button size='sm' onClick={() => setShowAddModal(true)} disabled={isAttaching}>
             {isAttaching ? (
-              <>
-                <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                Adding {attachingCount}...
-              </>
+              <><Loader2 className='mr-2 h-4 w-4 animate-spin' />Adding {attachingCount}...</>
             ) : (
-              <>
-                <Plus className='mr-2 h-4 w-4' />
-                Add Module
-              </>
+              <><Plus className='mr-2 h-4 w-4' />Add Module</>
             )}
           </Button>
         </CardHeader>
@@ -346,15 +270,10 @@ export default function PathDetailPage() {
               <div className='mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-muted'>
                 <BookOpen className='h-7 w-7 text-muted-foreground' />
               </div>
-              <p className='font-medium text-muted-foreground'>
-                {t('modules.empty')}
-              </p>
-              <p className='mt-1 text-sm text-muted-foreground'>
-                Add courses or labs to build this learning path
-              </p>
+              <p className='font-medium text-muted-foreground'>{t('modules.empty')}</p>
+              <p className='mt-1 text-sm text-muted-foreground'>Add courses or labs to build this learning path</p>
               <Button className='mt-4' onClick={() => setShowAddModal(true)} disabled={isAttaching}>
-                <Plus className='mr-2 h-4 w-4' />
-                Add First Module
+                <Plus className='mr-2 h-4 w-4' />Add First Module
               </Button>
             </div>
           ) : (
@@ -366,40 +285,26 @@ export default function PathDetailPage() {
                     'group flex items-center gap-4 rounded-xl border bg-card p-4 transition-all hover:bg-accent/30 hover:shadow-sm',
                     isAttaching && 'pointer-events-none opacity-60',
                   )}>
-                  {/* Drag handle + Order */}
                   <div className='flex shrink-0 items-center gap-1 text-muted-foreground'>
                     <GripVertical className='h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100' />
-                    <span className='w-5 text-center font-mono text-sm'>
-                      {idx + 1}
-                    </span>
+                    <span className='w-5 text-center font-mono text-sm'>{idx + 1}</span>
                   </div>
 
-                  {/* Type Icon */}
-                  <div
-                    className={cn(
-                      'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
-                      module.type === 'COURSE'
-                        ? 'bg-blue-500/10'
-                        : 'bg-purple-500/10',
-                    )}>
-                    {module.type === 'COURSE' ? (
-                      <BookOpen className='h-5 w-5 text-blue-600' />
-                    ) : (
-                      <FlaskConical className='h-5 w-5 text-purple-600' />
-                    )}
+                  <div className={cn(
+                    'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
+                    module.type === 'COURSE' ? 'bg-blue-500/10' : 'bg-purple-500/10',
+                  )}>
+                    {module.type === 'COURSE'
+                      ? <BookOpen className='h-5 w-5 text-blue-600' />
+                      : <FlaskConical className='h-5 w-5 text-purple-600' />}
                   </div>
 
-                  {/* Info */}
                   <div className='min-w-0 flex-1'>
                     <p className='truncate font-medium'>
-                      {module.course?.title ??
-                        module.lab?.title ??
-                        module.title}
+                      {module.course?.title ?? module.lab?.title ?? module.title}
                     </p>
                     <div className='mt-1 flex flex-wrap items-center gap-2'>
-                      <Badge variant='outline' className='py-0 text-xs'>
-                        {module.type}
-                      </Badge>
+                      <Badge variant='outline' className='py-0 text-xs'>{module.type}</Badge>
                       {(module.course?.difficulty ?? module.lab?.difficulty) && (
                         <Badge variant='secondary' className='py-0 text-xs'>
                           {module.course?.difficulty ?? module.lab?.difficulty}
@@ -407,39 +312,29 @@ export default function PathDetailPage() {
                       )}
                       {module.estimatedHours > 0 && (
                         <span className='flex items-center gap-1 text-xs text-muted-foreground'>
-                          <Clock className='h-3 w-3' />
-                          {module.estimatedHours}h
+                          <Clock className='h-3 w-3' />{module.estimatedHours}h
                         </span>
                       )}
                       {module.isLocked && (
                         <span className='flex items-center gap-1 text-xs text-orange-500'>
-                          <Lock className='h-3 w-3' />
-                          Locked
+                          <Lock className='h-3 w-3' />Locked
                         </span>
                       )}
                     </div>
                   </div>
 
-                  {/* Actions */}
                   <div className='flex shrink-0 items-center gap-1'>
-                    <Button
-                      variant='ghost'
-                      size='icon'
-                      className='h-8 w-8'
+                    <Button variant='ghost' size='icon' className='h-8 w-8'
                       title={module.isLocked ? 'Unlock module' : 'Lock module'}
                       onClick={() => handleToggleLock(module)}>
-                      {module.isLocked ? (
-                        <Lock className='h-4 w-4 text-orange-500' />
-                      ) : (
-                        <Unlock className='h-4 w-4 text-muted-foreground' />
-                      )}
+                      {module.isLocked
+                        ? <Lock className='h-4 w-4 text-orange-500' />
+                        : <Unlock className='h-4 w-4 text-muted-foreground' />}
                     </Button>
 
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button
-                          variant='ghost'
-                          size='icon'
+                        <Button variant='ghost' size='icon'
                           className='h-8 w-8 text-destructive opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100'>
                           <Trash2 className='h-4 w-4' />
                         </Button>
@@ -448,11 +343,7 @@ export default function PathDetailPage() {
                         <AlertDialogHeader>
                           <AlertDialogTitle>Remove module?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            This will remove &ldquo;
-                            {module.course?.title ??
-                              module.lab?.title ??
-                              module.title}
-                            &rdquo; from this path. The course/lab itself won&apos;t be deleted.
+                            This will remove &ldquo;{module.course?.title ?? module.lab?.title ?? module.title}&rdquo; from this path. The course/lab itself won&apos;t be deleted.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -473,7 +364,6 @@ export default function PathDetailPage() {
         </CardContent>
       </Card>
 
-      {/* ── Add Module Modal ── */}
       {showAddModal && (
         <AddModuleModal
           existingCourseIds={existingCourseIds}
