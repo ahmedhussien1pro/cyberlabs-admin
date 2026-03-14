@@ -7,12 +7,17 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    setupFiles: ['./src/test/setup.ts'],
+    // setup.ts first (no JSX), then setup.tsx (JSX mocks)
+    setupFiles: [
+      './src/test/setup.ts',
+      './src/test/setup.tsx',
+    ],
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     coverage: {
-      reporter: ['text', 'lcov'],
+      provider: 'v8',
+      reporter: ['text', 'lcov', 'html'],
       include: ['src/features/**'],
-      exclude: ['src/features/**/*.stories.*'],
+      exclude: ['src/features/**/*.stories.*', 'src/features/**/__tests__/**'],
     },
   },
   resolve: {
