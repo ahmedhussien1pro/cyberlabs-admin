@@ -1,11 +1,9 @@
 // src/features/courses/components/edit-tabs/curriculum-tab.tsx
-// ✅ Uses adminCoursesApi (admin endpoint with auth)
-// ✅ i18n via useTranslation() — reacts to topbar AR/EN toggle (same as preview tab)
-// ✅ Inline title editing for topics (EN + AR)
-// ✅ JSON import (paste or file)
-// ✅ Image upload via adminCoursesApi.uploadImage → R2 CDN URL
-// ✅ Add / delete / reorder topics & elements
-// ✅ Sticky Save / Discard bar when dirty
+// ✅ useTranslation() — reacts to topbar AR/EN (same as course-preview-tab)
+// ✅ getText(v, lang) — same helper as CourseElementRenderer
+// ✅ Element display uses lang — shows ar or en based on topbar
+// ✅ Topic title: ar preferred when isAr (same as TopicRow in preview)
+// ✅ CourseElementRenderer used for live preview inside open topic
 import { useState, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -14,7 +12,7 @@ import {
   ChevronDown, ChevronRight, ChevronUp,
   Save, RotateCcw, Upload, FileJson,
   AlertCircle, Edit2, Trash2, Plus,
-  ImageIcon, Loader2, Check, X,
+  ImageIcon, Loader2, Check, X, Eye,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,14 +22,18 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { adminCoursesApi } from '../../services/admin-courses.api';
+import CourseElementRenderer from '../CourseElementRenderer';
 import type { AdminCourse } from '../../types/admin-course.types';
+import type { CourseElement } from '../CourseElementRenderer';
+
+type Lang = 'en' | 'ar';
 
 interface Props { course: AdminCourse; onSaved?: () => void; }
 
 interface Element {
   id?: string | number;
   type: string;
-  value?: { en: string; ar: string } | string;
+  value?: { en: string; ar?: string } | string;
   imageUrl?: string;
   [key: string]: unknown;
 }
@@ -41,7 +43,14 @@ interface Topic {
   elements: Element[];
 }
 
-// ── JSON Import Panel ────────────────────────────────────────────────────────
+// ── Same getText helper as CourseElementRenderer ───────────────────────────
+function getText(v: { en: string; ar?: string | null } | string | undefined, lang: Lang): string {
+  if (!v) return '';
+  if (typeof v === 'string') return v;
+  return lang === 'ar' ? (v.ar ?? v.en) : v.en;
+}
+
+// ── JSON Import Panel ─────────────────────────────────────────────────────
 function JsonImportPanel({
   onImport, lbl,
 }: {
@@ -86,9 +95,7 @@ function JsonImportPanel({
 
   return (
     <Card>
-      <CardHeader
-        className='cursor-pointer select-none'
-        onClick={() => setOpen(!open)}>
+      <CardHeader className='cursor-pointer select-none' onClick={() => setOpen(!open)}>
         <CardTitle className='flex items-center justify-between text-sm'>
           <span className='flex items-center gap-2'>
             <FileJson className='h-4 w-4 text-primary' />
@@ -113,8 +120,7 @@ function JsonImportPanel({
             </span>
           </div>
           <Textarea
-            dir='ltr'
-            rows={5}
+            dir='ltr' rows={5}
             placeholder='{"topics": [...]} or [...]'
             value={pasteValue}
             onChange={(e) => setPasteValue(e.target.value)}
@@ -138,7 +144,7 @@ function JsonImportPanel({
   );
 }
 
-// ── Image Upload Button ──────────────────────────────────────────────────────
+// ── Image Upload Button ─────────────────────────────────────────────────────
 function ImageUploadButton({
   currentUrl, onUploaded, lbl,
 }: {
@@ -168,19 +174,10 @@ function ImageUploadButton({
   return (
     <div className='space-y-1.5'>
       <div className='flex items-center gap-2'>
-        <Button
-          type='button'
-          variant='outline'
-          size='sm'
-          className='gap-2 h-8 text-xs'
-          disabled={uploading}
-          onClick={() => ref.current?.click()}>
-          {uploading
-            ? <Loader2 className='h-3.5 w-3.5 animate-spin' />
-            : <ImageIcon className='h-3.5 w-3.5' />}
-          {uploading
-            ? lbl('Uploading…', 'جاري الرفع…')
-            : lbl('Upload Image', 'رفع صورة')}
+        <Button type='button' variant='outline' size='sm' className='gap-2 h-8 text-xs'
+          disabled={uploading} onClick={() => ref.current?.click()}>
+          {uploading ? <Loader2 className='h-3.5 w-3.5 animate-spin' /> : <ImageIcon className='h-3.5 w-3.5' />}
+          {uploading ? lbl('Uploading…', 'جاري الرفع…') : lbl('Upload Image', 'رفع صورة')}
         </Button>
         <input ref={ref} type='file' accept='image/*' className='hidden' onChange={handleFile} />
         {currentUrl && (
@@ -190,21 +187,19 @@ function ImageUploadButton({
         )}
       </div>
       {currentUrl && (
-        <img
-          src={currentUrl}
-          alt=''
-          className='h-24 rounded-lg border border-border object-contain bg-muted/20'
-        />
+        <img src={currentUrl} alt=''
+          className='h-24 rounded-lg border border-border object-contain bg-muted/20' />
       )}
     </div>
   );
 }
 
-// ── Element row ──────────────────────────────────────────────────────────────
+// ── Element row ─────────────────────────────────────────────────────────────
 function ElementRow({
-  el, onUpdate, onDelete, onMoveUp, onMoveDown, isFirst, isLast, lbl,
+  el, lang, onUpdate, onDelete, onMoveUp, onMoveDown, isFirst, isLast, lbl,
 }: {
   el: Element;
+  lang: Lang; // ⭐ passed from parent — drives getText
   onUpdate: (el: Element) => void;
   onDelete: () => void;
   onMoveUp: () => void;
@@ -213,108 +208,132 @@ function ElementRow({
   isLast: boolean;
   lbl: (en: string, ar: string) => string;
 }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft]     = useState('');
+  const [editing,   setEditing]   = useState(false);
+  const [preview,   setPreview]   = useState(false);
+  const [draft,     setDraft]     = useState('');
 
-  const isImage    = el.type === 'image';
-  const displayVal = typeof el.value === 'object'
-    ? ((el.value as any)?.en ?? '')
-    : (el.value ?? '');
+  const isImage = el.type === 'image';
 
-  const startEdit = () => { setDraft(JSON.stringify(el, null, 2)); setEditing(true); };
+  // ─ نفس getText بالضبط زي CourseElementRenderer ─
+  const displayVal = getText(el.value as any, lang);
+
+  const startEdit  = () => { setDraft(JSON.stringify(el, null, 2)); setEditing(true); setPreview(false); };
   const commitEdit = () => {
-    try {
-      onUpdate(JSON.parse(draft));
-      setEditing(false);
-    } catch {
-      toast.error(lbl('Invalid JSON for element', 'JSON غير صحيح للعنصر'));
-    }
+    try { onUpdate(JSON.parse(draft)); setEditing(false); }
+    catch { toast.error(lbl('Invalid JSON for element', 'JSON غير صحيح للعنصر')); }
   };
 
   return (
-    <div className='flex items-start gap-2 rounded-lg border border-border/40 bg-muted/20 px-3 py-2'>
-      <Badge variant='outline' className='shrink-0 mt-0.5 font-mono text-[10px] text-primary border-primary/30'>
-        {el.type}
-      </Badge>
-      <div className='flex-1 min-w-0 space-y-1.5'>
-        {editing ? (
-          <div className='space-y-2'>
-            <textarea
-              dir='ltr'
-              className='w-full rounded border border-border bg-background px-2 py-1.5 text-xs font-mono resize-y min-h-[5rem]'
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              autoFocus
-            />
-            {isImage && (
-              <ImageUploadButton
-                currentUrl={el.imageUrl as string | undefined}
-                onUploaded={(url) => {
-                  try {
-                    setDraft(JSON.stringify({ ...JSON.parse(draft), imageUrl: url }, null, 2));
-                  } catch { /* keep draft */ }
-                }}
-                lbl={lbl}
-              />
-            )}
-            <div className='flex gap-2'>
-              <Button size='sm' className='h-7 gap-1 text-xs' onClick={commitEdit}>
-                <Check className='h-3 w-3' /> {lbl('Apply', 'تطبيق')}
-              </Button>
-              <Button size='sm' variant='ghost' className='h-7 gap-1 text-xs' onClick={() => setEditing(false)}>
-                <X className='h-3 w-3' /> {lbl('Cancel', 'إلغاء')}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <>
+    <div className='rounded-lg border border-border/40 bg-muted/20'>
+      {/* ─ header row ─ */}
+      <div className='flex items-center gap-2 px-3 py-2'>
+        <Badge variant='outline'
+          className='shrink-0 font-mono text-[10px] text-primary border-primary/30'>
+          {el.type}
+        </Badge>
+
+        {/* ─ summary: lang-aware ─ */}
+        {!editing && !preview && (
+          <div className='flex-1 min-w-0'>
             {isImage && el.imageUrl ? (
               <img src={el.imageUrl as string} alt=''
-                className='h-16 rounded border border-border/40 object-contain bg-muted/10' />
+                className='h-10 rounded border border-border/40 object-contain bg-muted/10' />
             ) : (
-              <p className='text-xs text-muted-foreground line-clamp-2'>
-                {String(displayVal) || `(${el.type})`}
+              <p className='text-xs text-muted-foreground line-clamp-1'>
+                {displayVal || `(${el.type})`}
               </p>
             )}
-          </>
+          </div>
         )}
+        {(editing || preview) && <div className='flex-1' />}
+
+        {/* ─ action buttons ─ */}
+        <div className='flex shrink-0 items-center gap-0.5'>
+          <Button variant='ghost' size='sm' className='h-6 w-6 p-0' disabled={isFirst}  onClick={onMoveUp}>
+            <ChevronUp className='h-3 w-3' />
+          </Button>
+          <Button variant='ghost' size='sm' className='h-6 w-6 p-0' disabled={isLast} onClick={onMoveDown}>
+            <ChevronDown className='h-3 w-3' />
+          </Button>
+          <Button variant='ghost' size='sm' className='h-6 w-6 p-0'
+            title={lbl('Preview', 'معاينة')}
+            onClick={() => { setPreview(!preview); setEditing(false); }}>
+            <Eye className='h-3 w-3' />
+          </Button>
+          <Button variant='ghost' size='sm' className='h-6 w-6 p-0' onClick={startEdit}>
+            <Edit2 className='h-3 w-3' />
+          </Button>
+          <Button variant='ghost' size='sm' className='h-6 w-6 p-0 text-destructive hover:text-destructive' onClick={onDelete}>
+            <Trash2 className='h-3 w-3' />
+          </Button>
+        </div>
       </div>
-      <div className='flex shrink-0 items-center gap-0.5'>
-        <Button variant='ghost' size='sm' className='h-6 w-6 p-0' disabled={isFirst}  onClick={onMoveUp}>
-          <ChevronUp className='h-3 w-3' />
-        </Button>
-        <Button variant='ghost' size='sm' className='h-6 w-6 p-0' disabled={isLast} onClick={onMoveDown}>
-          <ChevronDown className='h-3 w-3' />
-        </Button>
-        <Button variant='ghost' size='sm' className='h-6 w-6 p-0' onClick={startEdit}>
-          <Edit2 className='h-3 w-3' />
-        </Button>
-        <Button variant='ghost' size='sm' className='h-6 w-6 p-0 text-destructive hover:text-destructive' onClick={onDelete}>
-          <Trash2 className='h-3 w-3' />
-        </Button>
-      </div>
+
+      {/* ─ edit mode ─ */}
+      {editing && (
+        <div className='px-3 pb-3 space-y-2 border-t border-border/30 pt-2'>
+          <textarea
+            dir='ltr'
+            className='w-full rounded border border-border bg-background px-2 py-1.5 text-xs font-mono resize-y min-h-[5rem]'
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            autoFocus
+          />
+          {isImage && (
+            <ImageUploadButton
+              currentUrl={el.imageUrl as string | undefined}
+              onUploaded={(url) => {
+                try { setDraft(JSON.stringify({ ...JSON.parse(draft), imageUrl: url }, null, 2)); }
+                catch { /* keep */ }
+              }}
+              lbl={lbl}
+            />
+          )}
+          <div className='flex gap-2'>
+            <Button size='sm' className='h-7 gap-1 text-xs' onClick={commitEdit}>
+              <Check className='h-3 w-3' /> {lbl('Apply', 'تطبيق')}
+            </Button>
+            <Button size='sm' variant='ghost' className='h-7 gap-1 text-xs' onClick={() => setEditing(false)}>
+              <X className='h-3 w-3' /> {lbl('Cancel', 'إلغاء')}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ─ preview mode: uses CourseElementRenderer with lang ─ */}
+      {preview && (
+        <div className='px-4 pb-4 border-t border-border/30 pt-3'
+          dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          <CourseElementRenderer
+            elements={[el as CourseElement]}
+            lang={lang}
+          />
+        </div>
+      )}
     </div>
   );
 }
 
-// ── TopicBlock ───────────────────────────────────────────────────────────────
+// ── TopicBlock ──────────────────────────────────────────────────────────────
 function TopicBlock({
-  topic, topicIndex, total, onChange, onDelete, onMoveUp, onMoveDown, lbl, isAr,
+  topic, topicIndex, total, lang, onChange, onDelete, onMoveUp, onMoveDown, lbl,
 }: {
   topic: Topic;
   topicIndex: number;
   total: number;
+  lang: Lang; // ⭐ passed down — drives title + elements
   onChange: (t: Topic) => void;
   onDelete: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
   lbl: (en: string, ar: string) => string;
-  isAr: boolean;
 }) {
   const [open,         setOpen]         = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleEn,      setTitleEn]      = useState(topic.title?.en ?? '');
   const [titleAr,      setTitleAr]      = useState(topic.title?.ar ?? '');
+
+  const isAr = lang === 'ar';
 
   const commitTitle = () => {
     onChange({ ...topic, title: { en: titleEn.trim() || 'Untitled', ar: titleAr.trim() } });
@@ -335,7 +354,7 @@ function TopicBlock({
     onChange({ ...topic, elements: els });
   };
 
-  // ── نفس منطق الـ TopicRow في preview tab ──
+  // ─ Exact same logic as TopicRow in course-preview-tab.tsx ─
   const displayTitle = isAr
     ? (topic.title?.ar || topic.title?.en || lbl('Untitled Topic', 'موضوع بدون عنوان'))
     : (topic.title?.en || topic.title?.ar || lbl('Untitled Topic', 'موضوع بدون عنوان'));
@@ -351,7 +370,7 @@ function TopicBlock({
         {editingTitle ? (
           <div className='flex-1 flex flex-col gap-1.5 min-w-0'>
             <div className='flex gap-2'>
-              <Input dir='ltr'  value={titleEn} onChange={(e) => setTitleEn(e.target.value)}
+              <Input dir='ltr' value={titleEn} onChange={(e) => setTitleEn(e.target.value)}
                 placeholder='Title EN' className='h-7 text-xs' autoFocus />
               <Input dir='rtl' value={titleAr} onChange={(e) => setTitleAr(e.target.value)}
                 placeholder='عنوان AR' className='h-7 text-xs' />
@@ -398,7 +417,7 @@ function TopicBlock({
         </div>
       </div>
 
-      {/* Elements */}
+      {/* Elements list */}
       {open && (
         <div className='p-3 space-y-2'>
           {topic.elements.length === 0 && (
@@ -410,6 +429,7 @@ function TopicBlock({
             <ElementRow
               key={idx}
               el={el}
+              lang={lang}  // ⭐ pass lang down
               isFirst={idx === 0}
               isLast={idx === topic.elements.length - 1}
               onUpdate={(updated) => updateElement(idx, updated)}
@@ -423,11 +443,7 @@ function TopicBlock({
           {/* Add element type buttons */}
           <div className='flex flex-wrap gap-2 pt-1'>
             {(['text', 'image', 'video', 'code', 'quiz', 'lab'] as const).map((type) => (
-              <Button
-                key={type}
-                variant='outline'
-                size='sm'
-                className='h-7 gap-1 text-xs'
+              <Button key={type} variant='outline' size='sm' className='h-7 gap-1 text-xs'
                 onClick={() =>
                   onChange({
                     ...topic,
@@ -449,12 +465,12 @@ function TopicBlock({
   );
 }
 
-// ═══ CurriculumTab ═══════════════════════════════════════════════════════════
+// ═══ CurriculumTab ══════════════════════════════════════════════════════════
 export function CurriculumTab({ course, onSaved }: Props) {
-  // ✅ useTranslation() بدون namespace — نفس ما بيعمله course-preview-tab.tsx
-  // بيتابع اللغة من الـ topbar مباشرة (i18n.changeLanguage)
+  // ✅ useTranslation() — same as course-preview-tab.tsx, reacts to topbar toggle
   const { i18n } = useTranslation();
-  const isAr = i18n.language === 'ar';
+  const lang: Lang = i18n.language === 'ar' ? 'ar' : 'en';
+  const isAr = lang === 'ar';
   const lbl  = (en: string, ar: string) => isAr ? ar : en;
 
   const [topics, setTopics] = useState<Topic[] | null>(null);
@@ -552,20 +568,16 @@ export function CurriculumTab({ course, onSaved }: Props) {
             topic={topic}
             topicIndex={idx}
             total={localTopics.length}
-            isAr={isAr}
+            lang={lang}  // ⭐ single source of truth for language
             lbl={lbl}
-            onChange={(t) => {
-              const arr = [...localTopics]; arr[idx] = t; update(arr);
-            }}
+            onChange={(t) => { const arr = [...localTopics]; arr[idx] = t; update(arr); }}
             onDelete={() => update(localTopics.filter((_, i) => i !== idx))}
             onMoveUp={() => moveTopic(idx, -1)}
             onMoveDown={() => moveTopic(idx, 1)}
           />
         ))}
 
-        <Button
-          variant='outline'
-          className='w-full gap-2'
+        <Button variant='outline' className='w-full gap-2'
           onClick={() =>
             update([
               ...localTopics,
