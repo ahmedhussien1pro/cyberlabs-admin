@@ -1,17 +1,17 @@
 // src/features/courses/components/course-admin-card.tsx
+// Card design mirrors the main cyberlabs-frontend course card:
+// thumbnail → title (active lang) → description (active lang) → 4 info badges
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
-  BookOpen, FlaskConical, BookMarked, BarChart3, Clock,
-  Unlock, Crown, Gem, Sparkles, Users, Star, PenLine,
-  Tag, Award, Globe2,
+  BookOpen, FlaskConical, BookMarked, BarChart3,
+  Unlock, Crown, Gem, Sparkles, Star,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { AdminOverlayControls } from './admin-overlay-controls';
-import { InlineEditable } from './inline-editable';
 import { adminCoursesApi } from '../services/admin-courses.api';
 import { FALLBACK_BG, FALLBACK_TEXT, HOVER_RING, ACCESS_BADGE, STATE_DOT } from '../constants/course-colors';
 import type { AdminCourse } from '../types/admin-course.types';
@@ -52,17 +52,11 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
   const queryClient  = useQueryClient();
   const isAr = i18n.language === 'ar';
 
-  // ── Active-language resolution ──────────────────────────────────────
-  // Primary: the language currently selected on the platform
-  // Secondary (subtitle): the other language — shown smaller & muted
-  const primaryTitle = isAr
-    ? (course.ar_title || course.title)          // AR preferred, fallback EN
-    : course.title;                               // EN always
-  const secondaryTitle = isAr
-    ? (course.ar_title ? course.title : null)     // show EN only if AR exists
-    : (course.ar_title ?? null);                  // show AR if available
-
-  const primaryDesc = isAr
+  // Active-language resolution — exactly like frontend
+  const activeTitle = isAr
+    ? (course.ar_title  || course.title)
+    : course.title;
+  const activeDesc  = isAr
     ? (course.ar_description || course.description || null)
     : (course.description || null);
 
@@ -81,8 +75,9 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] }),
     onError:   () => toast.error('Failed to save changes'),
   });
+  void updateMutation; // suppress unused warning — keep for future inline edits
 
-  // ── List view ────────────────────────────────────────────────────────
+  // ── List view (compact) ────────────────────────────────────────────────
   if (view === 'list') {
     return (
       <div
@@ -92,32 +87,25 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
         <AdminOverlayControls course={course} />
         <div className={cn('h-2 w-2 shrink-0 rounded-full', stateDot)} />
         <div className='relative w-16 h-10 shrink-0 overflow-hidden rounded bg-muted'>
-          <CourseThumbnail course={course} activeTitle={primaryTitle} />
+          <CourseThumbnail course={course} activeTitle={activeTitle} />
         </div>
         <div className='min-w-0 flex-1'>
-          <p className='font-medium text-sm truncate'>{primaryTitle}</p>
-          {secondaryTitle && (
-            <p className='truncate text-xs text-muted-foreground/60' dir={isAr ? 'ltr' : 'rtl'}>
-              {secondaryTitle}
-            </p>
-          )}
-          {primaryDesc && (
-            <p className='truncate text-xs text-muted-foreground/50 mt-0.5'>{primaryDesc}</p>
+          <p className='font-semibold text-sm truncate'>{activeTitle}</p>
+          {activeDesc && (
+            <p className='truncate text-xs text-muted-foreground/60 mt-0.5'>{activeDesc}</p>
           )}
         </div>
-        <div className='hidden sm:flex items-center gap-3 text-xs text-muted-foreground'>
-          <span className='flex items-center gap-1'><Users className='h-3 w-3' />{course.enrollmentCount ?? 0}</span>
-          <span className='flex items-center gap-1'><BookOpen className='h-3 w-3' />{course.totalTopics ?? 0}</span>
-          {(course.labSlugs?.length ?? 0) > 0 && (
-            <span className='flex items-center gap-1'><FlaskConical className='h-3 w-3' />{course.labSlugs.length}</span>
-          )}
-        </div>
-        <div className='hidden md:flex items-center gap-2'>
+        <div className='hidden sm:flex items-center gap-2'>
+          {diff && <Badge variant='outline' className='text-[10px] gap-1'><BarChart3 className='h-3 w-3'/>{diff}</Badge>}
           <Badge variant='outline' className={cn('text-[10px]', ACCESS_BADGE[course.access])}>
             <AccessIcon className='h-3 w-3 me-1' />{t(`access.${course.access}`, course.access)}
           </Badge>
-          <Badge variant='outline' className='text-[10px]'>{t(`state.${course.state}`, course.state)}</Badge>
-          {diff && <Badge variant='outline' className='text-[10px]'>{diff}</Badge>}
+          {(course.totalTopics ?? 0) > 0 && (
+            <Badge variant='outline' className='text-[10px] gap-1 text-primary border-primary/30'>
+              <BookOpen className='h-3 w-3'/>{course.totalTopics}
+            </Badge>
+          )}
+          {ct && <Badge variant='outline' className='text-[10px] gap-1'><ct.Icon className='h-3 w-3'/>{t(ct.labelKey)}</Badge>}
         </div>
       </div>
     );
@@ -139,10 +127,10 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
     >
       <AdminOverlayControls course={course} />
 
-      {/* Thumbnail */}
+      {/* ── Thumbnail ── */}
       <div className='relative aspect-video overflow-hidden bg-muted'>
         <CourseThumbnail
-          course={course} activeTitle={primaryTitle}
+          course={course} activeTitle={activeTitle}
           className='transition-transform duration-500 group-hover:scale-105'
         />
         {comingSoon && (
@@ -152,7 +140,7 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
             </span>
           </div>
         )}
-        {/* State badge */}
+        {/* State badge — top-left */}
         <div className='absolute top-2 start-2 z-20 pointer-events-none'>
           <span className={cn(
             'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold border',
@@ -164,7 +152,7 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
             {t(`state.${course.state}`, course.state)}
           </span>
         </div>
-        {/* Featured */}
+        {/* Featured — top-right */}
         {course.isFeatured && (
           <div className='absolute top-2 end-2 z-20 pointer-events-none'>
             <span className='inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold border bg-yellow-500/20 border-yellow-500/40 text-yellow-300'>
@@ -172,7 +160,7 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
             </span>
           </div>
         )}
-        {/* NEW */}
+        {/* NEW — bottom-right */}
         {course.isNew && (
           <div className='absolute bottom-2 end-2 z-20 pointer-events-none'>
             <span className='inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold bg-primary/80 text-white border border-primary/40'>NEW</span>
@@ -180,144 +168,51 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
         )}
       </div>
 
-      {/* Card body */}
+      {/* ── Card body ── */}
       <div className='flex flex-col flex-1 p-4 gap-2'>
 
-        {/* ── Title ── */}
-        <div className='flex items-start justify-between gap-2'>
-          <div className='flex-1 min-w-0'>
-            {/* Primary title — editable, active language */}
-            <InlineEditable
-              value={primaryTitle}
-              onSave={(val) =>
-                void updateMutation.mutateAsync(
-                  isAr ? { ar_title: val || undefined } : { title: val }
-                )
-              }
-              className='text-sm font-bold text-foreground leading-snug'
-            />
-            {/* Secondary title — read-only, other language */}
-            {secondaryTitle ? (
-              <p
-                className='mt-0.5 text-xs text-muted-foreground/55 truncate leading-snug'
-                dir={isAr ? 'ltr' : 'rtl'}
-              >
-                {secondaryTitle}
-              </p>
-            ) : !isAr ? (
-              // Only prompt for AR title when viewing in EN
-              <p className='mt-0.5 text-xs text-muted-foreground/30 italic flex items-center gap-1'>
-                <PenLine className='h-3 w-3' /> {t('card.noArTitle', 'Add Arabic title…')}
-              </p>
-            ) : null}
-          </div>
-          {/* Category */}
-          {course.category && (
-            <span className='shrink-0 text-end text-[10px] text-muted-foreground max-w-[80px] leading-tight'>
-              {course.category.replace(/_/g, ' ')}
-            </span>
-          )}
-        </div>
+        {/* Title — active language */}
+        <h3 className='text-sm font-bold text-foreground leading-snug line-clamp-2'>
+          {activeTitle}
+        </h3>
 
-        {/* ── Description — active lang only ── */}
-        <InlineEditable
-          value={primaryDesc ?? ''}
-          onSave={(val) =>
-            void updateMutation.mutateAsync(
-              isAr ? { ar_description: val || null } : { description: val || null }
-            )
-          }
-          as='textarea'
-          className={cn(
-            'text-xs leading-relaxed line-clamp-2',
-            primaryDesc ? 'text-muted-foreground' : 'text-muted-foreground/30 italic',
-          )}
-          placeholder={t('card.noDescription', 'Add description…')}
-        />
+        {/* Description — active language, max 2 lines */}
+        {activeDesc ? (
+          <p className='text-xs text-muted-foreground leading-relaxed line-clamp-2'>
+            {activeDesc}
+          </p>
+        ) : (
+          <p className='text-xs text-muted-foreground/30 italic'>
+            {t('card.noDescription', 'No description…')}
+          </p>
+        )}
 
-        {/* ── Badges ── */}
-        <div className='flex flex-wrap items-center gap-1.5 mt-1'>
-          {diff && (
-            <Badge variant='outline' className='gap-1 text-[10px] font-semibold border-border/60 bg-muted/40'>
-              <BarChart3 className='h-3 w-3' /> {diff}
-            </Badge>
-          )}
-          {course.access && (
-            <Badge variant='outline' className={cn('gap-1 text-[10px] font-bold', ACCESS_BADGE[course.access])}>
-              <AccessIcon className='h-3 w-3' />{t(`access.${course.access}`, course.access)}
-            </Badge>
-          )}
-          {(course.totalTopics ?? 0) > 0 && (
-            <Badge variant='outline' className='gap-1 text-[10px] font-semibold text-primary border-primary/30 bg-primary/5'>
-              <BookOpen className='h-3 w-3' />{course.totalTopics} {t('card.topics')}
-            </Badge>
-          )}
+        {/* ── 4 info badges — mirrors frontend exactly ── */}
+        <div className='flex flex-wrap items-center gap-1.5 mt-auto pt-3 border-t border-border/30'>
+          {/* Content type */}
           {ct && (
             <Badge variant='outline' className='gap-1 text-[10px] text-muted-foreground border-border/40'>
               <ct.Icon className='h-3 w-3' />{t(ct.labelKey)}
             </Badge>
           )}
-          {(course.labSlugs?.length ?? 0) > 0 && (
-            <Badge variant='outline' className='gap-1 text-[10px] text-cyan-400 border-cyan-500/30 bg-cyan-500/5'>
-              <FlaskConical className='h-3 w-3' />{course.labSlugs.length} {t('card.labs')}
+          {/* Topics */}
+          {(course.totalTopics ?? 0) > 0 && (
+            <Badge variant='outline' className='gap-1 text-[10px] font-semibold text-primary border-primary/30 bg-primary/5'>
+              <BookOpen className='h-3 w-3' />
+              {t('card.topicsCount', { count: course.totalTopics }, `Topics ${course.totalTopics}`)}
             </Badge>
           )}
-        </div>
-
-        {/* ── Skills (active lang) ── */}
-        {(() => {
-          const skills = isAr && course.ar_skills?.length ? course.ar_skills : course.skills;
-          return skills?.length ? (
-            <div className='flex flex-wrap gap-1 mt-0.5'>
-              {skills.slice(0, 3).map((s) => (
-                <span key={s} className='inline-flex items-center gap-0.5 rounded-full bg-muted/60 border border-border/40 px-2 py-0.5 text-[10px] text-muted-foreground'>
-                  <Award className='h-2.5 w-2.5 shrink-0' />{s}
-                </span>
-              ))}
-              {skills.length > 3 && (
-                <span className='inline-flex items-center rounded-full bg-muted/60 border border-border/40 px-2 py-0.5 text-[10px] text-muted-foreground'>+{skills.length - 3}</span>
-              )}
-            </div>
-          ) : null;
-        })()}
-
-        {/* ── Tags ── */}
-        {course.tags?.length ? (
-          <div className='flex flex-wrap gap-1'>
-            {course.tags.slice(0, 4).map((tag) => (
-              <span key={tag} className='inline-flex items-center gap-0.5 rounded-sm bg-primary/5 border border-primary/20 px-1.5 py-0.5 text-[9px] text-primary/70'>
-                <Tag className='h-2.5 w-2.5 shrink-0' />{tag}
-              </span>
-            ))}
-            {course.tags.length > 4 && (
-              <span className='rounded-sm bg-primary/5 border border-primary/20 px-1.5 py-0.5 text-[9px] text-primary/70'>+{course.tags.length - 4}</span>
-            )}
-          </div>
-        ) : null}
-
-        {/* ── Rating ── */}
-        {(course.averageRating ?? 0) > 0 && (
-          <div className='flex items-center gap-1 text-[11px] text-amber-400'>
-            <Star className='h-3 w-3 fill-amber-400' />
-            <span className='font-semibold'>{course.averageRating.toFixed(1)}</span>
-            <span className='text-muted-foreground/60'>({course.reviewCount ?? 0})</span>
-          </div>
-        )}
-
-        {/* ── Footer ── */}
-        <div className='mt-auto flex items-center gap-3 text-xs text-muted-foreground pt-2 border-t border-border/30'>
-          <span className='flex items-center gap-1'>
-            <Users className='h-3 w-3' />{course.enrollmentCount ?? 0} {t('card.enrolled')}
-          </span>
-          {(course.estimatedHours ?? 0) > 0 && (
-            <span className='flex items-center gap-1'>
-              <Clock className='h-3 w-3' />{course.estimatedHours}{t('card.hours')}
-            </span>
+          {/* Access */}
+          {course.access && (
+            <Badge variant='outline' className={cn('gap-1 text-[10px] font-bold', ACCESS_BADGE[course.access])}>
+              <AccessIcon className='h-3 w-3' />{t(`access.${course.access}`, course.access)}
+            </Badge>
           )}
-          {course.slug && (
-            <span className='flex items-center gap-1 ms-auto text-muted-foreground/40 text-[10px] truncate max-w-[110px]'>
-              <Globe2 className='h-2.5 w-2.5 shrink-0' />{course.slug}
-            </span>
+          {/* Difficulty */}
+          {diff && (
+            <Badge variant='outline' className='gap-1 text-[10px] font-semibold border-border/60 bg-muted/40'>
+              <BarChart3 className='h-3 w-3' /> {diff}
+            </Badge>
           )}
         </div>
       </div>

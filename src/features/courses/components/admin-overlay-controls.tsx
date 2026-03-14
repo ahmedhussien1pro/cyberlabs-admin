@@ -1,5 +1,6 @@
 // src/features/courses/components/admin-overlay-controls.tsx
-// Slide-up action bar — docked to bottom, slides over content on hover.
+// Slide-up frosted-glass action bar at the bottom of the card.
+// Preview opens the EXTERNAL frontend app (VITE_FRONTEND_URL/courses/:slug)
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -20,8 +21,12 @@ import {
 import { cn } from '@/lib/utils';
 import { adminCoursesApi } from '../services/admin-courses.api';
 import { ROUTES } from '@/shared/constants';
-import { ENV } from '@/shared/constants/env';
 import type { AdminCourse, CourseState } from '../types/admin-course.types';
+
+// Read frontend base URL from env — fallback to common dev port
+const FRONTEND_BASE =
+  (import.meta.env.VITE_FRONTEND_URL as string | undefined)?.replace(/\/$/, '') ??
+  'http://localhost:5173';
 
 const STATE_OPTIONS: { value: CourseState; labelKey: string; icon: React.ElementType; color: string }[] = [
   { value: 'PUBLISHED',   labelKey: 'state.PUBLISHED',   icon: Globe,  color: 'text-emerald-400' },
@@ -57,7 +62,7 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
   const invalidateList = useCallback(() =>
     queryClient.invalidateQueries({ queryKey: ['admin', 'courses', 'list'] }), [queryClient]);
 
-  // ── setState (optimistic) ──────────────────────────────────────────────
+  // setState (optimistic)
   const stateMutation = useMutation({
     mutationFn: (newState: CourseState) => adminCoursesApi.setState(course.id, newState),
     onMutate: async (newState) => {
@@ -67,7 +72,8 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
       const statsSnapshot = queryClient.getQueriesData({ queryKey: ['admin', 'courses', 'stats'] });
       queryClient.setQueriesData({ queryKey: ['admin', 'courses', 'list'] }, (old: any) => {
         if (!old?.data) return old;
-        return { ...old, data: old.data.map((c: AdminCourse) => c.id === course.id ? { ...c, state: newState } : c) };
+        return { ...old, data: old.data.map((c: AdminCourse) =>
+          c.id === course.id ? { ...c, state: newState } : c) };
       });
       queryClient.setQueriesData({ queryKey: ['admin', 'courses', 'stats'] }, (old: any) => {
         if (!old) return old;
@@ -82,7 +88,8 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
       return { listSnapshot, statsSnapshot };
     },
     onSuccess: (updated) => {
-      const key = updated.state === 'PUBLISHED' ? 'toast.published' : updated.state === 'COMING_SOON' ? 'toast.comingSoon' : 'toast.unpublished';
+      const key = updated.state === 'PUBLISHED' ? 'toast.published'
+        : updated.state === 'COMING_SOON' ? 'toast.comingSoon' : 'toast.unpublished';
       toast.success(t(key, { title: course.title }));
       invalidateList(); refetchStatsLater();
     },
@@ -93,7 +100,7 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
     },
   });
 
-  // ── duplicate ──────────────────────────────────────────────────────────
+  // duplicate
   const duplicateMutation = useMutation({
     mutationFn: () => adminCoursesApi.duplicate(course.id),
     onSuccess: (newCourse) => {
@@ -104,7 +111,7 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
     onError: () => toast.error(t('errors.duplicateFailed')),
   });
 
-  // ── delete ─────────────────────────────────────────────────────────────
+  // delete
   const deleteMutation = useMutation({
     mutationFn: () => adminCoursesApi.delete(course.id),
     onMutate: async () => {
@@ -141,34 +148,41 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
   const currentState = STATE_OPTIONS.find((o) => o.value === course.state) ?? STATE_OPTIONS[2];
   const CurrentIcon  = currentState.icon;
 
-  // Preview → opens on the main frontend app
+  /**
+   * Preview: open the EXTERNAL cyberlabs-frontend app, not the admin.
+   * This avoids the React Router 404 error entirely because we leave
+   * the admin domain and navigate to the real course page.
+   *
+   * In browsers, window.open always opens a new TAB unless the user
+   * has configured their browser to open new windows. That is normal
+   * and expected behaviour — we cannot force a separate window reliably.
+   */
   const openPreview = (e: React.MouseEvent) => {
-    e.preventDefault(); e.stopPropagation();
-    const base = (ENV.FRONTEND_URL ?? '').replace(/\/$/, '');
-    window.open(`${base}/courses/${course.slug}`, '_blank', 'noopener,noreferrer');
+    e.preventDefault();
+    e.stopPropagation();
+    const url = `${FRONTEND_BASE}/courses/${course.slug}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   return (
     <>
       {/*
        * SLIDE-UP BAR
-       * Positioned absolute at bottom-0, starts translate-y-full (hidden below),
-       * slides to translate-y-0 on group-hover.
-       * Semi-transparent bg with blur so card content shows through slightly.
+       * Sits at absolute bottom-0, initially pushed below the card
+       * via translate-y-full. On group-hover it slides into view.
        */}
       <div
         className={cn(
           'absolute bottom-0 inset-x-0 z-20',
           'translate-y-full group-hover:translate-y-0',
           'transition-transform duration-200 ease-out',
-          // Frosted-glass background — matches dark card theme
-          'bg-zinc-900/85 backdrop-blur-md border-t border-white/10',
+          'bg-zinc-900/88 backdrop-blur-md border-t border-white/10',
           'flex items-center gap-1.5 px-3 py-2.5',
           className,
         )}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Edit (primary) */}
+        {/* Edit */}
         <Button
           size='sm'
           className='flex-1 h-8 text-xs gap-1.5 bg-primary/90 hover:bg-primary'
@@ -177,7 +191,7 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
           <Pencil className='h-3.5 w-3.5' /> {t('overlay.edit')}
         </Button>
 
-        {/* Preview → main frontend */}
+        {/* Preview → opens external frontend */}
         <Button
           size='sm' variant='outline'
           className='h-8 w-8 p-0 border-white/20 bg-white/5 text-white/70 hover:bg-white/15 hover:text-white'
@@ -187,7 +201,7 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
           <Eye className='h-3.5 w-3.5' />
         </Button>
 
-        {/* State + more actions dropdown */}
+        {/* State + more actions */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
