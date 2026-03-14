@@ -1,9 +1,7 @@
 // src/features/courses/components/course-admin-card.tsx
-// Card design mirrors the main cyberlabs-frontend course card:
-// thumbnail → title (active lang) → description (active lang) → 4 info badges
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+// Mirrors cyberlabs-frontend card:
+//   thumbnail → title (active lang) → desc (active lang) → 4 badges
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
 import {
   BookOpen, FlaskConical, BookMarked, BarChart3,
   Unlock, Crown, Gem, Sparkles, Star,
@@ -12,25 +10,26 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { AdminOverlayControls } from './admin-overlay-controls';
-import { adminCoursesApi } from '../services/admin-courses.api';
 import { FALLBACK_BG, FALLBACK_TEXT, HOVER_RING, ACCESS_BADGE, STATE_DOT } from '../constants/course-colors';
 import type { AdminCourse } from '../types/admin-course.types';
 
 const ACCESS_ICON: Record<string, React.ElementType> = { FREE: Unlock, PRO: Crown, PREMIUM: Gem };
-const CONTENT_ICON: Record<string, { Icon: React.ElementType; labelKey: string }> = {
-  PRACTICAL:   { Icon: FlaskConical, labelKey: 'contentType.PRACTICAL'   },
-  THEORETICAL: { Icon: BookMarked,   labelKey: 'contentType.THEORETICAL' },
-  MIXED:       { Icon: BookOpen,     labelKey: 'contentType.MIXED'       },
+const CONTENT_ICON: Record<string, { Icon: React.ElementType; en: string; ar: string }> = {
+  PRACTICAL:   { Icon: FlaskConical, en: 'Practical', ar: 'تطبيقي'  },
+  THEORETICAL: { Icon: BookMarked,   en: 'Theory',    ar: 'نظري'    },
+  MIXED:       { Icon: BookOpen,     en: 'Mixed',     ar: 'مختلط'   },
 };
+const DIFF_AR: Record<string, string> = {
+  BEGINNER: 'مبتدئ', INTERMEDIATE: 'متوسط', ADVANCED: 'متقدم', EXPERT: 'خبير',
+};
+const ACCESS_AR: Record<string, string> = { FREE: 'مجاني', PRO: 'برو', PREMIUM: 'مميز' };
 
-function CourseThumbnail({ course, activeTitle, className }: {
-  course: AdminCourse; activeTitle: string; className?: string;
-}) {
+function CourseThumbnail({ course, title }: { course: AdminCourse; title: string }) {
   const img   = course.image ?? course.thumbnail;
   const color = (course.color ?? 'blue').toLowerCase();
   if (img) return (
-    <img src={img} alt={activeTitle} loading='lazy'
-      className={cn('w-full h-full object-cover', className)} />
+    <img src={img} alt={title} loading='lazy'
+      className='w-full h-full object-cover transition-transform duration-500 group-hover:scale-105' />
   );
   return (
     <div className={cn(
@@ -39,7 +38,7 @@ function CourseThumbnail({ course, activeTitle, className }: {
     )}>
       <p className={cn('font-black text-center px-3 leading-tight text-lg',
         FALLBACK_TEXT[color] ?? 'text-zinc-400')}>
-        {activeTitle}
+        {title}
       </p>
     </div>
   );
@@ -48,36 +47,35 @@ function CourseThumbnail({ course, activeTitle, className }: {
 interface Props { course: AdminCourse; index?: number; view?: 'grid' | 'list'; }
 
 export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
-  const { t, i18n } = useTranslation('courses');
-  const queryClient  = useQueryClient();
+  const { i18n } = useTranslation();
   const isAr = i18n.language === 'ar';
 
-  // Active-language resolution — exactly like frontend
+  // ── Active-language resolution ──────────────────────────────────────────
   const activeTitle = isAr
-    ? (course.ar_title  || course.title)
+    ? (course.ar_title || course.title)
     : course.title;
-  const activeDesc  = isAr
-    ? (course.ar_description || course.description || null)
-    : (course.description || null);
+
+  // Description: try active lang first, then fallback to other lang, then longDescription
+  const activeDesc = isAr
+    ? (course.ar_description || course.description || course.longDescription || null)
+    : (course.description || course.ar_description || course.longDescription || null);
 
   const color      = (course.color ?? 'blue').toLowerCase();
   const comingSoon = course.state === 'COMING_SOON';
   const ct         = CONTENT_ICON[course.contentType ?? 'MIXED'];
   const AccessIcon = ACCESS_ICON[course.access ?? 'FREE'] ?? Unlock;
   const stateDot   = STATE_DOT[course.state] ?? 'bg-zinc-400';
-  const diff = course.difficulty
-    ? t(`difficulty.${course.difficulty}`,
-        course.difficulty.charAt(0) + course.difficulty.slice(1).toLowerCase())
+
+  const diffLabel = course.difficulty
+    ? (isAr ? DIFF_AR[course.difficulty] : course.difficulty.charAt(0) + course.difficulty.slice(1).toLowerCase())
     : null;
+  const accessLabel = course.access
+    ? (isAr ? ACCESS_AR[course.access] : course.access.charAt(0) + course.access.slice(1).toLowerCase())
+    : null;
+  const ctLabel = ct ? (isAr ? ct.ar : ct.en) : null;
+  const topicsLabel = isAr ? 'موضوعات' : 'Topics';
 
-  const updateMutation = useMutation({
-    mutationFn: (data: Partial<AdminCourse>) => adminCoursesApi.update(course.id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] }),
-    onError:   () => toast.error('Failed to save changes'),
-  });
-  void updateMutation; // suppress unused warning — keep for future inline edits
-
-  // ── List view (compact) ────────────────────────────────────────────────
+  // ── List view ────────────────────────────────────────────────────────────
   if (view === 'list') {
     return (
       <div
@@ -87,7 +85,7 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
         <AdminOverlayControls course={course} />
         <div className={cn('h-2 w-2 shrink-0 rounded-full', stateDot)} />
         <div className='relative w-16 h-10 shrink-0 overflow-hidden rounded bg-muted'>
-          <CourseThumbnail course={course} activeTitle={activeTitle} />
+          <CourseThumbnail course={course} title={activeTitle} />
         </div>
         <div className='min-w-0 flex-1'>
           <p className='font-semibold text-sm truncate'>{activeTitle}</p>
@@ -96,22 +94,20 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
           )}
         </div>
         <div className='hidden sm:flex items-center gap-2'>
-          {diff && <Badge variant='outline' className='text-[10px] gap-1'><BarChart3 className='h-3 w-3'/>{diff}</Badge>}
-          <Badge variant='outline' className={cn('text-[10px]', ACCESS_BADGE[course.access])}>
-            <AccessIcon className='h-3 w-3 me-1' />{t(`access.${course.access}`, course.access)}
-          </Badge>
+          {diffLabel && <Badge variant='outline' className='text-[10px] gap-1'><BarChart3 className='h-3 w-3'/>{diffLabel}</Badge>}
+          {accessLabel && <Badge variant='outline' className={cn('text-[10px] gap-1', ACCESS_BADGE[course.access])}><AccessIcon className='h-3 w-3'/>{accessLabel}</Badge>}
           {(course.totalTopics ?? 0) > 0 && (
             <Badge variant='outline' className='text-[10px] gap-1 text-primary border-primary/30'>
-              <BookOpen className='h-3 w-3'/>{course.totalTopics}
+              <BookOpen className='h-3 w-3'/>{course.totalTopics} {topicsLabel}
             </Badge>
           )}
-          {ct && <Badge variant='outline' className='text-[10px] gap-1'><ct.Icon className='h-3 w-3'/>{t(ct.labelKey)}</Badge>}
+          {ct && <Badge variant='outline' className='text-[10px] gap-1'><ct.Icon className='h-3 w-3'/>{ctLabel}</Badge>}
         </div>
       </div>
     );
   }
 
-  // ── Grid view ────────────────────────────────────────────────────────
+  // ── Grid view ────────────────────────────────────────────────────────────
   return (
     <motion.div
       dir={isAr ? 'rtl' : 'ltr'}
@@ -127,20 +123,17 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
     >
       <AdminOverlayControls course={course} />
 
-      {/* ── Thumbnail ── */}
+      {/* Thumbnail */}
       <div className='relative aspect-video overflow-hidden bg-muted'>
-        <CourseThumbnail
-          course={course} activeTitle={activeTitle}
-          className='transition-transform duration-500 group-hover:scale-105'
-        />
+        <CourseThumbnail course={course} title={activeTitle} />
         {comingSoon && (
           <div className='absolute inset-0 z-10 flex items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-none'>
             <span className='flex items-center gap-1.5 rounded-full border border-white/20 px-3 py-1 text-xs font-bold uppercase tracking-widest text-white/80'>
-              <Sparkles className='h-3 w-3' /> {t('state.COMING_SOON')}
+              <Sparkles className='h-3 w-3' />{isAr ? 'قريباً' : 'Coming Soon'}
             </span>
           </div>
         )}
-        {/* State badge — top-left */}
+        {/* State badge – top-start */}
         <div className='absolute top-2 start-2 z-20 pointer-events-none'>
           <span className={cn(
             'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold border',
@@ -149,10 +142,11 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
             : 'bg-zinc-500/20 border-zinc-500/40 text-zinc-300',
           )}>
             <span className={cn('h-1.5 w-1.5 rounded-full', stateDot)} />
-            {t(`state.${course.state}`, course.state)}
+            {isAr
+              ? { PUBLISHED: 'منشور', DRAFT: 'مسودة', COMING_SOON: 'قريباً' }[course.state]
+              : { PUBLISHED: 'Published', DRAFT: 'Draft', COMING_SOON: 'Coming Soon' }[course.state]}
           </span>
         </div>
-        {/* Featured — top-right */}
         {course.isFeatured && (
           <div className='absolute top-2 end-2 z-20 pointer-events-none'>
             <span className='inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold border bg-yellow-500/20 border-yellow-500/40 text-yellow-300'>
@@ -160,7 +154,6 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
             </span>
           </div>
         )}
-        {/* NEW — bottom-right */}
         {course.isNew && (
           <div className='absolute bottom-2 end-2 z-20 pointer-events-none'>
             <span className='inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold bg-primary/80 text-white border border-primary/40'>NEW</span>
@@ -168,50 +161,44 @@ export function CourseAdminCard({ course, index = 0, view = 'grid' }: Props) {
         )}
       </div>
 
-      {/* ── Card body ── */}
+      {/* Body */}
       <div className='flex flex-col flex-1 p-4 gap-2'>
-
-        {/* Title — active language */}
+        {/* Title */}
         <h3 className='text-sm font-bold text-foreground leading-snug line-clamp-2'>
           {activeTitle}
         </h3>
 
-        {/* Description — active language, max 2 lines */}
+        {/* Description */}
         {activeDesc ? (
           <p className='text-xs text-muted-foreground leading-relaxed line-clamp-2'>
             {activeDesc}
           </p>
         ) : (
           <p className='text-xs text-muted-foreground/30 italic'>
-            {t('card.noDescription', 'No description…')}
+            {isAr ? 'لا يوجد وصف…' : 'No description…'}
           </p>
         )}
 
-        {/* ── 4 info badges — mirrors frontend exactly ── */}
+        {/* 4 info badges — order: difficulty · access · topics · content-type */}
         <div className='flex flex-wrap items-center gap-1.5 mt-auto pt-3 border-t border-border/30'>
-          {/* Content type */}
-          {ct && (
-            <Badge variant='outline' className='gap-1 text-[10px] text-muted-foreground border-border/40'>
-              <ct.Icon className='h-3 w-3' />{t(ct.labelKey)}
+          {diffLabel && (
+            <Badge variant='outline' className='gap-1 text-[10px] font-semibold border-border/60 bg-muted/40'>
+              <BarChart3 className='h-3 w-3' />{diffLabel}
             </Badge>
           )}
-          {/* Topics */}
+          {accessLabel && (
+            <Badge variant='outline' className={cn('gap-1 text-[10px] font-bold', ACCESS_BADGE[course.access])}>
+              <AccessIcon className='h-3 w-3' />{accessLabel}
+            </Badge>
+          )}
           {(course.totalTopics ?? 0) > 0 && (
             <Badge variant='outline' className='gap-1 text-[10px] font-semibold text-primary border-primary/30 bg-primary/5'>
-              <BookOpen className='h-3 w-3' />
-              {t('card.topicsCount', { count: course.totalTopics }, `Topics ${course.totalTopics}`)}
+              <BookOpen className='h-3 w-3' />{course.totalTopics} {topicsLabel}
             </Badge>
           )}
-          {/* Access */}
-          {course.access && (
-            <Badge variant='outline' className={cn('gap-1 text-[10px] font-bold', ACCESS_BADGE[course.access])}>
-              <AccessIcon className='h-3 w-3' />{t(`access.${course.access}`, course.access)}
-            </Badge>
-          )}
-          {/* Difficulty */}
-          {diff && (
-            <Badge variant='outline' className='gap-1 text-[10px] font-semibold border-border/60 bg-muted/40'>
-              <BarChart3 className='h-3 w-3' /> {diff}
+          {ct && (
+            <Badge variant='outline' className='gap-1 text-[10px] text-muted-foreground border-border/40'>
+              <ct.Icon className='h-3 w-3' />{ctLabel}
             </Badge>
           )}
         </div>

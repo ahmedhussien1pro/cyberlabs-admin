@@ -1,18 +1,20 @@
 // src/features/courses/components/admin-overlay-controls.tsx
-// Slide-up frosted-glass action bar at the bottom of the card.
-// Preview opens the EXTERNAL frontend app (VITE_FRONTEND_URL/courses/:slug)
+// Slide-up frosted bar with 4 visible buttons:
+//   [Edit]  [Duplicate]  [Delete]  [State ▾]
+// State is the ONLY dropdown. Preview button removed per request.
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
-  Pencil, Trash2, Globe, EyeOff, Copy, Eye, Loader2, Clock,
+  Pencil, Trash2, Globe, EyeOff, Copy, Loader2, Clock,
+  ChevronDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuTrigger, DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -23,153 +25,117 @@ import { adminCoursesApi } from '../services/admin-courses.api';
 import { ROUTES } from '@/shared/constants';
 import type { AdminCourse, CourseState } from '../types/admin-course.types';
 
-// Read frontend base URL from env — fallback to common dev port
 const FRONTEND_BASE =
   (import.meta.env.VITE_FRONTEND_URL as string | undefined)?.replace(/\/$/, '') ??
   'http://localhost:5173';
 
-const STATE_OPTIONS: { value: CourseState; labelKey: string; icon: React.ElementType; color: string }[] = [
-  { value: 'PUBLISHED',   labelKey: 'state.PUBLISHED',   icon: Globe,  color: 'text-emerald-400' },
-  { value: 'COMING_SOON', labelKey: 'state.COMING_SOON', icon: Clock,  color: 'text-blue-400'    },
-  { value: 'DRAFT',       labelKey: 'state.DRAFT',       icon: EyeOff, color: 'text-zinc-400'    },
+const STATE_OPTIONS: { value: CourseState; en: string; ar: string; icon: React.ElementType; color: string }[] = [
+  { value: 'PUBLISHED',   en: 'Published',   ar: 'منشور',  icon: Globe,  color: 'text-emerald-400' },
+  { value: 'COMING_SOON', en: 'Coming Soon', ar: 'قريباً', icon: Clock,  color: 'text-blue-400'    },
+  { value: 'DRAFT',       en: 'Draft',       ar: 'مسودة',  icon: EyeOff, color: 'text-zinc-400'    },
 ];
 
 const STATE_PILL: Record<string, string> = {
-  PUBLISHED:   'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30',
-  COMING_SOON: 'bg-blue-500/15    text-blue-400    border-blue-500/30    hover:bg-blue-500/30',
-  DRAFT:       'bg-zinc-500/15    text-zinc-400    border-zinc-500/30    hover:bg-zinc-500/30',
+  PUBLISHED:   'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25',
+  COMING_SOON: 'bg-blue-500/15    text-blue-300    border-blue-500/30    hover:bg-blue-500/25',
+  DRAFT:       'bg-zinc-500/15    text-zinc-300    border-zinc-500/30    hover:bg-zinc-500/25',
 };
 
 const STATE_KEY_MAP: Record<string, string> = {
   PUBLISHED: 'published', DRAFT: 'draft', COMING_SOON: 'comingSoon',
 };
 
-interface AdminOverlayControlsProps {
-  course: AdminCourse;
-  className?: string;
-}
-
-export function AdminOverlayControls({ course, className }: AdminOverlayControlsProps) {
-  const { t } = useTranslation('courses');
+export function AdminOverlayControls({ course }: { course: AdminCourse }) {
+  const { i18n } = useTranslation();
+  const isAr = i18n.language === 'ar';
   const navigate    = useNavigate();
   const queryClient = useQueryClient();
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  const refetchStatsLater = useCallback(() => {
-    setTimeout(() => queryClient.refetchQueries({ queryKey: ['admin', 'courses', 'stats'], type: 'active' }), 800);
+  const refetchStats = useCallback(() => {
+    setTimeout(() => queryClient.refetchQueries({ queryKey: ['admin', 'courses', 'stats'], type: 'active' }), 600);
   }, [queryClient]);
-
   const invalidateList = useCallback(() =>
     queryClient.invalidateQueries({ queryKey: ['admin', 'courses', 'list'] }), [queryClient]);
 
-  // setState (optimistic)
+  // ── setState (optimistic) ────────────────────────────────────────────────
   const stateMutation = useMutation({
-    mutationFn: (newState: CourseState) => adminCoursesApi.setState(course.id, newState),
-    onMutate: async (newState) => {
+    mutationFn: (s: CourseState) => adminCoursesApi.setState(course.id, s),
+    onMutate: async (next) => {
       await queryClient.cancelQueries({ queryKey: ['admin', 'courses', 'list']  });
       await queryClient.cancelQueries({ queryKey: ['admin', 'courses', 'stats'] });
-      const listSnapshot  = queryClient.getQueriesData({ queryKey: ['admin', 'courses', 'list']  });
-      const statsSnapshot = queryClient.getQueriesData({ queryKey: ['admin', 'courses', 'stats'] });
-      queryClient.setQueriesData({ queryKey: ['admin', 'courses', 'list'] }, (old: any) => {
-        if (!old?.data) return old;
-        return { ...old, data: old.data.map((c: AdminCourse) =>
-          c.id === course.id ? { ...c, state: newState } : c) };
-      });
+      const listSnap  = queryClient.getQueriesData({ queryKey: ['admin', 'courses', 'list']  });
+      const statsSnap = queryClient.getQueriesData({ queryKey: ['admin', 'courses', 'stats'] });
+      queryClient.setQueriesData({ queryKey: ['admin', 'courses', 'list'] }, (old: any) =>
+        old?.data ? { ...old, data: old.data.map((c: AdminCourse) => c.id === course.id ? { ...c, state: next } : c) } : old);
       queryClient.setQueriesData({ queryKey: ['admin', 'courses', 'stats'] }, (old: any) => {
         if (!old) return old;
-        const prev = course.state; const next = newState;
-        if (prev === next) return old;
+        const prev = course.state;
         return {
           ...old,
           [STATE_KEY_MAP[prev]]: Math.max(0, (old[STATE_KEY_MAP[prev]] ?? 0) - 1),
           [STATE_KEY_MAP[next]]: (old[STATE_KEY_MAP[next]] ?? 0) + 1,
         };
       });
-      return { listSnapshot, statsSnapshot };
+      return { listSnap, statsSnap };
     },
-    onSuccess: (updated) => {
-      const key = updated.state === 'PUBLISHED' ? 'toast.published'
-        : updated.state === 'COMING_SOON' ? 'toast.comingSoon' : 'toast.unpublished';
-      toast.success(t(key, { title: course.title }));
-      invalidateList(); refetchStatsLater();
-    },
+    onSuccess: () => { invalidateList(); refetchStats(); },
     onError: (_e: any, _v: any, ctx: any) => {
-      ctx?.listSnapshot?.forEach(([k, v]: [any, any])  => queryClient.setQueryData(k, v));
-      ctx?.statsSnapshot?.forEach(([k, v]: [any, any]) => queryClient.setQueryData(k, v));
-      toast.error(t('errors.publishFailed'));
+      ctx?.listSnap?.forEach(([k, v]: any)  => queryClient.setQueryData(k, v));
+      ctx?.statsSnap?.forEach(([k, v]: any) => queryClient.setQueryData(k, v));
+      toast.error(isAr ? 'فشل تحديث الحالة' : 'Failed to update state');
     },
   });
 
-  // duplicate
+  // ── duplicate ────────────────────────────────────────────────────────────
   const duplicateMutation = useMutation({
     mutationFn: () => adminCoursesApi.duplicate(course.id),
-    onSuccess: (newCourse) => {
-      toast.success(t('toast.duplicated', { title: course.title }));
-      invalidateList(); refetchStatsLater();
-      navigate(ROUTES.COURSE_EDIT(newCourse.slug ?? newCourse.id));
+    onSuccess: (c) => {
+      toast.success(isAr ? `تم تكرار "${course.title}"` : `"${course.title}" duplicated`);
+      invalidateList(); refetchStats();
+      navigate(ROUTES.COURSE_EDIT(c.slug ?? c.id));
     },
-    onError: () => toast.error(t('errors.duplicateFailed')),
+    onError: () => toast.error(isAr ? 'فشل تكرار الكورس' : 'Failed to duplicate course'),
   });
 
-  // delete
+  // ── delete ───────────────────────────────────────────────────────────────
   const deleteMutation = useMutation({
     mutationFn: () => adminCoursesApi.delete(course.id),
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: ['admin', 'courses', 'list']  });
       await queryClient.cancelQueries({ queryKey: ['admin', 'courses', 'stats'] });
-      const listSnapshot  = queryClient.getQueriesData({ queryKey: ['admin', 'courses', 'list']  });
-      const statsSnapshot = queryClient.getQueriesData({ queryKey: ['admin', 'courses', 'stats'] });
-      queryClient.setQueriesData({ queryKey: ['admin', 'courses', 'list'] }, (old: any) => {
-        if (!old?.data) return old;
-        return { ...old, data: old.data.filter((c: AdminCourse) => c.id !== course.id) };
-      });
-      queryClient.setQueriesData({ queryKey: ['admin', 'courses', 'stats'] }, (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          total: Math.max(0, (old.total ?? 0) - 1),
-          [STATE_KEY_MAP[course.state]]: Math.max(0, (old[STATE_KEY_MAP[course.state]] ?? 0) - 1),
-        };
-      });
-      return { listSnapshot, statsSnapshot };
+      const listSnap  = queryClient.getQueriesData({ queryKey: ['admin', 'courses', 'list']  });
+      const statsSnap = queryClient.getQueriesData({ queryKey: ['admin', 'courses', 'stats'] });
+      queryClient.setQueriesData({ queryKey: ['admin', 'courses', 'list'] }, (old: any) =>
+        old?.data ? { ...old, data: old.data.filter((c: AdminCourse) => c.id !== course.id) } : old);
+      queryClient.setQueriesData({ queryKey: ['admin', 'courses', 'stats'] }, (old: any) =>
+        old ? { ...old, total: Math.max(0, (old.total ?? 0) - 1), [STATE_KEY_MAP[course.state]]: Math.max(0, (old[STATE_KEY_MAP[course.state]] ?? 0) - 1) } : old);
+      return { listSnap, statsSnap };
     },
     onSuccess: () => {
-      toast.success(t('toast.deleted', { title: course.title }));
-      invalidateList(); refetchStatsLater();
+      toast.success(isAr ? `تم حذف "${course.title}"` : `"${course.title}" deleted`);
+      invalidateList(); refetchStats();
       setDeleteOpen(false);
     },
-    onError: (err: any, _v: any, ctx: any) => {
-      ctx?.listSnapshot?.forEach(([k, v]: [any, any])  => queryClient.setQueryData(k, v));
-      ctx?.statsSnapshot?.forEach(([k, v]: [any, any]) => queryClient.setQueryData(k, v));
-      toast.error(t('errors.deleteFailed', { message: err?.response?.data?.message ?? err?.message ?? '' }));
+    onError: (_e: any, _v: any, ctx: any) => {
+      ctx?.listSnap?.forEach(([k, v]: any)  => queryClient.setQueryData(k, v));
+      ctx?.statsSnap?.forEach(([k, v]: any) => queryClient.setQueryData(k, v));
+      toast.error(isAr ? 'فشل حذف الكورس' : 'Failed to delete course');
     },
   });
 
-  const currentState = STATE_OPTIONS.find((o) => o.value === course.state) ?? STATE_OPTIONS[2];
-  const CurrentIcon  = currentState.icon;
+  const currentOpt = STATE_OPTIONS.find((o) => o.value === course.state) ?? STATE_OPTIONS[2];
+  const CurrentIcon = currentOpt.icon;
+  const currentLabel = isAr ? currentOpt.ar : currentOpt.en;
 
-  /**
-   * Preview: open the EXTERNAL cyberlabs-frontend app, not the admin.
-   * This avoids the React Router 404 error entirely because we leave
-   * the admin domain and navigate to the real course page.
-   *
-   * In browsers, window.open always opens a new TAB unless the user
-   * has configured their browser to open new windows. That is normal
-   * and expected behaviour — we cannot force a separate window reliably.
-   */
-  const openPreview = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const url = `${FRONTEND_BASE}/courses/${course.slug}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
+  void FRONTEND_BASE; // keep for potential future preview use
 
   return (
     <>
       {/*
        * SLIDE-UP BAR
-       * Sits at absolute bottom-0, initially pushed below the card
-       * via translate-y-full. On group-hover it slides into view.
+       * ─ 4 buttons always visible: Edit · Duplicate · Delete · State▾
+       * ─ frosted glass, slides from bottom on group-hover
        */}
       <div
         className={cn(
@@ -177,8 +143,7 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
           'translate-y-full group-hover:translate-y-0',
           'transition-transform duration-200 ease-out',
           'bg-zinc-900/88 backdrop-blur-md border-t border-white/10',
-          'flex items-center gap-1.5 px-3 py-2.5',
-          className,
+          'flex items-center gap-1 px-2.5 py-2',
         )}
         onClick={(e) => e.stopPropagation()}
       >
@@ -188,26 +153,43 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
           className='flex-1 h-8 text-xs gap-1.5 bg-primary/90 hover:bg-primary'
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(ROUTES.COURSE_EDIT(course.slug)); }}
         >
-          <Pencil className='h-3.5 w-3.5' /> {t('overlay.edit')}
+          <Pencil className='h-3.5 w-3.5' />
+          {isAr ? 'تعديل' : 'Edit'}
         </Button>
 
-        {/* Preview → opens external frontend */}
+        {/* Duplicate */}
         <Button
           size='sm' variant='outline'
           className='h-8 w-8 p-0 border-white/20 bg-white/5 text-white/70 hover:bg-white/15 hover:text-white'
-          title={t('overlay.preview')}
-          onClick={openPreview}
+          title={isAr ? 'تكرار' : 'Duplicate'}
+          disabled={duplicateMutation.isPending}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); duplicateMutation.mutate(); }}
         >
-          <Eye className='h-3.5 w-3.5' />
+          {duplicateMutation.isPending
+            ? <Loader2 className='h-3.5 w-3.5 animate-spin' />
+            : <Copy className='h-3.5 w-3.5' />}
         </Button>
 
-        {/* State + more actions */}
+        {/* Delete */}
+        <Button
+          size='sm' variant='outline'
+          className='h-8 w-8 p-0 border-red-500/30 bg-red-500/5 text-red-400 hover:bg-red-500/20 hover:text-red-300'
+          title={isAr ? 'حذف' : 'Delete'}
+          disabled={deleteMutation.isPending}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteOpen(true); }}
+        >
+          {deleteMutation.isPending
+            ? <Loader2 className='h-3.5 w-3.5 animate-spin' />
+            : <Trash2 className='h-3.5 w-3.5' />}
+        </Button>
+
+        {/* State dropdown — only dropdown in the bar */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               size='sm' variant='outline'
               className={cn(
-                'h-8 gap-1.5 px-2.5 text-[11px] font-semibold border',
+                'h-8 gap-1 px-2 text-[11px] font-semibold border',
                 STATE_PILL[course.state] ?? STATE_PILL.DRAFT,
               )}
               disabled={stateMutation.isPending}
@@ -215,10 +197,16 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
             >
               {stateMutation.isPending
                 ? <Loader2 className='h-3 w-3 animate-spin' />
-                : <><CurrentIcon className='h-3 w-3' /><span className='hidden sm:inline ms-1'>{t(currentState.labelKey)}</span></>}
+                : (
+                  <>
+                    <CurrentIcon className='h-3 w-3' />
+                    <span className='max-w-[52px] truncate'>{currentLabel}</span>
+                    <ChevronDown className='h-2.5 w-2.5 opacity-60' />
+                  </>
+                )}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align='end' className='min-w-[170px]'>
+          <DropdownMenuContent align='end' className='min-w-[150px]'>
             {STATE_OPTIONS.map((opt) => {
               const Icon = opt.icon;
               const isCurrent = course.state === opt.value;
@@ -230,51 +218,40 @@ export function AdminOverlayControls({ course, className }: AdminOverlayControls
                   onSelect={(e) => { e.preventDefault(); if (!isCurrent) stateMutation.mutate(opt.value); }}
                 >
                   <Icon className={cn('h-3.5 w-3.5', opt.color)} />
-                  {t(opt.labelKey)}
+                  {isAr ? opt.ar : opt.en}
                   {isCurrent && <span className='ms-auto text-[10px] text-muted-foreground'>✓</span>}
                 </DropdownMenuItem>
               );
             })}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className='gap-2 text-xs'
-              disabled={duplicateMutation.isPending}
-              onSelect={(e) => { e.preventDefault(); duplicateMutation.mutate(); }}
-            >
-              {duplicateMutation.isPending
-                ? <Loader2 className='h-3.5 w-3.5 animate-spin' />
-                : <Copy className='h-3.5 w-3.5' />}
-              {t('overlay.duplicate')}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className='gap-2 text-xs text-destructive focus:text-destructive'
-              disabled={deleteMutation.isPending}
-              onSelect={(e) => { e.preventDefault(); setDeleteOpen(true); }}
-            >
-              <Trash2 className='h-3.5 w-3.5' />
-              {t('overlay.delete')}
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
 
-      {/* Delete confirmation */}
+      {/* Delete confirmation dialog */}
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('dialogs.deleteTitle', { title: course.title })}</AlertDialogTitle>
-            <AlertDialogDescription>{t('dialogs.deleteDesc')}</AlertDialogDescription>
+            <AlertDialogTitle>
+              {isAr ? `حذف "${course.title}"؟` : `Delete "${course.title}"?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {isAr
+                ? 'سيؤدي هذا إلى حذف الكورس وجميع بياناته نهائياً. لا يمكن التراجع.'
+                : 'This will permanently delete the course and all its data. This action cannot be undone.'}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMutation.isPending}>{t('dialogs.cancel')}</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>
+              {isAr ? 'إلغاء' : 'Cancel'}
+            </AlertDialogCancel>
             <AlertDialogAction
-              onClick={(e) => { e.preventDefault(); deleteMutation.mutate(undefined); }}
+              onClick={(e) => { e.preventDefault(); deleteMutation.mutate(); }}
               disabled={deleteMutation.isPending}
               className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
             >
               {deleteMutation.isPending
-                ? <><Loader2 className='mr-2 h-4 w-4 animate-spin' />{t('dialogs.deleting')}</>
-                : t('dialogs.deleteConfirm')}
+                ? <><Loader2 className='mr-2 h-4 w-4 animate-spin' />{isAr ? 'جارٍ الحذف…' : 'Deleting…'}</>
+                : (isAr ? 'حذف الكورس' : 'Delete Course')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

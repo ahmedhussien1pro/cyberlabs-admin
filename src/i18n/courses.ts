@@ -1,0 +1,163 @@
+// src/i18n/courses.ts
+export const coursesI18n = {
+  en: {
+    title: 'Courses',
+    subtitle: 'Manage and publish platform courses',
+    newCourse: 'New Course',
+    stats: {
+      total: 'Total Courses',
+      published: 'Published',
+      draft: 'Draft',
+      comingSoon: 'Coming Soon',
+    },
+    filters: {
+      searchPlaceholder: 'Search courses…',
+    },
+    state: {
+      all: 'All States',
+      PUBLISHED: 'Published',
+      DRAFT: 'Draft',
+      COMING_SOON: 'Coming Soon',
+    },
+    difficulty: {
+      ALL: 'All Levels',
+      BEGINNER: 'Beginner',
+      INTERMEDIATE: 'Intermediate',
+      ADVANCED: 'Advanced',
+      EXPERT: 'Expert',
+    },
+    access: {
+      FREE: 'Free',
+      PRO: 'Pro',
+      PREMIUM: 'Premium',
+    },
+    contentType: {
+      PRACTICAL: 'Practical',
+      THEORETICAL: 'Theory',
+      MIXED: 'Mixed',
+    },
+    card: {
+      topics: 'Topics',
+      labs: 'Labs',
+      enrolled: 'enrolled',
+      hours: 'h',
+      noDescription: 'No description…',
+      noArTitle: 'Add Arabic title…',
+    },
+    overlay: {
+      edit: 'Edit',
+      preview: 'Preview',
+      duplicate: 'Duplicate',
+      delete: 'Delete',
+    },
+    toast: {
+      published: '"{{title}}" published',
+      unpublished: '"{{title}}" unpublished',
+      comingSoon: '"{{title}}" set to Coming Soon',
+      duplicated: '"{{title}}" duplicated',
+      deleted: '"{{title}}" deleted',
+    },
+    errors: {
+      loadFailed: 'Failed to load courses',
+      publishFailed: 'Failed to update state',
+      duplicateFailed: 'Failed to duplicate course',
+      deleteFailed: 'Failed to delete course: {{message}}',
+    },
+    dialogs: {
+      deleteTitle: 'Delete "{{title}}"?',
+      deleteDesc: 'This will permanently delete the course and all its data. This action cannot be undone.',
+      cancel: 'Cancel',
+      deleting: 'Deleting…',
+      deleteConfirm: 'Delete Course',
+    },
+    table: {
+      of: 'of',
+      results: 'results',
+      noResults: 'No courses found',
+      noResultsHint: 'Try adjusting your filters or create a new course.',
+    },
+    actions: {
+      tryAgain: 'Try Again',
+    },
+  },
+  ar: {
+    title: 'الكورسات',
+    subtitle: 'إدارة ونشر كورسات المنصة',
+    newCourse: 'كورس جديد',
+    stats: {
+      total: 'إجمالي الكورسات',
+      published: 'منشور',
+      draft: 'مسودة',
+      comingSoon: 'قريباً',
+    },
+    filters: {
+      searchPlaceholder: 'بحث في الكورسات…',
+    },
+    state: {
+      all: 'كل الحالات',
+      PUBLISHED: 'منشور',
+      DRAFT: 'مسودة',
+      COMING_SOON: 'قريباً',
+    },
+    difficulty: {
+      ALL: 'كل المستويات',
+      BEGINNER: 'مبتدئ',
+      INTERMEDIATE: 'متوسط',
+      ADVANCED: 'متقدم',
+      EXPERT: 'خبير',
+    },
+    access: {
+      FREE: 'مجاني',
+      PRO: 'برو',
+      PREMIUM: 'مميز',
+    },
+    contentType: {
+      PRACTICAL: 'تطبيقي',
+      THEORETICAL: 'نظري',
+      MIXED: 'مختلط',
+    },
+    card: {
+      topics: 'موضوعات',
+      labs: 'معامل',
+      enrolled: 'مسجل',
+      hours: 'س',
+      noDescription: 'لا يوجد وصف…',
+      noArTitle: 'أضف عنواناً بالعربية…',
+    },
+    overlay: {
+      edit: 'تعديل',
+      preview: 'معاينة',
+      duplicate: 'تكرار',
+      delete: 'حذف',
+    },
+    toast: {
+      published: 'تم نشر "{{title}}"',
+      unpublished: 'تم إلغاء نشر "{{title}}"',
+      comingSoon: 'تم تعيين "{{title}}" كقريباً',
+      duplicated: 'تم تكرار "{{title}}"',
+      deleted: 'تم حذف "{{title}}"',
+    },
+    errors: {
+      loadFailed: 'فشل تحميل الكورسات',
+      publishFailed: 'فشل تحديث الحالة',
+      duplicateFailed: 'فشل تكرار الكورس',
+      deleteFailed: 'فشل حذف الكورس: {{message}}',
+    },
+    dialogs: {
+      deleteTitle: 'حذف "{{title}}"؟',
+      deleteDesc: 'سيؤدي هذا إلى حذف الكورس وجميع بياناته نهائياً. لا يمكن التراجع.',
+      cancel: 'إلغاء',
+      deleting: 'جارٍ الحذف…',
+      deleteConfirm: 'حذف الكورس',
+    },
+    table: {
+      of: 'من',
+      results: 'نتائج',
+      noResults: 'لا توجد كورسات',
+      noResultsHint: 'جرب تعديل الفلاتر أو أنشئ كورساً جديداً.',
+    },
+    actions: {
+      tryAgain: 'حاول مرة أخرى',
+    },
+  },
+} as const;
