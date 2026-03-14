@@ -1,6 +1,6 @@
 // src/features/courses/components/edit-tabs/curriculum-tab.tsx
 // ✅ Uses adminCoursesApi (admin endpoint with auth)
-// ✅ i18n-aware (AR/EN), dir driven by admin topbar language
+// ✅ i18n via useTranslation() — reacts to topbar AR/EN toggle (same as preview tab)
 // ✅ Inline title editing for topics (EN + AR)
 // ✅ JSON import (paste or file)
 // ✅ Image upload via adminCoursesApi.uploadImage → R2 CDN URL
@@ -138,11 +138,9 @@ function JsonImportPanel({
   );
 }
 
-// ── Image Upload Button (used inside element editor) ─────────────────────────
+// ── Image Upload Button ──────────────────────────────────────────────────────
 function ImageUploadButton({
-  currentUrl,
-  onUploaded,
-  lbl,
+  currentUrl, onUploaded, lbl,
 }: {
   currentUrl?: string;
   onUploaded: (url: string) => void;
@@ -202,7 +200,7 @@ function ImageUploadButton({
   );
 }
 
-// ── Element row ──────────────────────────────────────────────────────────────────
+// ── Element row ──────────────────────────────────────────────────────────────
 function ElementRow({
   el, onUpdate, onDelete, onMoveUp, onMoveDown, isFirst, isLast, lbl,
 }: {
@@ -218,19 +216,15 @@ function ElementRow({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft]     = useState('');
 
-  const isImage  = el.type === 'image';
+  const isImage    = el.type === 'image';
   const displayVal = typeof el.value === 'object'
     ? ((el.value as any)?.en ?? '')
     : (el.value ?? '');
 
-  const startEdit = () => {
-    setDraft(JSON.stringify(el, null, 2));
-    setEditing(true);
-  };
+  const startEdit = () => { setDraft(JSON.stringify(el, null, 2)); setEditing(true); };
   const commitEdit = () => {
     try {
-      const updated = JSON.parse(draft);
-      onUpdate(updated);
+      onUpdate(JSON.parse(draft));
       setEditing(false);
     } catch {
       toast.error(lbl('Invalid JSON for element', 'JSON غير صحيح للعنصر'));
@@ -257,12 +251,8 @@ function ElementRow({
                 currentUrl={el.imageUrl as string | undefined}
                 onUploaded={(url) => {
                   try {
-                    const parsed = JSON.parse(draft);
-                    const updated = { ...parsed, imageUrl: url };
-                    setDraft(JSON.stringify(updated, null, 2));
-                  } catch {
-                    // keep draft as-is
-                  }
+                    setDraft(JSON.stringify({ ...JSON.parse(draft), imageUrl: url }, null, 2));
+                  } catch { /* keep draft */ }
                 }}
                 lbl={lbl}
               />
@@ -279,11 +269,8 @@ function ElementRow({
         ) : (
           <>
             {isImage && el.imageUrl ? (
-              <img
-                src={el.imageUrl as string}
-                alt=''
-                className='h-16 rounded border border-border/40 object-contain bg-muted/10'
-              />
+              <img src={el.imageUrl as string} alt=''
+                className='h-16 rounded border border-border/40 object-contain bg-muted/10' />
             ) : (
               <p className='text-xs text-muted-foreground line-clamp-2'>
                 {String(displayVal) || `(${el.type})`}
@@ -310,7 +297,7 @@ function ElementRow({
   );
 }
 
-// ── TopicBlock ───────────────────────────────────────────────────────────────────
+// ── TopicBlock ───────────────────────────────────────────────────────────────
 function TopicBlock({
   topic, topicIndex, total, onChange, onDelete, onMoveUp, onMoveDown, lbl, isAr,
 }: {
@@ -342,46 +329,32 @@ function TopicBlock({
     onChange({ ...topic, elements: topic.elements.filter((_, i) => i !== idx) });
   const moveEl = (idx: number, dir: -1 | 1) => {
     const els = [...topic.elements];
-    const to = idx + dir;
+    const to  = idx + dir;
     if (to < 0 || to >= els.length) return;
     [els[idx], els[to]] = [els[to], els[idx]];
     onChange({ ...topic, elements: els });
   };
 
+  // ── نفس منطق الـ TopicRow في preview tab ──
   const displayTitle = isAr
     ? (topic.title?.ar || topic.title?.en || lbl('Untitled Topic', 'موضوع بدون عنوان'))
-    : (topic.title?.en || lbl('Untitled Topic', 'موضوع بدون عنوان'));
+    : (topic.title?.en || topic.title?.ar || lbl('Untitled Topic', 'موضوع بدون عنوان'));
 
   return (
     <div className='rounded-xl border border-border/60 bg-card overflow-hidden'>
       {/* Topic header */}
       <div className='flex items-center gap-2 px-4 py-3 bg-muted/30'>
-        <button
-          className='shrink-0 text-muted-foreground'
-          onClick={() => setOpen(!open)}>
-          {open
-            ? <ChevronDown className='h-4 w-4' />
-            : <ChevronRight className='h-4 w-4' />}
+        <button className='shrink-0 text-muted-foreground' onClick={() => setOpen(!open)}>
+          {open ? <ChevronDown className='h-4 w-4' /> : <ChevronRight className='h-4 w-4' />}
         </button>
 
         {editingTitle ? (
           <div className='flex-1 flex flex-col gap-1.5 min-w-0'>
             <div className='flex gap-2'>
-              <Input
-                dir='ltr'
-                value={titleEn}
-                onChange={(e) => setTitleEn(e.target.value)}
-                placeholder='Title EN'
-                className='h-7 text-xs'
-                autoFocus
-              />
-              <Input
-                dir='rtl'
-                value={titleAr}
-                onChange={(e) => setTitleAr(e.target.value)}
-                placeholder='عنوان AR'
-                className='h-7 text-xs'
-              />
+              <Input dir='ltr'  value={titleEn} onChange={(e) => setTitleEn(e.target.value)}
+                placeholder='Title EN' className='h-7 text-xs' autoFocus />
+              <Input dir='rtl' value={titleAr} onChange={(e) => setTitleAr(e.target.value)}
+                placeholder='عنوان AR' className='h-7 text-xs' />
             </div>
             <div className='flex gap-1.5'>
               <Button size='sm' className='h-6 text-xs gap-1 px-2' onClick={commitTitle}>
@@ -394,9 +367,7 @@ function TopicBlock({
             </div>
           </div>
         ) : (
-          <button
-            className='flex-1 text-start min-w-0'
-            onClick={() => setOpen(!open)}>
+          <button className='flex-1 text-start min-w-0' onClick={() => setOpen(!open)}>
             <span className='text-sm font-semibold truncate block'>
               {topicIndex + 1}. {displayTitle}
             </span>
@@ -412,13 +383,16 @@ function TopicBlock({
             onClick={() => setEditingTitle(!editingTitle)}>
             <Edit2 className='h-3.5 w-3.5' />
           </Button>
-          <Button variant='ghost' size='sm' className='h-7 w-7 p-0' disabled={topicIndex === 0} onClick={onMoveUp}>
+          <Button variant='ghost' size='sm' className='h-7 w-7 p-0'
+            disabled={topicIndex === 0} onClick={onMoveUp}>
             <ChevronUp className='h-3.5 w-3.5' />
           </Button>
-          <Button variant='ghost' size='sm' className='h-7 w-7 p-0' disabled={topicIndex === total - 1} onClick={onMoveDown}>
+          <Button variant='ghost' size='sm' className='h-7 w-7 p-0'
+            disabled={topicIndex === total - 1} onClick={onMoveDown}>
             <ChevronDown className='h-3.5 w-3.5' />
           </Button>
-          <Button variant='ghost' size='sm' className='h-7 w-7 p-0 text-destructive hover:text-destructive' onClick={onDelete}>
+          <Button variant='ghost' size='sm' className='h-7 w-7 p-0 text-destructive hover:text-destructive'
+            onClick={onDelete}>
             <Trash2 className='h-3.5 w-3.5' />
           </Button>
         </div>
@@ -446,7 +420,7 @@ function TopicBlock({
             />
           ))}
 
-          {/* Add element menu */}
+          {/* Add element type buttons */}
           <div className='flex flex-wrap gap-2 pt-1'>
             {(['text', 'image', 'video', 'code', 'quiz', 'lab'] as const).map((type) => (
               <Button
@@ -475,11 +449,13 @@ function TopicBlock({
   );
 }
 
-// ═══ CurriculumTab ═══════════════════════════════════════════════════════════════════
+// ═══ CurriculumTab ═══════════════════════════════════════════════════════════
 export function CurriculumTab({ course, onSaved }: Props) {
-  const { i18n } = useTranslation('courses');
+  // ✅ useTranslation() بدون namespace — نفس ما بيعمله course-preview-tab.tsx
+  // بيتابع اللغة من الـ topbar مباشرة (i18n.changeLanguage)
+  const { i18n } = useTranslation();
   const isAr = i18n.language === 'ar';
-  const lbl = (en: string, ar: string) => isAr ? ar : en;
+  const lbl  = (en: string, ar: string) => isAr ? ar : en;
 
   const [topics, setTopics] = useState<Topic[] | null>(null);
   const [dirty,  setDirty]  = useState(false);
@@ -503,10 +479,7 @@ export function CurriculumTab({ course, onSaved }: Props) {
     onError: () => toast.error(lbl('Failed to save curriculum', 'فشل حفظ المنهج')),
   });
 
-  const update = (newTopics: Topic[]) => {
-    setTopics(newTopics);
-    setDirty(true);
-  };
+  const update = (newTopics: Topic[]) => { setTopics(newTopics); setDirty(true); };
 
   const moveTopic = (idx: number, dir: -1 | 1) => {
     const arr = [...localTopics];
@@ -565,7 +538,10 @@ export function CurriculumTab({ course, onSaved }: Props) {
         {localTopics.length === 0 && (
           <Card className='p-8 text-center'>
             <p className='text-muted-foreground text-sm'>
-              {lbl('No topics yet. Import JSON or add one below.', 'لا يوجد مواضيع. استورد JSON أو أضف موضوعاً أدناه.')}
+              {lbl(
+                'No topics yet. Import JSON or add one below.',
+                'لا يوجد مواضيع. استورد JSON أو أضف موضوعاً أدناه.',
+              )}
             </p>
           </Card>
         )}
@@ -579,9 +555,7 @@ export function CurriculumTab({ course, onSaved }: Props) {
             isAr={isAr}
             lbl={lbl}
             onChange={(t) => {
-              const arr = [...localTopics];
-              arr[idx] = t;
-              update(arr);
+              const arr = [...localTopics]; arr[idx] = t; update(arr);
             }}
             onDelete={() => update(localTopics.filter((_, i) => i !== idx))}
             onMoveUp={() => moveTopic(idx, -1)}
@@ -606,17 +580,12 @@ export function CurriculumTab({ course, onSaved }: Props) {
       {/* Sticky Save / Discard */}
       {dirty && (
         <div className='flex items-center justify-end gap-3 border-t pt-4 sticky bottom-0 bg-background/95 backdrop-blur py-4'>
-          <Button
-            variant='outline'
-            className='gap-2'
+          <Button variant='outline' className='gap-2'
             onClick={() => { setTopics(null); setDirty(false); }}>
             <RotateCcw className='h-4 w-4' />
             {lbl('Discard', 'تجاهل')}
           </Button>
-          <Button
-            onClick={() => save.mutate()}
-            disabled={save.isPending}
-            className='gap-2'>
+          <Button onClick={() => save.mutate()} disabled={save.isPending} className='gap-2'>
             {save.isPending
               ? <Loader2 className='h-4 w-4 animate-spin' />
               : <Save className='h-4 w-4' />}
