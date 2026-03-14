@@ -72,7 +72,7 @@ type StateFilter = CourseState | 'all';
 type DiffFilter = 'ALL' | 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT';
 
 // Items per page — pagination shows when total > LIMIT
-const LIMIT = 12;
+const LIMIT = 8;
 
 // ── Pagination ────────────────────────────────────────────────────────────────
 function Pagination({
