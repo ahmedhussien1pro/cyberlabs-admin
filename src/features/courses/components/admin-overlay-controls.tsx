@@ -1,7 +1,7 @@
 // src/features/courses/components/admin-overlay-controls.tsx
-// Slide-up frosted bar with 4 visible buttons:
-//   [Edit]  [Duplicate]  [Delete]  [State ▾]
-// State is the ONLY dropdown. Preview button removed per request.
+// Slide-up frosted bar with 5 visible buttons:
+//   [Edit]  [Preview]  [Duplicate]  [Delete]  [State ▾]
+// State is the ONLY dropdown.
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
   Pencil, Trash2, Globe, EyeOff, Copy, Loader2, Clock,
-  ChevronDown,
+  ChevronDown, Eye,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,6 +25,8 @@ import { adminCoursesApi } from '../services/admin-courses.api';
 import { ROUTES } from '@/shared/constants';
 import type { AdminCourse, CourseState } from '../types/admin-course.types';
 
+// Opens the REAL cyberlabs-frontend app, not the admin router.
+// Browser always opens a new tab — that is the expected behaviour.
 const FRONTEND_BASE =
   (import.meta.env.VITE_FRONTEND_URL as string | undefined)?.replace(/\/$/, '') ??
   'http://localhost:5173';
@@ -124,18 +126,22 @@ export function AdminOverlayControls({ course }: { course: AdminCourse }) {
     },
   });
 
-  const currentOpt = STATE_OPTIONS.find((o) => o.value === course.state) ?? STATE_OPTIONS[2];
-  const CurrentIcon = currentOpt.icon;
+  const currentOpt   = STATE_OPTIONS.find((o) => o.value === course.state) ?? STATE_OPTIONS[2];
+  const CurrentIcon  = currentOpt.icon;
   const currentLabel = isAr ? currentOpt.ar : currentOpt.en;
 
-  void FRONTEND_BASE; // keep for potential future preview use
+  const openPreview = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    window.open(`${FRONTEND_BASE}/courses/${course.slug}`, '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <>
       {/*
        * SLIDE-UP BAR
-       * ─ 4 buttons always visible: Edit · Duplicate · Delete · State▾
-       * ─ frosted glass, slides from bottom on group-hover
+       * ─ 5 controls: [Edit▶]  [👁 Preview]  [⧉ Duplicate]  [🗑 Delete]  [State ▾]
+       * ─ frosted glass, slides up from bottom on group-hover
        */}
       <div
         className={cn(
@@ -147,7 +153,7 @@ export function AdminOverlayControls({ course }: { course: AdminCourse }) {
         )}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Edit */}
+        {/* Edit — primary CTA */}
         <Button
           size='sm'
           className='flex-1 h-8 text-xs gap-1.5 bg-primary/90 hover:bg-primary'
@@ -155,6 +161,16 @@ export function AdminOverlayControls({ course }: { course: AdminCourse }) {
         >
           <Pencil className='h-3.5 w-3.5' />
           {isAr ? 'تعديل' : 'Edit'}
+        </Button>
+
+        {/* Preview — opens FRONTEND_BASE/courses/:slug in new tab */}
+        <Button
+          size='sm' variant='outline'
+          className='h-8 w-8 p-0 border-white/20 bg-white/5 text-white/70 hover:bg-white/15 hover:text-white'
+          title={isAr ? 'معاينة' : 'Preview'}
+          onClick={openPreview}
+        >
+          <Eye className='h-3.5 w-3.5' />
         </Button>
 
         {/* Duplicate */}
@@ -183,7 +199,7 @@ export function AdminOverlayControls({ course }: { course: AdminCourse }) {
             : <Trash2 className='h-3.5 w-3.5' />}
         </Button>
 
-        {/* State dropdown — only dropdown in the bar */}
+        {/* State — ONLY dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -200,7 +216,7 @@ export function AdminOverlayControls({ course }: { course: AdminCourse }) {
                 : (
                   <>
                     <CurrentIcon className='h-3 w-3' />
-                    <span className='max-w-[52px] truncate'>{currentLabel}</span>
+                    <span className='hidden sm:inline max-w-[48px] truncate'>{currentLabel}</span>
                     <ChevronDown className='h-2.5 w-2.5 opacity-60' />
                   </>
                 )}
@@ -227,7 +243,7 @@ export function AdminOverlayControls({ course }: { course: AdminCourse }) {
         </DropdownMenu>
       </div>
 
-      {/* Delete confirmation dialog */}
+      {/* Delete confirmation */}
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
