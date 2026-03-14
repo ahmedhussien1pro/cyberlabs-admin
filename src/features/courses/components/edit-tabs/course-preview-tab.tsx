@@ -1,4 +1,6 @@
-// course-preview-tab.tsx — full platform preview (hero + curriculum + labs)
+// src/features/courses/components/edit-tabs/course-preview-tab.tsx
+// Full platform preview: hero + curriculum + labs.
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -6,24 +8,22 @@ import {
   FlaskConical, Heart, Rocket, ChevronDown,
   Star, Gem, CheckCircle2,
 } from 'lucide-react';
-import { useState } from 'react';
-import { Badge } from '@/components/ui/badge';
+import { Badge }    from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
+import { cn }       from '@/lib/utils';
 import { MatrixRain } from '@/shared/components/common/matrix-rain';
-import {
-  MATRIX_COLOR, STRIPE, BLOOM, TEXT_COLOR, FALLBACK_BG, ACCESS_BADGE,
-} from '../../../constants/course-colors';
+// ✅ Unified imports — from feature barrels
+import { MATRIX_COLOR, STRIPE, BLOOM, TEXT_COLOR, FALLBACK_BG, ACCESS_BADGE } from '../../constants/course-colors';
 import { adminCoursesApi } from '../../services/admin-courses.api';
+import type { AdminCourse, CurriculumTopic } from '../../types';
+import { Stat } from '../shared/Stat';
 import CourseElementRenderer from '../CourseElementRenderer';
-import type { AdminCourse, CurriculumTopic } from '../../types/admin-course.types';
 
-// ── Access icon map ──────────────────────────────────────────────────────────
 const ACCESS_ICON: Record<string, React.ElementType> = {
   FREE: Unlock, PRO: Crown, PREMIUM: Gem,
 };
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ─ helpers ──────────────────────────────────────────────────────────────────────────
 function normalizeTitleField(raw: unknown): { en: string; ar: string } {
   if (!raw) return { en: '', ar: '' };
   if (typeof raw === 'string') return { en: raw, ar: '' };
@@ -39,26 +39,13 @@ function normalizeTitleField(raw: unknown): { en: string; ar: string } {
 function normalizeTopic(raw: unknown, idx: number): CurriculumTopic {
   const t = (raw ?? {}) as Record<string, unknown>;
   return {
-    id: String(t['id'] ?? `topic-${idx}`),
-    title: normalizeTitleField(t['title']),
+    id:       String(t['id'] ?? `topic-${idx}`),
+    title:    normalizeTitleField(t['title']),
     elements: Array.isArray(t['elements']) ? t['elements'] : [],
   };
 }
 
-// ── Stat pill ────────────────────────────────────────────────────────────────
-function Stat({ icon, value, label, textClass }: {
-  icon: React.ReactNode; value?: number | string; label?: string; textClass: string;
-}) {
-  return (
-    <div className='flex items-center gap-1.5 text-xs'>
-      <span className={textClass}>{icon}</span>
-      <span className='font-bold text-white'>{value}</span>
-      {label && <span className='text-white/45'>{label}</span>}
-    </div>
-  );
-}
-
-// ── Skeleton ─────────────────────────────────────────────────────────────────
+// ─ Curriculum Skeleton ────────────────────────────────────────────────────────────────
 function CurriculumSkeleton() {
   return (
     <div className='space-y-3'>
@@ -72,7 +59,7 @@ function CurriculumSkeleton() {
   );
 }
 
-// ── Topic Row ────────────────────────────────────────────────────────────────
+// ─ Topic Row ───────────────────────────────────────────────────────────────────────────
 function TopicRow({
   topic, idx, total, isOpen, onToggle, lang,
 }: {
@@ -90,8 +77,9 @@ function TopicRow({
       <div className='relative flex shrink-0 flex-col items-center'>
         <div className={cn(
           'relative z-10 flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold transition-all duration-300',
-          isOpen ? 'border-primary bg-primary/15 text-primary shadow-lg shadow-primary/20'
-                 : 'border-border/60 bg-muted/50 text-muted-foreground',
+          isOpen
+            ? 'border-primary bg-primary/15 text-primary shadow-lg shadow-primary/20'
+            : 'border-border/60 bg-muted/50 text-muted-foreground',
         )}>
           <span className='font-black'>{num}</span>
         </div>
@@ -118,7 +106,10 @@ function TopicRow({
           </div>
           <div className='flex shrink-0 items-center gap-1.5'>
             <Badge variant='outline' className='text-xs'>{topic.elements.length} el</Badge>
-            <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform duration-200 ms-1', isOpen && 'rotate-180')} />
+            <ChevronDown className={cn(
+              'h-4 w-4 text-muted-foreground transition-transform duration-200 ms-1',
+              isOpen && 'rotate-180',
+            )} />
           </div>
         </button>
         {isOpen && (
@@ -133,10 +124,8 @@ function TopicRow({
   );
 }
 
-// ── Main ─────────────────────────────────────────────────────────────────────
-interface Props { course: AdminCourse; }
-
-export function CoursePlatformPreviewTab({ course }: Props) {
+// ═══ CoursePlatformPreviewTab ════════════════════════════════════════════════════════════════
+export function CoursePlatformPreviewTab({ course }: { course: AdminCourse }) {
   const { i18n } = useTranslation();
   const lang  = i18n.language === 'ar' ? 'ar' : 'en';
   const isAr  = lang === 'ar';
@@ -150,10 +139,12 @@ export function CoursePlatformPreviewTab({ course }: Props) {
   const AccessIcon = ACCESS_ICON[course.access ?? 'FREE'] ?? Unlock;
   const title      = isAr ? course.ar_title || course.title : course.title;
   const desc       = isAr ? course.ar_description || course.description : course.description;
+  const avgRating  = (course as any).averageRating ?? 0;
+  const reviewCount = (course as any).reviewCount ?? 0;
 
   const { data: curriculumData, isLoading: currLoading } = useQuery({
-    queryKey: ['admin', 'curriculum-preview', course.id],
-    queryFn: () => adminCoursesApi.getCurriculum(course.slug),
+    queryKey:  ['admin', 'curriculum-preview', course.id],
+    queryFn:   () => adminCoursesApi.getCurriculum(course.slug),
     staleTime: 1000 * 60 * 5,
   });
 
@@ -171,12 +162,9 @@ export function CoursePlatformPreviewTab({ course }: Props) {
     enabled: !!course.id,
   });
 
-  const labsCount  = labsList?.length ?? 0;
-  const avgRating  = (course as any).averageRating ?? 0;
-  const reviewCount = (course as any).reviewCount ?? 0;
-  const topics: CurriculumTopic[] = ((curriculumData as any)?.topics ?? []).map(
-    (t: unknown, i: number) => normalizeTopic(t, i),
-  );
+  const labsCount = labsList?.length ?? 0;
+  const topics: CurriculumTopic[] = ((curriculumData as any)?.topics ?? [])
+    .map((t: unknown, i: number) => normalizeTopic(t, i));
 
   return (
     <div className='w-full space-y-0 rounded-2xl overflow-hidden border border-border/50 bg-background' dir={isAr ? 'rtl' : 'ltr'}>
@@ -197,70 +185,81 @@ export function CoursePlatformPreviewTab({ course }: Props) {
               <span className='mx-1 text-white/20'>/</span>
               <span className='truncate text-white/65'>{title}</span>
             </nav>
-            <div className='flex flex-col gap-5 min-w-0'>
-              <div className='flex items-start gap-4'>
-                <div className='hidden sm:block shrink-0'>
-                  <div className='h-14 w-14 shrink-0 overflow-hidden rounded-2xl ring-1 ring-white/10'>
-                    {imgSrc ? (
-                      <img src={imgSrc} alt={title ?? ''} className='h-full w-full object-cover' />
-                    ) : (
-                      <div className={cn(
-                        'h-full w-full flex items-center justify-center bg-gradient-to-br border border-white/10',
-                        FALLBACK_BG[col] ?? 'from-zinc-900 to-zinc-800',
-                      )}>
-                        <p className={cn('text-[9px] font-black text-center px-1.5 leading-tight', textCls)}>
-                          {title?.slice(0, 12)}
-                        </p>
-                      </div>
-                    )}
-                  </div>
+
+            <div className='flex items-start gap-4'>
+              {/* Thumbnail */}
+              <div className='hidden sm:block shrink-0'>
+                <div className='h-14 w-14 overflow-hidden rounded-2xl ring-1 ring-white/10'>
+                  {imgSrc ? (
+                    <img src={imgSrc} alt={title ?? ''} className='h-full w-full object-cover' />
+                  ) : (
+                    <div className={cn(
+                      'h-full w-full flex items-center justify-center bg-gradient-to-br border border-white/10',
+                      FALLBACK_BG[col] ?? 'from-zinc-900 to-zinc-800',
+                    )}>
+                      <p className={cn('text-[9px] font-black text-center px-1.5 leading-tight', textCls)}>
+                        {title?.slice(0, 12)}
+                      </p>
+                    </div>
+                  )}
                 </div>
-                <div className='min-w-0 flex-1 space-y-2'>
-                  <div className='flex flex-wrap items-center gap-1.5'>
-                    <Badge variant='outline' className={cn('rounded-full text-[11px] font-bold gap-1', ACCESS_BADGE[course.access ?? 'FREE'] ?? ACCESS_BADGE.FREE)}>
-                      <AccessIcon className='h-2.5 w-2.5' /> {course.access ?? 'FREE'}
+              </div>
+
+              {/* Meta */}
+              <div className='min-w-0 flex-1 space-y-2'>
+                <div className='flex flex-wrap items-center gap-1.5'>
+                  <Badge variant='outline' className={cn('rounded-full text-[11px] font-bold gap-1', ACCESS_BADGE[course.access ?? 'FREE'] ?? ACCESS_BADGE.FREE)}>
+                    <AccessIcon className='h-2.5 w-2.5' /> {course.access ?? 'FREE'}
+                  </Badge>
+                  {course.difficulty && (
+                    <Badge variant='outline' className='rounded-full border-white/20 text-[11px] text-white/65 gap-1'>
+                      <Shield className='h-2.5 w-2.5' />
+                      {isAr ? (course as any).ar_difficulty || course.difficulty : course.difficulty}
                     </Badge>
-                    {course.difficulty && (
-                      <Badge variant='outline' className='rounded-full border-white/20 text-[11px] text-white/65 gap-1'>
-                        <Shield className='h-2.5 w-2.5' /> {isAr ? (course as any).ar_difficulty || course.difficulty : course.difficulty}
-                      </Badge>
-                    )}
-                    {course.category && (
-                      <Badge variant='outline' className='rounded-full border-white/15 text-[11px] text-white/50'>
-                        {isAr ? (course as any).ar_category || course.category : course.category.replace(/_/g, ' ')}
-                      </Badge>
-                    )}
-                    {course.isNew && (
-                      <span className='inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white'>
-                        {isAr ? 'جديد' : 'New'}
-                      </span>
-                    )}
-                    {comingSoon && (
-                      <span className='inline-flex items-center gap-1 rounded-full border border-white/10 bg-zinc-600/80 px-2 py-0.5 text-[10px] font-bold text-white'>
-                        <Clock className='h-2.5 w-2.5' /> {isAr ? 'قريباً' : 'Coming Soon'}
-                      </span>
-                    )}
-                  </div>
-                  <h1 className='text-xl font-black leading-tight tracking-tight text-white sm:text-2xl lg:text-3xl'>
-                    {title || <span className='opacity-30 italic'>{isAr ? 'عنوان الكورس' : 'Course Title'}</span>}
-                  </h1>
-                  {desc && <p className='mt-2 max-w-2xl text-sm leading-relaxed text-white/60'>{desc}</p>}
+                  )}
+                  {course.category && (
+                    <Badge variant='outline' className='rounded-full border-white/15 text-[11px] text-white/50'>
+                      {isAr
+                        ? (course as any).ar_category || course.category
+                        : course.category.replace(/_/g, ' ')}
+                    </Badge>
+                  )}
+                  {course.isNew && (
+                    <span className='inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white'>
+                      {isAr ? 'جديد' : 'New'}
+                    </span>
+                  )}
+                  {comingSoon && (
+                    <span className='inline-flex items-center gap-1 rounded-full border border-white/10 bg-zinc-600/80 px-2 py-0.5 text-[10px] font-bold text-white'>
+                      <Clock className='h-2.5 w-2.5' /> {isAr ? 'قريباً' : 'Coming Soon'}
+                    </span>
+                  )}
                 </div>
+                <h1 className='text-xl font-black leading-tight tracking-tight text-white sm:text-2xl lg:text-3xl'>
+                  {title || <span className='opacity-30 italic'>{isAr ? 'عنوان الكورس' : 'Course Title'}</span>}
+                </h1>
+                {desc && <p className='mt-2 max-w-2xl text-sm leading-relaxed text-white/60'>{desc}</p>}
               </div>
             </div>
           </div>
 
-          {/* Hero bottom bar */}
+          {/* Bottom bar */}
           <div className='flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-white/10 py-3'>
             <div className='flex flex-wrap items-center gap-x-5 gap-y-1.5'>
-              {(course.totalTopics ?? 0) > 0 && <Stat icon={<BookOpen className='h-3.5 w-3.5' />} value={course.totalTopics} label={isAr ? 'موضوع' : 'Topics'} textClass={textCls} />}
-              {(course.estimatedHours ?? 0) > 0 && <Stat icon={<Clock className='h-3.5 w-3.5' />} value={`${course.estimatedHours}h`} label='est.' textClass={textCls} />}
+              {(course.totalTopics ?? 0) > 0 && (
+                <Stat icon={<BookOpen className='h-3.5 w-3.5' />} value={course.totalTopics} label={isAr ? 'موضوع' : 'Topics'} textClass={textCls} />
+              )}
+              {(course.estimatedHours ?? 0) > 0 && (
+                <Stat icon={<Clock className='h-3.5 w-3.5' />} value={`${course.estimatedHours}h`} label='est.' textClass={textCls} />
+              )}
               <div className='flex items-center gap-1.5 text-xs'>
                 <span className={textCls}><FlaskConical className='h-3.5 w-3.5' /></span>
                 <span className='font-bold text-white'>{labsCount > 0 ? labsCount : 'Labs'}</span>
                 {labsCount > 0 && <span className='text-white/45'>{isAr ? 'مختبر' : 'Labs'}</span>}
               </div>
-              {(course.enrollmentCount ?? 0) > 0 && <Stat icon={<Users className='h-3.5 w-3.5' />} value={(course.enrollmentCount ?? 0).toLocaleString()} label={isAr ? 'مسجل' : 'enrolled'} textClass={textCls} />}
+              {(course.enrollmentCount ?? 0) > 0 && (
+                <Stat icon={<Users className='h-3.5 w-3.5' />} value={(course.enrollmentCount ?? 0).toLocaleString()} label={isAr ? 'مسجل' : 'enrolled'} textClass={textCls} />
+              )}
               {avgRating > 0 && (
                 <div className='flex items-center gap-1.5 text-xs'>
                   <Star className='h-3.5 w-3.5 fill-yellow-500 text-yellow-500' />
@@ -312,12 +311,13 @@ export function CoursePlatformPreviewTab({ course }: Props) {
             <CheckCircle2 className='h-3.5 w-3.5' />
             <span>{isAr ? 'تقدمك' : 'Your progress'} (0/{topics.length})</span>
             <div className='w-32 h-1.5 rounded-full bg-muted overflow-hidden'>
-              <div className='h-full rounded-full bg-primary transition-all' style={{ width: '0%' }} />
+              <div className='h-full rounded-full bg-primary' style={{ width: '0%' }} />
             </div>
             <span className='font-semibold'>0%</span>
             <span className='text-muted-foreground/60'>est. {course.estimatedHours ?? 0}h</span>
           </div>
         </div>
+
         {currLoading ? (
           <CurriculumSkeleton />
         ) : topics.length === 0 ? (
@@ -330,10 +330,12 @@ export function CoursePlatformPreviewTab({ course }: Props) {
             <div aria-hidden className='absolute top-5 bottom-5 start-[25px] w-px bg-border/40' />
             <ol className='space-y-2'>
               {topics.map((topic, idx) => (
-                <TopicRow key={topic.id} topic={topic} idx={idx} total={topics.length}
+                <TopicRow
+                  key={topic.id} topic={topic} idx={idx} total={topics.length}
                   isOpen={openId === topic.id}
                   onToggle={() => setOpenId((p) => (p === topic.id ? null : topic.id))}
-                  lang={lang} />
+                  lang={lang}
+                />
               ))}
             </ol>
           </div>
