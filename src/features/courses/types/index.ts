@@ -21,10 +21,10 @@ export type CourseCategory    =
   | 'CAREER_AND_INDUSTRY';
 
 /**
- * CourseColor — stored & returned LOWERCASE by backend.
- * UI lookups use `.toLowerCase()` before map access.
+ * CourseColor — UPPERCASE to match the constants array & UI selects.
+ * The API layer (courses.api.ts) normalizes to lowercase before Tailwind usage.
  */
-export type CourseColor = 'emerald' | 'blue' | 'violet' | 'orange' | 'rose' | 'cyan';
+export type CourseColor = 'EMERALD' | 'BLUE' | 'VIOLET' | 'ORANGE' | 'ROSE' | 'CYAN';
 
 // ─── Curriculum ─────────────────────────────────────────────────────────────
 export type CurriculumElementType =
@@ -211,3 +211,7 @@ export interface HeroFormState {
   ar_prerequisites:   string[];
   tags:               string[];
 }
+
+// ─── Utility picks (used by utils functions) ──────────────────────────────────
+export type CourseTitlePick      = Pick<AdminCourse, 'title' | 'ar_title'>        & { ar_title: string | null | undefined };
+export type CourseThumbnailPick  = Pick<AdminCourse, 'image' | 'thumbnail'>       & { image: string | null | undefined; thumbnail: string | null | undefined };
