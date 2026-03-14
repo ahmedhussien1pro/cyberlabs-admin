@@ -1,22 +1,19 @@
+// src/features/auth/components/login-form.tsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Mail, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
-import Cookies from 'js-cookie';
 
-import { authService } from '@/core/api/services';
-import { useAuthStore } from '@/core/store/auth.store';
-import { ROUTES } from '@/shared/constants';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { authService }      from '@/core/api/services';
+import { useAuthStore }     from '@/core/store/auth.store';
+import { ROUTES }           from '@/shared/constants';
+import { Button }           from '@/components/ui/button';
+import { Input }            from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-
-interface LoginFormData {
-  email: string;
-  password: string;
-}
+import { authTokenService } from '../services/auth-tokens.service';
+import type { LoginFormData } from '../types';
 
 export function LoginForm() {
   const { t } = useTranslation('auth');
@@ -25,33 +22,24 @@ export function LoginForm() {
   const [error, setError] = useState<string>('');
   const [showPassword, setShowPassword] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginFormData>();
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>();
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginFormData) => {
       const data = await authService.login(credentials);
 
-      const token =
-        data.accessToken ||
-        (data as any).access_token ||
-        (data as any).token;
+      // Normalise token field (backend may use different keys)
+      const token = data.accessToken ?? (data as any).access_token ?? (data as any).token;
+      if (!token) throw new Error('Authentication failed — no token received');
 
-      if (!token) throw new Error('Authentication failed - no token received');
+      // ✅ Security: tokens stored via centralised service (SameSite=strict, secure in prod)
+      authTokenService.save(token, data.refreshToken);
 
-      Cookies.set('access_token', token, { expires: 7, path: '/', sameSite: 'lax' });
-      if (data.refreshToken) {
-        Cookies.set('refresh_token', data.refreshToken, { expires: 30, path: '/', sameSite: 'lax' });
-      }
-
+      // Verify the user actually has admin access before proceeding
       try {
         await authService.verifyAdminHealth();
       } catch {
-        Cookies.remove('access_token');
-        Cookies.remove('refresh_token');
+        authTokenService.clear();
         throw new Error(t('login.error.notAdmin', 'Access denied: Admin role required'));
       }
 
@@ -64,11 +52,11 @@ export function LoginForm() {
     },
 
     onError: (err: any) => {
-      const message =
-        err.message ||
-        err.response?.data?.message ||
-        t('login.error.invalidCredentials', 'Invalid email or password');
-      setError(message);
+      setError(
+        err.message ??
+        err.response?.data?.message ??
+        t('login.error.invalidCredentials', 'Invalid email or password'),
+      );
     },
   });
 
@@ -78,7 +66,7 @@ export function LoginForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className='space-y-4'>
+    <form onSubmit={handleSubmit(onSubmit)} className='space-y-4' noValidate>
 
       {/* Email */}
       <div>
@@ -89,6 +77,8 @@ export function LoginForm() {
             placeholder={t('login.emailPlaceholder', 'admin@cyberlabs.com')}
             autoComplete='email'
             className='auth-form__input'
+            aria-invalid={!!errors.email}
+            aria-describedby={errors.email ? 'email-error' : undefined}
             {...register('email', {
               required: 'Email is required',
               pattern: {
@@ -98,10 +88,12 @@ export function LoginForm() {
             })}
             disabled={loginMutation.isPending}
           />
-          <Mail className='auth-form__input-icon' size={18} />
+          <Mail className='auth-form__input-icon' size={18} aria-hidden='true' />
         </div>
         {errors.email && (
-          <span className='auth-form__error'>{errors.email.message}</span>
+          <span id='email-error' className='auth-form__error' role='alert'>
+            {errors.email.message}
+          </span>
         )}
       </div>
 
@@ -114,6 +106,8 @@ export function LoginForm() {
             placeholder={t('login.passwordPlaceholder', '••••••••')}
             autoComplete='current-password'
             className='auth-form__input'
+            aria-invalid={!!errors.password}
+            aria-describedby={errors.password ? 'password-error' : undefined}
             {...register('password', {
               required: 'Password is required',
               minLength: { value: 6, message: 'Password must be at least 6 characters' },
@@ -130,14 +124,16 @@ export function LoginForm() {
           </button>
         </div>
         {errors.password && (
-          <span className='auth-form__error'>{errors.password.message}</span>
+          <span id='password-error' className='auth-form__error' role='alert'>
+            {errors.password.message}
+          </span>
         )}
       </div>
 
       {/* Error Alert */}
       {error && (
-        <Alert variant='destructive'>
-          <AlertCircle className='h-4 w-4' />
+        <Alert variant='destructive' role='alert'>
+          <AlertCircle className='h-4 w-4' aria-hidden='true' />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
@@ -146,10 +142,11 @@ export function LoginForm() {
       <Button
         type='submit'
         className='auth-form__submit-btn'
-        disabled={loginMutation.isPending}>
+        disabled={loginMutation.isPending}
+        aria-busy={loginMutation.isPending}>
         {loginMutation.isPending ? (
           <span className='flex items-center gap-2'>
-            <Loader2 className='h-4 w-4 animate-spin' />
+            <Loader2 className='h-4 w-4 animate-spin' aria-hidden='true' />
             {t('login.loading', 'Signing in...')}
           </span>
         ) : (

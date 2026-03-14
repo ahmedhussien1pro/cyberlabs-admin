@@ -1,39 +1,14 @@
-/* =====================================================
-   1. SHARED LAYOUT & STRUCTURE
-   ===================================================== */
+/* ==========================================================================
+   auth.css — Only classes actually used by login.page.tsx + login-form.tsx
+   Removed: .auth-page* (17 dead classes) and .auth-form__container/__form-box
+   ========================================================================== */
 
-.auth-page {
-  @apply min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background to-muted;
-}
-
-.auth-page__container {
-  @apply w-full max-w-md;
-}
-
-.auth-page__card {
-  @apply p-8 space-y-6 bg-card border shadow-lg rounded-xl;
-  animation: fadeIn 0.3s ease-out;
-}
-
-/* =====================================================
-   2. AUTH FORM LAYOUT
-   ===================================================== */
-
+/* ── 1. Page shell ─────────────────────────────────────────────────────── */
 .auth-form {
   @apply min-h-screen flex items-center justify-center p-4 bg-background;
 }
 
-.auth-form__container {
-  @apply relative w-full max-w-4xl overflow-hidden rounded-3xl shadow-2xl bg-card;
-  min-height: 600px;
-}
-
-/* Form Box */
-.auth-form__form-box {
-  @apply absolute w-1/2 h-full flex items-center justify-center p-8 z-10;
-  transition: all 0.6s ease-in-out;
-}
-
+/* ── 2. Inner form card ────────────────────────────────────────────────── */
 .auth-form__form {
   @apply w-full max-w-md space-y-4;
 }
@@ -42,6 +17,7 @@
   @apply text-4xl font-bold text-center mb-6 text-primary;
 }
 
+/* ── 3. Input wrappers ─────────────────────────────────────────────────── */
 .auth-form__input-box {
   position: relative;
   width: 100%;
@@ -56,9 +32,11 @@
 }
 
 .auth-form__input-icon-btn {
-  @apply absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors bg-transparent border-none cursor-pointer;
+  @apply absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground
+         hover:text-foreground transition-colors bg-transparent border-none cursor-pointer;
 }
 
+/* ── 4. Error & submit ─────────────────────────────────────────────────── */
 .auth-form__error {
   display: block;
   margin-top: 0.375rem;
@@ -73,121 +51,34 @@
   @apply w-full h-12 text-base font-semibold;
 }
 
-/* =====================================================
-   3. SHARED PAGE COMPONENTS
-   ===================================================== */
-
-.auth-page__icon-wrapper {
-  @apply w-20 h-20 mx-auto rounded-full bg-primary/10 flex items-center justify-center;
-}
-
-.auth-page__icon {
-  @apply text-primary;
-}
-
-.auth-page__header {
-  @apply text-center space-y-2;
-}
-
-.auth-page__title {
-  @apply text-2xl font-bold;
-}
-
-.auth-page__subtitle {
-  @apply text-sm text-muted-foreground;
-}
-
-.auth-page__form {
-  @apply space-y-4;
-}
-
-.auth-page__input-group {
-  @apply relative;
-}
-
-.auth-page__input {
-  @apply pr-10;
-}
-
-.auth-page__input-icon {
-  @apply absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none;
-}
-
-.auth-page__input-icon--clickable {
-  @apply cursor-pointer hover:text-foreground transition-colors pointer-events-auto;
-}
-
-.auth-page__error {
-  @apply text-sm text-destructive mt-1;
-}
-
-.auth-page__submit {
-  @apply w-full;
-}
-
-/* =====================================================
-   4. ANIMATIONS
-   ===================================================== */
-
+/* ── 5. Animations ─────────────────────────────────────────────────────── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes pulse2 {
-  0%, 100% { transform: scale(1); }
-  50%       { transform: scale(1.05); }
-}
-
-/* =====================================================
-   5. RESPONSIVE
-   ===================================================== */
-
-@media (max-width: 767px) {
-  .auth-form__container {
-    @apply h-auto min-h-[600px] rounded-2xl;
-  }
-
-  .auth-form__form-box {
-    @apply w-full;
-  }
-
-  .auth-page__card {
-    @apply p-6;
-  }
-
-  .auth-page__title {
-    @apply text-xl;
-  }
-
-  .auth-page__icon-wrapper {
-    @apply w-16 h-16;
-  }
-}
-
-/* =====================================================
-   6. RTL SUPPORT
-   ===================================================== */
-
-[dir='rtl'] .auth-page__input,
+/* ── 6. RTL support ────────────────────────────────────────────────────── */
 [dir='rtl'] .auth-form__input {
   @apply pl-3 pr-3;
 }
 
-[dir='rtl'] .auth-page__input-icon,
 [dir='rtl'] .auth-form__input-icon,
 [dir='rtl'] .auth-form__input-icon-btn {
   @apply left-3 right-auto;
 }
 
 [dir='rtl'] .auth-form__heading {
-  direction: ltr; /* keeps Cyber Labs text readable */
+  direction: ltr;
 }
 
-/* =====================================================
-   7. DARK MODE ENHANCEMENTS
-   ===================================================== */
-
+/* ── 7. Dark mode ──────────────────────────────────────────────────────── */
 .dark .auth-form__input {
   @apply bg-background/80;
+}
+
+/* ── 8. Responsive ─────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .auth-form__heading {
+    @apply text-2xl;
+  }
 }
