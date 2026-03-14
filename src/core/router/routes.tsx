@@ -21,6 +21,17 @@ export const routes: RouteObject[] = [
     path: ROUTES.LOGIN,
     element: <LazyPage Component={Pages.LoginPage} />,
   },
+
+  // ── Course Preview (protected by AdminGate, no AdminLayout) ──────────────
+  {
+    path: '/preview/courses/:slug',
+    element: (
+      <ProtectedRoute>
+        <LazyPage Component={Pages.CoursePreviewPage} />
+      </ProtectedRoute>
+    ),
+  },
+
   {
     path: '/',
     element: <ProtectedRoute />,

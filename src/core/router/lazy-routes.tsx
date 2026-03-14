@@ -35,6 +35,10 @@ export const CourseImportPage = lazy(
 export const CourseDetailPage = lazy(
   () => import('@/features/courses/pages/course-detail.page'),
 );
+// ➕ Admin Preview (standalone, no nav/footer)
+export const CoursePreviewPage = lazy(
+  () => import('@/features/courses/pages/course-preview.page'),
+);
 
 // Labs
 export const LabsListPage = lazy(
