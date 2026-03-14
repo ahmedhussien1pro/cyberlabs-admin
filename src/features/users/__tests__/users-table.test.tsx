@@ -1,58 +1,38 @@
+// src/features/users/__tests__/users-table.test.tsx
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { UsersTable } from '../components/users-table';
-import type { User, PaginationMeta } from '../types';
+import type { UserListItem, PaginationMeta } from '@/core/types';
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (_: string, fb: string) => fb }),
-}));
-
-function makeUser(overrides: Partial<User> = {}): User {
+function makeUser(overrides: Partial<UserListItem> = {}): UserListItem {
   return {
     id: '1',
     name: 'Test User',
     email: 'test@example.com',
     role: 'USER',
-    status: 'ACTIVE',
+    isActive: true,
     createdAt: new Date().toISOString(),
-    enrollmentsCount: 3,
-    labsCount: 5,
+    _count: { enrollments: 3, labProgress: 5 },
     ...overrides,
   };
 }
 
 function makeMeta(overrides: Partial<PaginationMeta> = {}): PaginationMeta {
-  return {
-    total: 1,
-    totalPages: 1,
-    page: 1,
-    limit: 10,
-    ...overrides,
-  };
+  return { total: 1, totalPages: 1, page: 1, limit: 10, ...overrides };
 }
 
-const mockHandlers = {
-  onPageChange: vi.fn(),
-  onSuspend: vi.fn(),
-  onActivate: vi.fn(),
-  onRoleChange: vi.fn(),
-};
+const mockOnPageChange = vi.fn();
 
 function renderTable(
-  users: User[] = [makeUser()],
-  meta: PaginationMeta = makeMeta(),
+  data: UserListItem[] = [makeUser()],
+  meta: PaginationMeta   = makeMeta(),
   page = 1,
 ) {
   return render(
     <MemoryRouter>
-      <UsersTable
-        users={users}
-        meta={meta}
-        page={page}
-        {...mockHandlers}
-      />
+      <UsersTable data={data} meta={meta} page={page} onPageChange={mockOnPageChange} />
     </MemoryRouter>,
   );
 }
@@ -60,7 +40,7 @@ function renderTable(
 beforeEach(() => vi.clearAllMocks());
 
 describe('UsersTable — rendering', () => {
-  it('renders table with user data', () => {
+  it('renders table with user name and email', () => {
     renderTable();
     expect(screen.getByText('Test User')).toBeInTheDocument();
     expect(screen.getByText('test@example.com')).toBeInTheDocument();
@@ -78,62 +58,49 @@ describe('UsersTable — rendering', () => {
     expect(screen.getByText(/no users found/i)).toBeInTheDocument();
   });
 
-  it('renders active badge for active user', () => {
-    renderTable();
+  it('renders Active badge for active user', () => {
+    renderTable([makeUser({ isActive: true })]);
     expect(screen.getByText('Active')).toBeInTheDocument();
   });
 
-  it('renders suspended badge for suspended user', () => {
-    renderTable([makeUser({ status: 'SUSPENDED' })]);
-    expect(screen.getByText(/suspend/i)).toBeInTheDocument();
+  it('renders Suspended badge for suspended user', () => {
+    renderTable([makeUser({ security: { isSuspended: true } })]);
+    expect(screen.getByText('Suspended')).toBeInTheDocument();
   });
 });
 
 describe('UsersTable — pagination', () => {
-  it('shows pagination when totalPages > 1', () => {
-    renderTable([makeUser()], makeMeta({ totalPages: 3, total: 55 }), 2);
-    // Text is split across elements: "Page" "2" "of" "3" — use function matcher
+  it('shows pagination text when totalPages > 1', () => {
+    renderTable([makeUser()], makeMeta({ totalPages: 3, total: 55, page: 2 }), 2);
     expect(
-      screen.getByText((_, el) => {
-        const text = el?.textContent ?? '';
-        return /page\s+2\s+of\s+3/i.test(text) && el?.tagName !== 'BODY';
-      }),
+      screen.getByText((_, el) => /page\s+2\s+of\s+3/i.test(el?.textContent ?? '') && el?.tagName !== 'BODY'),
     ).toBeInTheDocument();
   });
 
-  it('calls onPageChange when next is clicked', async () => {
-    renderTable([makeUser()], makeMeta({ totalPages: 3, total: 30 }), 1);
+  it('calls onPageChange(next) when Next clicked', async () => {
+    renderTable([makeUser()], makeMeta({ totalPages: 3, total: 30, page: 1 }), 1);
     await userEvent.click(screen.getByRole('button', { name: /next page/i }));
-    expect(mockHandlers.onPageChange).toHaveBeenCalledWith(2);
+    expect(mockOnPageChange).toHaveBeenCalledWith(2);
   });
 
-  it('calls onPageChange when previous is clicked', async () => {
-    renderTable([makeUser()], makeMeta({ totalPages: 3, total: 30 }), 2);
+  it('calls onPageChange(prev) when Previous clicked', async () => {
+    renderTable([makeUser()], makeMeta({ totalPages: 3, total: 30, page: 2 }), 2);
     await userEvent.click(screen.getByRole('button', { name: /previous page/i }));
-    expect(mockHandlers.onPageChange).toHaveBeenCalledWith(1);
+    expect(mockOnPageChange).toHaveBeenCalledWith(1);
   });
 
-  it('prev button disabled on page 1', () => {
-    renderTable([makeUser()], makeMeta({ totalPages: 3, total: 30 }), 1);
+  it('Previous button disabled on page 1', () => {
+    renderTable([makeUser()], makeMeta({ totalPages: 3, total: 30, page: 1 }), 1);
     expect(screen.getByRole('button', { name: /previous page/i })).toBeDisabled();
   });
 
-  it('next button disabled on last page', () => {
-    renderTable([makeUser()], makeMeta({ totalPages: 3, total: 30 }), 3);
+  it('Next button disabled on last page', () => {
+    renderTable([makeUser()], makeMeta({ totalPages: 3, total: 30, page: 3 }), 3);
     expect(screen.getByRole('button', { name: /next page/i })).toBeDisabled();
   });
-});
 
-describe('UsersTable — actions', () => {
-  it('calls onSuspend when suspend button clicked', async () => {
-    renderTable([makeUser({ status: 'ACTIVE' })]);
-    await userEvent.click(screen.getByRole('button', { name: /suspend/i }));
-    expect(mockHandlers.onSuspend).toHaveBeenCalledWith(makeUser());
-  });
-
-  it('calls onActivate when activate button clicked', async () => {
-    renderTable([makeUser({ status: 'SUSPENDED' })]);
-    await userEvent.click(screen.getByRole('button', { name: /activate/i }));
-    expect(mockHandlers.onActivate).toHaveBeenCalledWith(makeUser({ status: 'SUSPENDED' }));
+  it('pagination not rendered when totalPages = 1', () => {
+    renderTable([makeUser()], makeMeta({ totalPages: 1, total: 1 }), 1);
+    expect(screen.queryByRole('button', { name: /next page/i })).not.toBeInTheDocument();
   });
 });
