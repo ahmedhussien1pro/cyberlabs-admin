@@ -28,24 +28,27 @@ import {
 } from '@/components/ui/alert-dialog';
 import { adminCoursesApi } from '../services/admin-courses.api';
 import { ROUTES } from '@/shared/constants';
-import type { AdminCourse, CourseState } from '../types/admin-course.types';
+// ✅ unified barrel
+import type { AdminCourse, CourseState } from '../types';
 
 const COLOR_CLASS: Record<string, string> = {
   EMERALD: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400',
-  BLUE:    'bg-blue-500/10 border-blue-500/30 text-blue-400',
-  VIOLET:  'bg-violet-500/10 border-violet-500/30 text-violet-400',
-  ORANGE:  'bg-orange-500/10 border-orange-500/30 text-orange-400',
-  ROSE:    'bg-rose-500/10 border-rose-500/30 text-rose-400',
-  CYAN:    'bg-cyan-500/10 border-cyan-500/30 text-cyan-400',
+  BLUE:    'bg-blue-500/10    border-blue-500/30    text-blue-400',
+  VIOLET:  'bg-violet-500/10  border-violet-500/30  text-violet-400',
+  ORANGE:  'bg-orange-500/10  border-orange-500/30  text-orange-400',
+  ROSE:    'bg-rose-500/10    border-rose-500/30    text-rose-400',
+  CYAN:    'bg-cyan-500/10    border-cyan-500/30    text-cyan-400',
 };
 
 const STATE_CLASS: Record<string, string> = {
   PUBLISHED:   'bg-emerald-500/10 border-emerald-500/30 text-emerald-400',
-  DRAFT:       'bg-zinc-500/10 border-zinc-500/30 text-zinc-400',
-  COMING_SOON: 'bg-blue-500/10 border-blue-500/30 text-blue-400',
+  DRAFT:       'bg-zinc-500/10    border-zinc-500/30    text-zinc-400',
+  COMING_SOON: 'bg-blue-500/10    border-blue-500/30    text-blue-400',
 };
 
-function StatCard({ label, value, icon: Icon }: { label: string; value: string | number; icon: React.ElementType }) {
+function StatCard({
+  label, value, icon: Icon,
+}: { label: string; value: string | number; icon: React.ElementType }) {
   return (
     <div className='flex items-center gap-3 rounded-xl border border-border/50 bg-muted/20 px-4 py-3'>
       <Icon className='h-5 w-5 text-muted-foreground shrink-0' />
@@ -92,7 +95,6 @@ export default function CourseDetailPage() {
     onError: () => toast.error('Failed to duplicate'),
   });
 
-  // Derive published state from `state` field (single source of truth)
   const isPublished = course?.state === 'PUBLISHED';
 
   const { mutate: togglePublish, isPending: publishing } = useMutation({
@@ -134,7 +136,7 @@ export default function CourseDetailPage() {
     );
   }
 
-  const colorClass  = COLOR_CLASS[course.color?.toUpperCase()] ?? COLOR_CLASS.BLUE;
+  const colorClass  = COLOR_CLASS[(course.color ?? '').toUpperCase()] ?? COLOR_CLASS.BLUE;
   const courseState = course.state ?? 'DRAFT';
   const stateClass  = STATE_CLASS[courseState] ?? STATE_CLASS.DRAFT;
 
@@ -168,34 +170,22 @@ export default function CourseDetailPage() {
 
         {/* Actions */}
         <div className='flex flex-wrap items-center gap-2 shrink-0'>
-          <Button
-            variant='outline' size='sm' className='gap-2'
-            onClick={() => togglePublish()} disabled={publishing}
-          >
-            {publishing
-              ? <Loader2 className='h-4 w-4 animate-spin' />
-              : <Globe className='h-4 w-4' />}
+          <Button variant='outline' size='sm' className='gap-2'
+            onClick={() => togglePublish()} disabled={publishing}>
+            {publishing ? <Loader2 className='h-4 w-4 animate-spin' /> : <Globe className='h-4 w-4' />}
             {isPublished ? 'Unpublish' : 'Publish'}
           </Button>
-          <Button
-            variant='outline' size='sm' className='gap-2'
-            onClick={() => duplicateCourse()} disabled={duplicating}
-          >
-            {duplicating
-              ? <Loader2 className='h-4 w-4 animate-spin' />
-              : <Copy className='h-4 w-4' />}
+          <Button variant='outline' size='sm' className='gap-2'
+            onClick={() => duplicateCourse()} disabled={duplicating}>
+            {duplicating ? <Loader2 className='h-4 w-4 animate-spin' /> : <Copy className='h-4 w-4' />}
             Duplicate
           </Button>
-          <Button
-            variant='outline' size='sm' className='gap-2'
-            onClick={() => navigate(`/courses/${course.slug}/edit?tab=curriculum`)}
-          >
+          <Button variant='outline' size='sm' className='gap-2'
+            onClick={() => navigate(`/courses/${course.slug}/edit?tab=curriculum`)}>
             <BookText className='h-4 w-4' /> Curriculum
           </Button>
-          <Button
-            size='sm' className='gap-2'
-            onClick={() => navigate(`/courses/${course.slug}/edit`)}
-          >
+          <Button size='sm' className='gap-2'
+            onClick={() => navigate(`/courses/${course.slug}/edit`)}>
             <Edit className='h-4 w-4' /> Edit
           </Button>
         </div>
@@ -207,11 +197,8 @@ export default function CourseDetailPage() {
           <div className='flex items-start gap-4'>
             <div className='h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-border/50'>
               {course.image || course.thumbnail ? (
-                <img
-                  src={(course.image ?? course.thumbnail)!}
-                  alt={course.title}
-                  className='h-full w-full object-cover'
-                />
+                <img src={(course.image ?? course.thumbnail)!} alt={course.title}
+                  className='h-full w-full object-cover' />
               ) : (
                 <div className={`h-full w-full flex items-center justify-center rounded-xl border ${colorClass}`}>
                   <BookOpen className='h-6 w-6' />
@@ -226,7 +213,7 @@ export default function CourseDetailPage() {
                 <Badge variant='outline' className='rounded-full text-xs'>
                   {course.access === 'FREE'
                     ? <Unlock className='h-3 w-3 mr-1 inline' />
-                    : <Crown className='h-3 w-3 mr-1 inline' />}
+                    : <Crown  className='h-3 w-3 mr-1 inline' />}
                   {course.access}
                 </Badge>
                 <Badge variant='outline' className='rounded-full text-xs'>
@@ -246,10 +233,10 @@ export default function CourseDetailPage() {
 
       {/* Stats */}
       <div className='grid grid-cols-2 gap-3 sm:grid-cols-4'>
-        <StatCard label='Topics'     value={course.totalTopics ?? 0}                         icon={BookOpen}    />
-        <StatCard label='Est. Hours' value={`${course.estimatedHours ?? 0}h`}               icon={Clock}       />
-        <StatCard label='Enrolled'   value={(course.enrollmentCount ?? 0).toLocaleString()}  icon={Users}       />
-        <StatCard label='Labs'       value={course.labSlugs?.length ?? 0}                    icon={FlaskConical} />
+        <StatCard label='Topics'     value={course.totalTopics ?? 0}                        icon={BookOpen}     />
+        <StatCard label='Est. Hours' value={`${course.estimatedHours ?? 0}h`}              icon={Clock}        />
+        <StatCard label='Enrolled'   value={(course.enrollmentCount ?? 0).toLocaleString()} icon={Users}        />
+        <StatCard label='Labs'       value={course.labSlugs?.length ?? 0}                   icon={FlaskConical}  />
       </div>
 
       {/* Skills & Tags */}
@@ -261,9 +248,7 @@ export default function CourseDetailPage() {
               <div>
                 <p className='text-xs text-muted-foreground mb-2'>Skills</p>
                 <div className='flex flex-wrap gap-2'>
-                  {course.skills.map((s) => (
-                    <Badge key={s} variant='secondary' className='text-xs'>{s}</Badge>
-                  ))}
+                  {course.skills.map((s) => <Badge key={s} variant='secondary' className='text-xs'>{s}</Badge>)}
                 </div>
               </div>
             )}
@@ -271,9 +256,7 @@ export default function CourseDetailPage() {
               <div>
                 <p className='text-xs text-muted-foreground mb-2'>Tags</p>
                 <div className='flex flex-wrap gap-2'>
-                  {course.tags.map((tag) => (
-                    <Badge key={tag} variant='outline' className='text-xs opacity-70'>{tag}</Badge>
-                  ))}
+                  {course.tags.map((tag) => <Badge key={tag} variant='outline' className='text-xs opacity-70'>{tag}</Badge>)}
                 </div>
               </div>
             )}

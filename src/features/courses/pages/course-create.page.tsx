@@ -1,10 +1,8 @@
 // src/features/courses/pages/course-create.page.tsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Unified "New Course" flow:
+// Unified “New Course” flow:
 //   Step 1 — Upload JSON (or start blank)  →  populates metadata + topics
 //   Step 2 — Review & edit everything before saving
 //   Step 3 — Success dialog: Preview or Done
-// ─────────────────────────────────────────────────────────────────────────────
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -22,12 +20,13 @@ import {
   COURSE_DIFFICULTIES, COURSE_ACCESSES, COURSE_COLORS,
   COURSE_CONTENT_TYPES, COURSE_CATEGORIES, COURSE_STATES, enumLabel,
 } from '../constants/course-enums';
+// ✅ unified barrel
 import type {
   AdminCourseCreateDto, CourseAccess, CourseCategory, CourseColor,
   CourseContentType, CourseDifficulty, CourseState,
-} from '../types/admin-course.types';
+} from '../types';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ── Types ──────────────────────────────────────────────────────────────────────
 interface TopicRow {
   id: string;
   title_en: string;
@@ -36,11 +35,9 @@ interface TopicRow {
 }
 
 interface CourseMeta {
-  title: string;
-  ar_title: string;
+  title: string;        ar_title: string;
   slug: string;
-  description: string;
-  ar_description: string;
+  description: string;  ar_description: string;
   difficulty: CourseDifficulty;
   access: CourseAccess;
   category: CourseCategory;
@@ -57,7 +54,7 @@ interface CourseMeta {
 
 type Step = 'upload' | 'edit' | 'done';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────
 function slugify(s: string) {
   return s.toLowerCase().trim()
     .replace(/[^a-z0-9\s-]/g, '')
@@ -84,27 +81,28 @@ function parseJson(content: string): { meta: Partial<CourseMeta>; topics: TopicR
   const setIfString = (key: keyof CourseMeta, val: any) => {
     if (val && typeof val === 'string') (meta as any)[key] = val;
   };
-  setIfString('title', src.title);
-  setIfString('ar_title', src.ar_title);
-  setIfString('slug', src.slug);
-  setIfString('description', src.description);
+  setIfString('title',          src.title);
+  setIfString('ar_title',       src.ar_title);
+  setIfString('slug',           src.slug);
+  setIfString('description',    src.description);
   setIfString('ar_description', src.ar_description);
-  setIfString('difficulty', src.difficulty);
-  setIfString('access', src.access);
-  setIfString('category', src.category);
-  setIfString('color', src.color);
-  setIfString('contentType', src.contentType);
-  setIfString('state', src.state);
-  setIfString('instructorId', src.instructorId);
-  if (src.estimatedHours) meta.estimatedHours = Number(src.estimatedHours) || 0;
+  setIfString('difficulty',     src.difficulty);
+  setIfString('access',         src.access);
+  setIfString('category',       src.category);
+  setIfString('color',          src.color);
+  setIfString('contentType',    src.contentType);
+  setIfString('state',          src.state);
+  setIfString('instructorId',   src.instructorId);
+  if (src.estimatedHours !== undefined) meta.estimatedHours = Number(src.estimatedHours) || 0;
   if (Array.isArray(src.tags))   meta.tags   = src.tags.join(', ');
   if (Array.isArray(src.skills)) meta.skills = src.skills.join(', ');
   if (src.isFeatured !== undefined) meta.isFeatured = Boolean(src.isFeatured);
-  if (src.isNew !== undefined)      meta.isNew      = Boolean(src.isNew);
+  if (src.isNew      !== undefined) meta.isNew      = Boolean(src.isNew);
 
   const rawTopics: any[] = Array.isArray(parsed)
     ? parsed
-    : (Array.isArray(src.topics) ? src.topics : Array.isArray(src.curriculum) ? src.curriculum : []);
+    : (Array.isArray(src.topics) ? src.topics
+      : Array.isArray(src.curriculum) ? src.curriculum : []);
 
   const topics: TopicRow[] = rawTopics.map((t: any, i: number) => {
     if (!t || typeof t !== 'object') {
@@ -115,7 +113,7 @@ function parseJson(content: string): { meta: Partial<CourseMeta>; topics: TopicR
     const title_ar = typeof t.title === 'object' ? (t.title?.ar ?? '') : '';
     const elements = Array.isArray(t.elements) ? t.elements : (Array.isArray(t.lessons) ? t.lessons : []);
     return {
-      id: t.id ?? `topic-${Date.now()}-${i}`,
+      id:       t.id ?? `topic-${Date.now()}-${i}`,
       title_en: String(title_en),
       title_ar: String(title_ar),
       elements,
@@ -127,16 +125,18 @@ function parseJson(content: string): { meta: Partial<CourseMeta>; topics: TopicR
 
 function topicsToApiFormat(topics: TopicRow[]): object[] {
   return topics.map((t) => ({
-    id: t.id,
-    title: { en: t.title_en, ar: t.title_ar },
+    id:       t.id,
+    title:    { en: t.title_en, ar: t.title_ar },
     elements: t.elements,
   }));
 }
 
-// ─── InstructorPicker ─────────────────────────────────────────────────────────
-function InstructorPicker({ value, onChange }: { value: string; onChange: (id: string, name: string) => void }) {
+// ── InstructorPicker ────────────────────────────────────────────────────────────
+function InstructorPicker({
+  value, onChange,
+}: { value: string; onChange: (id: string, name: string) => void }) {
   const [search, setSearch] = useState('');
-  const [open, setOpen] = useState(false);
+  const [open,   setOpen]   = useState(false);
   const [selectedName, setSelectedName] = useState('');
 
   const { data: adminData } = useQuery({
@@ -150,13 +150,12 @@ function InstructorPicker({ value, onChange }: { value: string; onChange: (id: s
 
   const allUsers = [
     ...(adminData?.data ?? []),
-    ...(instData?.data ?? []),
+    ...(instData?.data  ?? []),
   ].filter((u, i, arr) => arr.findIndex((x) => x.id === u.id) === i);
 
   const filtered = allUsers.filter((u: any) => {
     const name = u.name ?? `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim();
-    const q = `${name} ${u.email ?? ''}`.toLowerCase();
-    return q.includes(search.toLowerCase());
+    return `${name} ${u.email ?? ''}`.toLowerCase().includes(search.toLowerCase());
   });
 
   const handleSelect = (u: any) => {
@@ -200,7 +199,9 @@ function InstructorPicker({ value, onChange }: { value: string; onChange: (id: s
                   const initial = (u.name?.[0] ?? u.firstName?.[0] ?? u.email?.[0] ?? '?').toUpperCase();
                   return (
                     <li key={u.id}
-                      className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors ${u.id === value ? 'bg-primary/10 text-primary' : ''}`}
+                      className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors ${
+                        u.id === value ? 'bg-primary/10 text-primary' : ''
+                      }`}
                       onClick={() => handleSelect(u)}>
                       <div className='w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0'>
                         {initial}
@@ -221,18 +222,10 @@ function InstructorPicker({ value, onChange }: { value: string; onChange: (id: s
   );
 }
 
-// ─── Success Dialog ───────────────────────────────────────────────────────────
+// ── SuccessDialog ──────────────────────────────────────────────────────────────
 function SuccessDialog({
-  courseTitle,
-  courseSlug,
-  onPreview,
-  onDone,
-}: {
-  courseTitle: string;
-  courseSlug: string;
-  onPreview: () => void;
-  onDone: () => void;
-}) {
+  courseTitle, courseSlug, onPreview, onDone,
+}: { courseTitle: string; courseSlug: string; onPreview: () => void; onDone: () => void }) {
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm'>
       <div className='w-full max-w-md rounded-2xl border bg-card shadow-2xl p-8 text-center space-y-5'>
@@ -242,7 +235,7 @@ function SuccessDialog({
         <div>
           <h2 className='text-xl font-bold'>Course Created!</h2>
           <p className='text-sm text-muted-foreground mt-1'>
-            <span className='font-medium text-foreground'>"{courseTitle}"</span> has been saved successfully.
+            <span className='font-medium text-foreground'>“{courseTitle}”</span> has been saved successfully.
           </p>
           <p className='text-xs text-muted-foreground mt-1 font-mono'>/courses/{courseSlug}</p>
         </div>
@@ -259,7 +252,7 @@ function SuccessDialog({
   );
 }
 
-// ─── Field helpers ────────────────────────────────────────────────────────────
+// ── Field helpers ──────────────────────────────────────────────────────────────
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
@@ -273,11 +266,9 @@ function Input({ value, onChange, placeholder = '', dir }: {
   value: string; onChange: (v: string) => void; placeholder?: string; dir?: string;
 }) {
   return (
-    <input
-      className='w-full rounded-md border bg-background px-3 py-2 text-sm'
+    <input className='w-full rounded-md border bg-background px-3 py-2 text-sm'
       value={value} placeholder={placeholder} dir={dir}
-      onChange={(e) => onChange(e.target.value)}
-    />
+      onChange={(e) => onChange(e.target.value)} />
   );
 }
 
@@ -292,17 +283,17 @@ function Select({ value, onChange, opts }: {
   );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// ── Main Page ──────────────────────────────────────────────────────────────────────
 export default function CourseCreatePage() {
   const navigate = useNavigate();
-  const fileRef = useRef<HTMLInputElement>(null);
+  const fileRef  = useRef<HTMLInputElement>(null);
 
-  const [step, setStep] = useState<Step>('upload');
-  const [fileError, setFileError] = useState('');
-  const [warnings, setWarnings] = useState<string[]>([]);
-  const [meta, setMeta] = useState<CourseMeta>(defaultMeta());
-  const [topics, setTopics] = useState<TopicRow[]>([]);
-  const [savedSlug, setSavedSlug] = useState('');
+  const [step,       setStep]       = useState<Step>('upload');
+  const [fileError,  setFileError]  = useState('');
+  const [warnings,   setWarnings]   = useState<string[]>([]);
+  const [meta,       setMeta]       = useState<CourseMeta>(defaultMeta());
+  const [topics,     setTopics]     = useState<TopicRow[]>([]);
+  const [savedSlug,  setSavedSlug]  = useState('');
   const [savedTitle, setSavedTitle] = useState('');
 
   const setTitle = (v: string) => setMeta((f) => ({
@@ -313,7 +304,6 @@ export default function CourseCreatePage() {
   const setField = <K extends keyof CourseMeta>(k: K, v: CourseMeta[K]) =>
     setMeta((f) => ({ ...f, [k]: v }));
 
-  // ── File handling ─────────────────────────────────────────────────────
   const handleFile = (file: File) => {
     if (!file.name.endsWith('.json')) { setFileError('Only .json files are supported'); return; }
     setFileError('');
@@ -340,37 +330,32 @@ export default function CourseCreatePage() {
     if (file) handleFile(file);
   };
 
-  // ── Topics ────────────────────────────────────────────────────────────
-  const addTopic = () => setTopics((prev) => [
+  const addTopic    = () => setTopics((prev) => [
     ...prev,
     { id: `topic-${Date.now()}`, title_en: `Topic ${prev.length + 1}`, title_ar: '', elements: [] },
   ]);
-
   const removeTopic = (i: number) => setTopics((prev) => prev.filter((_, idx) => idx !== i));
-
-  const moveTopic = (i: number, dir: 'up' | 'down') => {
+  const moveTopic   = (i: number, dir: 'up' | 'down') => {
     const ni = dir === 'up' ? i - 1 : i + 1;
     if (ni < 0 || ni >= topics.length) return;
     const arr = [...topics];
     [arr[i], arr[ni]] = [arr[ni], arr[i]];
     setTopics(arr);
   };
-
   const updateTopic = (i: number, field: 'title_en' | 'title_ar', v: string) =>
     setTopics((prev) => prev.map((t, idx) => idx === i ? { ...t, [field]: v } : t));
 
-  // ── Save ──────────────────────────────────────────────────────────────
   const { mutate: save, isPending: isSaving } = useMutation({
     mutationFn: async () => {
-      if (!meta.title.trim()) throw new Error('Title is required');
-      if (!meta.slug.trim()) throw new Error('Slug is required');
+      if (!meta.title.trim())        throw new Error('Title is required');
+      if (!meta.slug.trim())         throw new Error('Slug is required');
       if (!meta.instructorId.trim()) throw new Error('Instructor is required');
 
       const dto: AdminCourseCreateDto & Record<string, any> = {
         title:          meta.title.trim(),
-        ar_title:       meta.ar_title.trim() || undefined,
+        ar_title:       meta.ar_title.trim()       || undefined,
         slug:           meta.slug.trim(),
-        description:    meta.description.trim() || undefined,
+        description:    meta.description.trim()    || undefined,
         ar_description: meta.ar_description.trim() || undefined,
         difficulty:     meta.difficulty,
         access:         meta.access,
@@ -382,16 +367,14 @@ export default function CourseCreatePage() {
         estimatedHours: meta.estimatedHours || undefined,
         isFeatured:     meta.isFeatured,
         isNew:          meta.isNew,
-        tags:           meta.tags ? meta.tags.split(',').map((s) => s.trim()).filter(Boolean) : [],
-        skills:         meta.skills ? meta.skills.split(',').map((s) => s.trim()).filter(Boolean) : [],
+        tags:    meta.tags    ? meta.tags.split(',').map((s)   => s.trim()).filter(Boolean) : [],
+        skills:  meta.skills  ? meta.skills.split(',').map((s) => s.trim()).filter(Boolean) : [],
       };
 
       const course = await adminCoursesApi.create(dto);
-
       if (topics.length > 0) {
         await adminCoursesApi.saveCurriculum(course.id, topicsToApiFormat(topics));
       }
-
       return course;
     },
     onSuccess: (course) => {
@@ -410,7 +393,6 @@ export default function CourseCreatePage() {
   return (
     <div className='min-h-[calc(100vh-4rem)] bg-background'>
 
-      {/* Success Dialog */}
       {step === 'done' && (
         <SuccessDialog
           courseTitle={savedTitle}
@@ -420,7 +402,7 @@ export default function CourseCreatePage() {
         />
       )}
 
-      {/* ── Top Bar ─────────────────────────────────────────────────────── */}
+      {/* Top Bar */}
       <div className='sticky top-0 z-20 flex items-center justify-between px-6 py-3 border-b bg-card/95 backdrop-blur'>
         <div className='flex items-center gap-3'>
           <Button variant='ghost' size='sm' className='gap-1' onClick={() => navigate(ROUTES.COURSES)}>
@@ -448,14 +430,16 @@ export default function CourseCreatePage() {
                 <FileJson size={13} /> Replace JSON
               </Button>
               <Button size='sm' className='gap-1.5 min-w-[110px]' onClick={() => save()} disabled={isSaving}>
-                {isSaving ? <><Loader2 size={13} className='animate-spin' /> Saving…</> : <><Save size={13} /> Save Course</>}
+                {isSaving
+                  ? <><Loader2 size={13} className='animate-spin' /> Saving…</>
+                  : <><Save size={13} /> Save Course</>}
               </Button>
             </>
           )}
         </div>
       </div>
 
-      {/* ── Step 1: Upload ───────────────────────────────────────────────── */}
+      {/* Step 1: Upload */}
       {step === 'upload' && (
         <div className='max-w-xl mx-auto px-6 py-16 space-y-6'>
           <div className='text-center space-y-2'>
@@ -470,8 +454,7 @@ export default function CourseCreatePage() {
 
           <label
             className='flex flex-col items-center justify-center gap-4 w-full h-52 border-2 border-dashed rounded-2xl cursor-pointer hover:bg-muted/20 hover:border-primary/60 transition-all'
-            onDrop={handleDrop}
-            onDragOver={(e) => e.preventDefault()}>
+            onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}>
             <input ref={fileRef} type='file' accept='.json' className='hidden'
               onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }} />
             <Upload size={32} className='text-muted-foreground' />
@@ -499,7 +482,7 @@ export default function CourseCreatePage() {
         </div>
       )}
 
-      {/* ── Step 2: Edit ────────────────────────────────────────────────── */}
+      {/* Step 2: Edit */}
       {step === 'edit' && (
         <div className='max-w-3xl mx-auto px-6 py-8 space-y-8'>
 
@@ -516,7 +499,6 @@ export default function CourseCreatePage() {
             <h2 className='text-sm font-bold flex items-center gap-2'>
               <BookOpen size={15} className='text-primary' /> Course Metadata
             </h2>
-
             <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
               <Field label='Title (EN) *'>
                 <Input value={meta.title} onChange={setTitle} placeholder='e.g., Web Application Hacking' />
@@ -525,7 +507,6 @@ export default function CourseCreatePage() {
                 <Input value={meta.ar_title} onChange={(v) => setField('ar_title', v)} placeholder='العنوان بالعربي' dir='rtl' />
               </Field>
             </div>
-
             <Field label='Slug *'>
               <div className='flex items-center gap-2'>
                 <span className='text-xs text-muted-foreground font-mono shrink-0'>courses/</span>
@@ -534,7 +515,6 @@ export default function CourseCreatePage() {
                   onChange={(e) => setField('slug', slugify(e.target.value))} />
               </div>
             </Field>
-
             <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
               <Field label='Description (EN)'>
                 <textarea className='w-full rounded-md border bg-background px-3 py-2 text-sm' rows={2}
@@ -547,7 +527,6 @@ export default function CourseCreatePage() {
                   onChange={(e) => setField('ar_description', e.target.value)} />
               </Field>
             </div>
-
             <div className='grid grid-cols-2 sm:grid-cols-3 gap-4'>
               <Field label='Difficulty'>
                 <Select value={meta.difficulty} onChange={(v) => setField('difficulty', v as CourseDifficulty)} opts={COURSE_DIFFICULTIES} />
@@ -570,16 +549,13 @@ export default function CourseCreatePage() {
                   onChange={(e) => setField('estimatedHours', Number(e.target.value) || 0)} />
               </Field>
             </div>
-
             <Field label='Category'>
               <Select value={meta.category} onChange={(v) => setField('category', v as CourseCategory)} opts={COURSE_CATEGORIES} />
             </Field>
-
             <InstructorPicker
               value={meta.instructorId}
               onChange={(id, name) => { setField('instructorId', id); void name; }}
             />
-
             <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
               <Field label='Tags (comma-separated)'>
                 <Input value={meta.tags} onChange={(v) => setField('tags', v)} placeholder='ctf, web, beginner' />
@@ -588,7 +564,6 @@ export default function CourseCreatePage() {
                 <Input value={meta.skills} onChange={(v) => setField('skills', v)} placeholder='SQL Injection, XSS' />
               </Field>
             </div>
-
             <div className='flex items-center gap-6'>
               <label className='flex items-center gap-2 cursor-pointer text-sm'>
                 <input type='checkbox' checked={meta.isFeatured}
@@ -657,9 +632,7 @@ export default function CourseCreatePage() {
                       </div>
                     </div>
                     <div className='flex items-center gap-1 shrink-0 mt-1'>
-                      <span className='text-xs text-muted-foreground'>
-                        {t.elements.length} el.
-                      </span>
+                      <span className='text-xs text-muted-foreground'>{t.elements.length} el.</span>
                       <button className='p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors'
                         onClick={() => removeTopic(i)}>
                         <Trash2 size={13} />
