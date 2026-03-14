@@ -6,7 +6,11 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Save, Eye, AlertTriangle, X, BookOpen, Clock, Shield, FlaskConical, Crown, Unlock, Gem, Rocket, Heart, Star } from 'lucide-react';
+import {
+  Save, Eye, AlertTriangle, X,
+  BookOpen, Clock, Shield, FlaskConical,
+  Crown, Unlock, Gem, Rocket, Heart, Users,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,7 +43,7 @@ import {
   enumLabel,
 } from '../../constants/course-enums';
 
-// ── Color maps (mirror course-preview-tab) ────────────────────────────
+// ── Color maps (mirror course-preview-tab) ────────────────────────────────────────
 const MATRIX_COLOR: Record<string, string> = {
   emerald:'#10b981', blue:'#3b82f6', violet:'#8b5cf6',
   rose:'#f43f5e', orange:'#f97316', cyan:'#06b6d4',
@@ -70,7 +74,7 @@ const ACCESS_ICON: Record<string, React.ElementType> = {
   FREE: Unlock, PRO: Crown, PREMIUM: Gem,
 };
 
-// ── Types ────────────────────────────────────────────────────────────────
+// ── Types ────────────────────────────────────────────────────────────────────
 interface Props { course: AdminCourse; onSaved: () => void; }
 
 interface FormState {
@@ -106,9 +110,9 @@ const REQUIRED_HERO: Array<{ key: keyof FormState; label: string; labelAr: strin
   { key: 'description', label: 'Description (EN)', labelAr: 'الوصف (EN)' },
 ];
 
-const STATE_OPTIONS   = ['DRAFT', 'PUBLISHED', 'COMING_SOON'];
+const STATE_OPTIONS = ['DRAFT', 'PUBLISHED', 'COMING_SOON'];
 
-// ── TagsInput ────────────────────────────────────────────────────────────
+// ── TagsInput ────────────────────────────────────────────────────────────────────
 function TagsInput({
   label, value, onChange, dir = 'ltr',
 }: { label: string; value: string[]; onChange: (v: string[]) => void; dir?: 'ltr' | 'rtl' }) {
@@ -142,7 +146,7 @@ function TagsInput({
   );
 }
 
-// ── Stat pill (mirrors course-preview-tab) ─────────────────────────────
+// ── Stat pill (mirrors course-preview-tab) ──────────────────────────────────────────────
 function Stat({ icon, value, label, textClass }: {
   icon: React.ReactNode; value?: number | string; label?: string; textClass: string;
 }) {
@@ -155,7 +159,7 @@ function Stat({ icon, value, label, textClass }: {
   );
 }
 
-// ── Live Hero Preview (same markup as CoursePlatformPreviewTab hero) ─────
+// ── Live Hero Preview (same markup as CoursePlatformPreviewTab hero) ───────────────
 function LiveHeroPreview({ form, course, isAr }: {
   form: FormState; course: AdminCourse; isAr: boolean;
 }) {
@@ -317,7 +321,7 @@ function LiveHeroPreview({ form, course, isAr }: {
             <div>
               <p className='text-[10px] text-white/30 mb-1'>{isAr ? 'مهارات' : 'Skills'}</p>
               <div className='flex flex-wrap gap-1'>
-                {(isAr ? form.ar_skills.length > 0 ? form.ar_skills : form.skills : form.skills).slice(0, 4).map((s) => (
+                {(isAr && form.ar_skills.length > 0 ? form.ar_skills : form.skills).slice(0, 4).map((s) => (
                   <span key={s} className='rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-white/50'>{s}</span>
                 ))}
                 {form.skills.length > 4 && <span className='text-[10px] text-white/30'>+{form.skills.length - 4}</span>}
@@ -328,7 +332,7 @@ function LiveHeroPreview({ form, course, isAr }: {
             <div>
               <p className='text-[10px] text-white/30 mb-1'>{isAr ? 'متطلبات' : 'Prerequisites'}</p>
               <div className='flex flex-wrap gap-1'>
-                {(isAr ? form.ar_prerequisites.length > 0 ? form.ar_prerequisites : form.prerequisites : form.prerequisites).slice(0, 3).map((s) => (
+                {(isAr && form.ar_prerequisites.length > 0 ? form.ar_prerequisites : form.prerequisites).slice(0, 3).map((s) => (
                   <span key={s} className='rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-white/50'>{s}</span>
                 ))}
               </div>
@@ -340,16 +344,12 @@ function LiveHeroPreview({ form, course, isAr }: {
   );
 }
 
-// I need Users import – adding it
-import { Users } from 'lucide-react';
-
-// ── Main component ────────────────────────────────────────────────────────────
+// ── Main component ────────────────────────────────────────────────────────────────────
 export function HeroInfoTab({ course, onSaved }: Props) {
   const { t, i18n } = useTranslation('courses');
   const isAr = i18n.language === 'ar';
   const [previewOpen, setPreviewOpen] = useState(false);
 
-  // ✅ Pre-fill ALL fields from DB
   const [form, setForm] = useState<FormState>({
     title:              course.title              ?? '',
     ar_title:           course.ar_title           ?? '',
@@ -358,7 +358,7 @@ export function HeroInfoTab({ course, onSaved }: Props) {
     thumbnail:          course.thumbnail          ?? '',
     access:             course.access             ?? 'FREE',
     difficulty:         course.difficulty         ?? 'BEGINNER',
-    category:           course.category           ?? 'GENERAL',
+    category:           course.category           ?? 'FUNDAMENTALS',
     contentType:        course.contentType        ?? 'MIXED',
     state:              course.state              ?? 'DRAFT',
     isNew:              course.isNew              ?? false,
@@ -380,7 +380,6 @@ export function HeroInfoTab({ course, onSaved }: Props) {
 
   const set = (k: keyof FormState, v: any) => setForm((f) => ({ ...f, [k]: v }));
 
-  // ── Validation ────────────────────────────────────────────────────────────
   const validate = (): boolean => {
     const missing = REQUIRED_HERO
       .filter((f) => !String(form[f.key]).trim())
@@ -400,7 +399,6 @@ export function HeroInfoTab({ course, onSaved }: Props) {
     return true;
   };
 
-  // ── Save mutation ────────────────────────────────────────────────────────────
   const mut = useMutation({
     mutationFn: () => adminCoursesApi.update(course.id, {
       color:              form.color              as any,
@@ -435,7 +433,6 @@ export function HeroInfoTab({ course, onSaved }: Props) {
   });
 
   const handleSave = () => { if (validate()) mut.mutate(); };
-
   const lbl = (en: string, ar: string) => isAr ? ar : en;
 
   return (
@@ -722,9 +719,9 @@ export function HeroInfoTab({ course, onSaved }: Props) {
               { label: lbl('Difficulty',  'المستوى'),       old: course.difficulty,         cur: form.difficulty },
               { label: lbl('State',       'الحالة'),           old: course.state,              cur: form.state },
               { label: lbl('Hours',       'ساعات'),           old: String(course.estimatedHours ?? 0), cur: form.estimatedHours },
-              { label: 'isNew',                old: String(course.isNew ?? false), cur: String(form.isNew) },
-              { label: 'isFeatured',           old: String(course.isFeatured ?? false), cur: String(form.isFeatured) },
-            ] as Array<{ label: string; old: string | undefined; cur: string }>)
+              { label: 'isNew',            old: String(course.isNew ?? false),      cur: String(form.isNew) },
+              { label: 'isFeatured',       old: String(course.isFeatured ?? false), cur: String(form.isFeatured) },
+            ] as Array<{ label: string; old: string | undefined | null; cur: string }>)
               .filter((r) => (r.old ?? '') !== r.cur)
               .map((r) => (
                 <div key={r.label} className='flex items-center gap-2 text-xs'>
@@ -734,9 +731,9 @@ export function HeroInfoTab({ course, onSaved }: Props) {
                   <span className='text-emerald-400 font-medium truncate max-w-[80px]'>{r.cur || '—'}</span>
                 </div>
               ))}
-            {(course.title === form.title &&
+            {course.title === form.title &&
               (course.color ?? '').toLowerCase() === form.color &&
-              course.state === form.state) && (
+              course.state === form.state && (
               <p className='text-[11px] text-muted-foreground/50 italic'>
                 {lbl('No changes yet', 'لا تغييرات')}
               </p>
