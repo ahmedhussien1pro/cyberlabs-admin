@@ -5,25 +5,30 @@ import { UsersTable } from '../components/users-table';
 import { UserFilters } from '../components/user-filters';
 import { Button } from '@/components/ui/button';
 import { UserPlus } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { ROUTES } from '@/shared/constants';
-import type { UserListItem, PaginationMeta } from '@/core/types';
+import type { UserListItem, PaginationMeta, UserRole } from '@/core/types';
+import type { StatusFilter } from '../types';
 
-export function UsersListPage() {
+export default function UsersListPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('ALL');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'suspended'>('all');
+  const [roleFilter, setRoleFilter] = useState<UserRole | 'ALL'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin-users', page, search, roleFilter, statusFilter],
     queryFn: () =>
-      usersService.list({
+      usersService.getAll({
         page,
         limit: 20,
         search: search || undefined,
         role: roleFilter !== 'ALL' ? roleFilter : undefined,
-        status: statusFilter !== 'all' ? statusFilter : undefined,
+        isActive:
+          statusFilter === 'active'
+            ? true
+            : statusFilter === 'suspended'
+            ? false
+            : undefined,
       }),
   });
 
@@ -39,12 +44,13 @@ export function UsersListPage() {
             {meta ? `${meta.total} total users` : 'Manage platform users'}
           </p>
         </div>
-        <Link to={ROUTES.USER_CREATE}>
+        {/* ROUTES.USER_CREATE does not exist — link to /users for now */}
+        <a href={ROUTES.USERS}>
           <Button>
             <UserPlus className='mr-2 h-4 w-4' />
             Add User
           </Button>
-        </Link>
+        </a>
       </div>
 
       <UserFilters
@@ -64,7 +70,8 @@ export function UsersListPage() {
 
       {isError && (
         <div className='rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive'>
-          Failed to load users. <button onClick={() => refetch()} className='underline'>Retry</button>
+          Failed to load users.{' '}
+          <button onClick={() => refetch()} className='underline'>Retry</button>
         </div>
       )}
 
