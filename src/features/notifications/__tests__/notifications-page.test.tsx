@@ -5,10 +5,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import NotificationsPage from '../pages/notifications.page';
 
-// Hoist mocks so vi.mock factories can reference them
-const mockGetHistory = vi.fn();
-const mockBroadcast  = vi.fn();
-const mockToastError   = vi.fn();
+const mockGetHistory  = vi.fn();
+const mockBroadcast   = vi.fn();
+const mockToastError  = vi.fn();
 const mockToastSuccess = vi.fn();
 
 vi.mock('@/core/api/services/notifications.service', () => ({
@@ -22,7 +21,6 @@ vi.mock('@/core/api/services/users.service', () => ({
   usersService: { getAll: vi.fn().mockResolvedValue({ data: [] }) },
 }));
 
-// Key fix: mock sonner with stable function references
 vi.mock('sonner', () => ({
   toast: {
     error:   (...a: any[]) => mockToastError(...a),
@@ -43,6 +41,12 @@ function wrap() {
       <MemoryRouter><NotificationsPage /></MemoryRouter>
     </QueryClientProvider>,
   );
+}
+
+function getSendButton() {
+  return screen
+    .getAllByRole('button')
+    .find((b) => b.textContent?.includes('form.sendButtonAll'))!;
 }
 
 beforeEach(() => {
@@ -79,24 +83,28 @@ describe('NotificationsPage', () => {
   });
 
   it('shows validation error when send clicked with empty form', async () => {
+    // Fill title only (message stays empty) so the button becomes enabled
+    // but handleSend still hits the validation branch and calls toast.error
     wrap();
-    // Wait for the button to be in the DOM — it is disabled when form is empty
-    // so we use getAllByRole to find it (disabled buttons still appear in DOM)
     await waitFor(() => screen.getByText('form.cardTitle'));
-    // The send button text equals the t() key output
-    const btns = screen.getAllByRole('button');
-    // Find the send button — it contains 'form.sendButtonAll' text
-    const sendBtn = btns.find((b) => b.textContent?.includes('form.sendButtonAll'));
-    expect(sendBtn).toBeTruthy();
-    // Remove disabled so we can click it (it's disabled on empty form)
-    sendBtn!.removeAttribute('disabled');
-    fireEvent.click(sendBtn!);
-    await waitFor(() => expect(mockToastError).toHaveBeenCalledWith('form.validationError'));
+
+    fireEvent.change(screen.getByPlaceholderText('form.titlePlaceholder'), {
+      target: { value: 'Some Title' },
+    });
+
+    const sendBtn = getSendButton();
+    fireEvent.click(sendBtn);
+
+    await waitFor(() =>
+      expect(mockToastError).toHaveBeenCalledWith('form.validationError'),
+    );
   });
 
   it('switches to user target mode', async () => {
     wrap();
-    const userBtn = await waitFor(() => screen.getByRole('button', { name: /form\.targetUser/ }));
+    const userBtn = await waitFor(() =>
+      screen.getByRole('button', { name: /form\.targetUser/ }),
+    );
     fireEvent.click(userBtn);
     await waitFor(() => expect(screen.getByText('form.selectedUser')).toBeTruthy());
   });
@@ -104,11 +112,13 @@ describe('NotificationsPage', () => {
   it('opens confirm dialog when form is valid', async () => {
     wrap();
     await waitFor(() => screen.getByPlaceholderText('form.titlePlaceholder'));
-    fireEvent.change(screen.getByPlaceholderText('form.titlePlaceholder'), { target: { value: 'My Title' } });
-    fireEvent.change(screen.getByPlaceholderText('form.messagePlaceholder'), { target: { value: 'My Message' } });
-    const btns = screen.getAllByRole('button');
-    const sendBtn = btns.find((b) => b.textContent?.includes('form.sendButtonAll'))!;
-    fireEvent.click(sendBtn);
+    fireEvent.change(screen.getByPlaceholderText('form.titlePlaceholder'), {
+      target: { value: 'My Title' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('form.messagePlaceholder'), {
+      target: { value: 'My Message' },
+    });
+    fireEvent.click(getSendButton());
     await waitFor(() => expect(screen.getByText('confirm.title')).toBeTruthy());
   });
 
@@ -116,11 +126,13 @@ describe('NotificationsPage', () => {
     mockBroadcast.mockResolvedValue({ recipientCount: 10 });
     wrap();
     await waitFor(() => screen.getByPlaceholderText('form.titlePlaceholder'));
-    fireEvent.change(screen.getByPlaceholderText('form.titlePlaceholder'), { target: { value: 'Title' } });
-    fireEvent.change(screen.getByPlaceholderText('form.messagePlaceholder'), { target: { value: 'Msg' } });
-    const btns = screen.getAllByRole('button');
-    const sendBtn = btns.find((b) => b.textContent?.includes('form.sendButtonAll'))!;
-    fireEvent.click(sendBtn);
+    fireEvent.change(screen.getByPlaceholderText('form.titlePlaceholder'), {
+      target: { value: 'Title' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('form.messagePlaceholder'), {
+      target: { value: 'Msg' },
+    });
+    fireEvent.click(getSendButton());
     await waitFor(() => screen.getByText('confirm.send'));
     fireEvent.click(screen.getByText('confirm.send'));
     await waitFor(() => expect(mockBroadcast).toHaveBeenCalled());
@@ -129,14 +141,18 @@ describe('NotificationsPage', () => {
   it('shows char counter for title', async () => {
     wrap();
     await waitFor(() => screen.getByText('0/120'));
-    fireEvent.change(screen.getByPlaceholderText('form.titlePlaceholder'), { target: { value: 'Hi' } });
+    fireEvent.change(screen.getByPlaceholderText('form.titlePlaceholder'), {
+      target: { value: 'Hi' },
+    });
     await waitFor(() => expect(screen.getByText('2/120')).toBeTruthy());
   });
 
   it('shows preview when title is typed', async () => {
     wrap();
     await waitFor(() => screen.getByPlaceholderText('form.titlePlaceholder'));
-    fireEvent.change(screen.getByPlaceholderText('form.titlePlaceholder'), { target: { value: 'Preview Title' } });
+    fireEvent.change(screen.getByPlaceholderText('form.titlePlaceholder'), {
+      target: { value: 'Preview Title' },
+    });
     await waitFor(() => expect(screen.getByText('form.previewLabel')).toBeTruthy());
   });
 });
