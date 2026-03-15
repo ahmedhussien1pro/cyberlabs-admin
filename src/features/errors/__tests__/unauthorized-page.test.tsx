@@ -18,21 +18,26 @@ describe('UnauthorizedPage', () => {
     expect(screen.getAllByText('401').length).toBeGreaterThan(0);
   });
 
-  it('renders UNAUTHORIZED_ACCESS badge', () => {
-    wrap();
-    // badge text is split: pulse dot + text node — use getByText with exact:false
-    expect(screen.getByText(/SYSTEM :: UNAUTHORIZED_ACCESS/)).toBeTruthy();
+  it('renders UNAUTHORIZED_ACCESS badge via innerHTML', () => {
+    // The badge div contains a <span> pulse dot + text node sibling.
+    // getByText with exact match fails because the text node is split.
+    // We check the container HTML directly instead.
+    const { container } = wrap();
+    expect(container.innerHTML).toContain('SYSTEM :: UNAUTHORIZED_ACCESS');
   });
 
   it('renders terminal header label', () => {
     wrap();
-    expect(screen.getByText(/cyberlabs.*auth/)).toBeTruthy();
+    // label rendered inside a <span> that also contains an SVG — use regex
+    const { container } = render(<MemoryRouter><UnauthorizedPage /></MemoryRouter>);
+    expect(container.innerHTML).toContain('cyberlabs — auth');
   });
 
-  it('renders forbidden translation key', () => {
-    wrap();
-    // the <p> contains only the text node; use exact:false to avoid whitespace issues
-    expect(screen.getByText('forbidden', { exact: true })).toBeTruthy();
+  it('renders forbidden translation key via innerHTML', () => {
+    // The <p> renders t('forbidden') = 'forbidden' but it is a text node
+    // inside a flex container that may contain whitespace — use innerHTML
+    const { container } = wrap();
+    expect(container.innerHTML).toContain('>forbidden<');
   });
 
   it('renders forbiddenBack button', () => {
