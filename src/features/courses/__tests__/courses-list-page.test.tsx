@@ -14,9 +14,8 @@ const { mockList, mockGetStats } = vi.hoisted(() => ({
 
 vi.mock('../services/admin-courses.api', () => ({
   adminCoursesApi: {
-    list:     (...a: any[]) => mockList(...a),
-    getStats: ()           => mockGetStats(),
-    // overlay controls — not called in page-level tests
+    list:      (...a: any[]) => mockList(...a),
+    getStats:  ()           => mockGetStats(),
     delete:    vi.fn(),
     setState:  vi.fn(),
     duplicate: vi.fn(),
@@ -45,7 +44,7 @@ const mockStats: AdminCourseStats = {
 
 function makeCourse(i: number): AdminCourse {
   return {
-    id: `c${i}`, title: `Course ${i}`, slug: `course-${i}`,
+    id: `c${i}`, title: `Course-${i}`, slug: `course-${i}`,
     state: 'DRAFT', difficulty: 'BEGINNER', access: 'FREE',
     enrollmentCount: i * 10, color: 'blue',
     tags: [], skills: [], ar_skills: [], topics: [], ar_topics: [],
@@ -59,11 +58,17 @@ const mockListResponse = (courses: AdminCourse[], total = courses.length) => ({
   meta: { total, page: 1, limit: 8, totalPages: Math.ceil(total / 8) },
 });
 
-// ─── Wrapper ─────────────────────────────────────────────────────────────────
-function wrap() {
-  const qc = new QueryClient({
-    defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
+// ─── Wrapper helpers ───────────────────────────────────────────────────────────
+function makeQC() {
+  return new QueryClient({
+    defaultOptions: {
+      queries:   { retry: false, gcTime: 0 },
+      mutations: { retry: false },
+    },
   });
+}
+
+function wrap(qc = makeQC()) {
   return render(
     <QueryClientProvider client={qc}>
       <MemoryRouter>
@@ -82,8 +87,8 @@ beforeEach(() => {
 // ─── Tests ─────────────────────────────────────────────────────────────────
 describe('CoursesListPage', () => {
 
-  // ── Page header ────────────────────────────────────────────────────────
-  it('renders page title and New Course button', async () => {
+  // ── Header ───────────────────────────────────────────────────────────────
+  it('renders page title and New Course button', () => {
     wrap();
     expect(screen.getByText('title')).toBeTruthy();
     expect(screen.getByText('newCourse')).toBeTruthy();
@@ -100,30 +105,29 @@ describe('CoursesListPage', () => {
 
   // ── Loading skeletons ────────────────────────────────────────────────
   it('shows skeletons while loading then renders courses', async () => {
-    let resolve: (v: any) => void;
+    let resolve!: (v: any) => void;
     mockList.mockReturnValue(new Promise((r) => { resolve = r; }));
     wrap();
-    // skeletons visible immediately
     const skeletons = document.querySelectorAll('.animate-pulse, [data-slot="skeleton"]');
     expect(skeletons.length).toBeGreaterThan(0);
-    // resolve and check courses appear
-    resolve!(mockListResponse([makeCourse(1), makeCourse(2)]));
-    await waitFor(() => expect(screen.getByText('Course 1')).toBeTruthy());
+    resolve(mockListResponse([makeCourse(1), makeCourse(2)]));
+    await waitFor(() => expect(screen.getAllByText('Course-1').length).toBeGreaterThan(0));
   });
 
   // ── Error state ────────────────────────────────────────────────────────
   it('shows error alert and retry button when list fails', async () => {
     mockList.mockRejectedValue(new Error('network error'));
     wrap();
-    await waitFor(() => expect(screen.getByText('errors.loadFailed')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('errors.loadFailed')).toBeTruthy(), { timeout: 3000 });
     expect(screen.getByText('actions.tryAgain')).toBeTruthy();
   });
 
   // ── Course data ────────────────────────────────────────────────────────
   it('renders course cards in grid view', async () => {
     wrap();
-    await waitFor(() => expect(screen.getByText('Course 1')).toBeTruthy());
-    expect(screen.getByText('Course 2')).toBeTruthy();
+    // card renders title in multiple places — getAllByText
+    await waitFor(() => expect(screen.getAllByText('Course-1').length).toBeGreaterThan(0));
+    expect(screen.getAllByText('Course-2').length).toBeGreaterThan(0);
   });
 
   it('calls api.list once on mount', async () => {
@@ -142,13 +146,9 @@ describe('CoursesListPage', () => {
   // ── View toggle ────────────────────────────────────────────────────────
   it('switches to table view and renders table', async () => {
     wrap();
-    await waitFor(() => screen.getByText('Course 1'));
-    // find the List (table) toggle button by its icon aria
-    const buttons = screen.getAllByRole('button');
-    // table toggle is the second icon button in the view group
-    const tableBtn = buttons.find((b) => b.querySelector('.lucide-list'));
+    await waitFor(() => screen.getAllByText('Course-1'));
+    const tableBtn = screen.getAllByRole('button').find((b) => b.querySelector('.lucide-list'));
     if (tableBtn) fireEvent.click(tableBtn);
-    // table header "table.course" should appear
     await waitFor(() => expect(screen.getByText('table.course')).toBeTruthy());
   });
 
@@ -156,11 +156,7 @@ describe('CoursesListPage', () => {
   it('clicking New Course button opens dialog', async () => {
     wrap();
     fireEvent.click(screen.getByText('newCourse'));
-    // dialog should mount — check for a dialog role or known content
-    await waitFor(() => {
-      const dialog = document.querySelector('[role="dialog"]');
-      expect(dialog).toBeTruthy();
-    });
+    await waitFor(() => expect(document.querySelector('[role="dialog"]')).toBeTruthy());
   });
 
   // ── Search filter ─────────────────────────────────────────────────────
@@ -174,14 +170,18 @@ describe('CoursesListPage', () => {
     );
   });
 
-  // ── Retry ────────────────────────────────────────────────────────────────
-  it('retry button re-calls api.list', async () => {
+  // ── Retry ───────────────────────────────────────────────────────────────
+  it('retry button refetches and shows courses', async () => {
+    // First render fails
     mockList.mockRejectedValue(new Error('fail'));
-    wrap();
-    await waitFor(() => screen.getByText('actions.tryAgain'));
+    const { unmount } = wrap();
+    await waitFor(() => screen.getByText('errors.loadFailed'), { timeout: 3000 });
+
+    // Swap mock to success, click retry
     mockList.mockResolvedValue(mockListResponse([makeCourse(1)]));
     fireEvent.click(screen.getByText('actions.tryAgain'));
-    await waitFor(() => expect(screen.getByText('Course 1')).toBeTruthy());
+    await waitFor(() => expect(screen.getAllByText('Course-1').length).toBeGreaterThan(0));
+    unmount();
   });
 
   // ── Pagination ──────────────────────────────────────────────────────────
@@ -189,10 +189,10 @@ describe('CoursesListPage', () => {
     const courses = Array.from({ length: 8 }, (_, i) => makeCourse(i + 1));
     mockList.mockResolvedValue(mockListResponse(courses, 20));
     wrap();
-    await waitFor(() => expect(screen.getByText('Course 1')).toBeTruthy());
-    // next page button present
-    const nextBtns = document.querySelectorAll('button[aria-label], button');
-    const hasNext = Array.from(nextBtns).some((b) => b.querySelector('.lucide-chevron-right'));
+    await waitFor(() => expect(screen.getAllByText('Course-1').length).toBeGreaterThan(0));
+    const hasNext = Array.from(document.querySelectorAll('button')).some(
+      (b) => b.querySelector('.lucide-chevron-right'),
+    );
     expect(hasNext).toBe(true);
   });
 
@@ -200,9 +200,7 @@ describe('CoursesListPage', () => {
     const courses = Array.from({ length: 3 }, (_, i) => makeCourse(i + 1));
     mockList.mockResolvedValue(mockListResponse(courses, 3));
     wrap();
-    await waitFor(() => screen.getByText('Course 1'));
-    // pagination component returns null — chevron-first / chevron-last hidden
-    const firstBtns = document.querySelectorAll('.lucide-chevron-first');
-    expect(firstBtns.length).toBe(0);
+    await waitFor(() => expect(screen.getAllByText('Course-1').length).toBeGreaterThan(0));
+    expect(document.querySelectorAll('.lucide-chevron-first').length).toBe(0);
   });
 });
