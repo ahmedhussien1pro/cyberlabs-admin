@@ -26,13 +26,19 @@ vi.mock('framer-motion', () => ({
 function base(overrides: Partial<AdminCourse> = {}): AdminCourse {
   return {
     id: 'c1', title: 'My Course', slug: 'my-course',
+    ar_title: null, description: null, ar_description: null,
+    longDescription: null, ar_longDescription: null,
+    image: null, thumbnail: null,
     state: 'DRAFT', difficulty: 'BEGINNER', access: 'FREE',
-    enrollmentCount: 0, color: 'blue',
+    color: 'BLUE', category: 'FUNDAMENTALS', contentType: 'MIXED',
+    estimatedHours: 0, enrollmentCount: 0,
+    totalTopics: 0, labsCount: 0, averageRating: 0, reviewCount: 0,
     tags: [], skills: [], ar_skills: [], topics: [], ar_topics: [],
     prerequisites: [], ar_prerequisites: [], labSlugs: [],
-    contentType: 'MIXED', isFeatured: false, isNew: false,
+    isFeatured: false, isNew: false, isPublished: false,
+    labsLink: null, instructorId: null,
     ...overrides,
-  } as AdminCourse;
+  };
 }
 
 function wrap(course: AdminCourse, view: 'grid' | 'list' = 'grid') {
@@ -50,8 +56,8 @@ function wrap(course: AdminCourse, view: 'grid' | 'list' = 'grid') {
   );
 }
 
-// helper: AdminOverlayControls renders a hidden <span> with state text too,
-// so state labels appear 2x in the DOM. getAllByText + length check is correct.
+// AdminOverlayControls renders a hidden <span> with state text too,
+// so state labels appear 2x in the DOM — getAllByText is correct here.
 const hasText = (text: string) => screen.getAllByText(text).length > 0;
 
 // ─── Tests ─────────────────────────────────────────────────────────────────
@@ -63,7 +69,6 @@ describe('CourseAdminCard', () => {
     expect(screen.getAllByText('My Course').length).toBeGreaterThan(0);
   });
 
-  // state badge text also appears in AdminOverlayControls hidden span → getAllByText
   it('renders DRAFT state badge', () => {
     wrap(base({ state: 'DRAFT' }));
     expect(hasText('Draft')).toBe(true);
@@ -76,7 +81,6 @@ describe('CourseAdminCard', () => {
 
   it('renders COMING_SOON overlay + badge', () => {
     wrap(base({ state: 'COMING_SOON' }));
-    // overlay span (uppercase CSS) + badge span both contain 'Coming Soon'
     expect(hasText('Coming Soon')).toBe(true);
   });
 
@@ -106,18 +110,18 @@ describe('CourseAdminCard', () => {
   });
 
   it('renders topics count badge when totalTopics > 0', () => {
-    wrap(base({ totalTopics: 7 } as any));
+    wrap(base({ totalTopics: 7 }));
     expect(screen.getByText(/7/)).toBeTruthy();
     expect(screen.getByText(/Topics/)).toBeTruthy();
   });
 
   it('renders fallback thumbnail when no image', () => {
-    wrap(base({ image: undefined, thumbnail: undefined }));
+    wrap(base());
     expect(screen.getAllByText('My Course').length).toBeGreaterThanOrEqual(2);
   });
 
   it('renders img tag when image is provided', () => {
-    wrap(base({ image: 'https://cdn.example.com/img.jpg' } as any));
+    wrap(base({ image: 'https://cdn.example.com/img.jpg' }));
     const img = document.querySelector('img[alt="My Course"]');
     expect(img).toBeTruthy();
     expect((img as HTMLImageElement).src).toContain('cdn.example.com');

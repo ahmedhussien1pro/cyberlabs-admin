@@ -39,18 +39,24 @@ vi.mock('react-router-dom', async (orig) => {
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 const mockStats: AdminCourseStats = {
-  total: 10, published: 5, draft: 3, comingSoon: 2,
+  total: 10, published: 5, draft: 3, comingSoon: 2, featured: 1, unpublished: 5,
 };
 
 function makeCourse(i: number): AdminCourse {
   return {
     id: `c${i}`, title: `Course-${i}`, slug: `course-${i}`,
+    ar_title: null, description: null, ar_description: null,
+    longDescription: null, ar_longDescription: null,
+    image: null, thumbnail: null,
     state: 'DRAFT', difficulty: 'BEGINNER', access: 'FREE',
-    enrollmentCount: i * 10, color: 'blue',
+    color: 'BLUE', category: 'FUNDAMENTALS', contentType: 'MIXED',
+    estimatedHours: 0, enrollmentCount: i * 10,
+    totalTopics: 0, labsCount: 0, averageRating: 0, reviewCount: 0,
     tags: [], skills: [], ar_skills: [], topics: [], ar_topics: [],
     prerequisites: [], ar_prerequisites: [], labSlugs: [],
-    contentType: 'MIXED', isFeatured: false, isNew: false,
-  } as AdminCourse;
+    isFeatured: false, isNew: false, isPublished: false,
+    labsLink: null, instructorId: null,
+  };
 }
 
 const mockListResponse = (courses: AdminCourse[], total = courses.length) => ({
@@ -58,7 +64,7 @@ const mockListResponse = (courses: AdminCourse[], total = courses.length) => ({
   meta: { total, page: 1, limit: 8, totalPages: Math.ceil(total / 8) },
 });
 
-// ─── Wrapper helpers ───────────────────────────────────────────────────────────
+// ─── Wrapper helpers ─────────────────────────────────────────────────────────
 function makeQC() {
   return new QueryClient({
     defaultOptions: {
@@ -87,14 +93,12 @@ beforeEach(() => {
 // ─── Tests ─────────────────────────────────────────────────────────────────
 describe('CoursesListPage', () => {
 
-  // ── Header ───────────────────────────────────────────────────────────────
   it('renders page title and New Course button', () => {
     wrap();
     expect(screen.getByText('title')).toBeTruthy();
     expect(screen.getByText('newCourse')).toBeTruthy();
   });
 
-  // ── Stats ───────────────────────────────────────────────────────────────
   it('renders stat numbers after load', async () => {
     wrap();
     await waitFor(() => expect(screen.getByText('10')).toBeTruthy());
@@ -103,7 +107,6 @@ describe('CoursesListPage', () => {
     expect(screen.getByText('2')).toBeTruthy();
   });
 
-  // ── Loading skeletons ────────────────────────────────────────────────
   it('shows skeletons while loading then renders courses', async () => {
     let resolve!: (v: any) => void;
     mockList.mockReturnValue(new Promise((r) => { resolve = r; }));
@@ -114,7 +117,6 @@ describe('CoursesListPage', () => {
     await waitFor(() => expect(screen.getAllByText('Course-1').length).toBeGreaterThan(0));
   });
 
-  // ── Error state ────────────────────────────────────────────────────────
   it('shows error alert and retry button when list fails', async () => {
     mockList.mockRejectedValue(new Error('network error'));
     wrap();
@@ -122,10 +124,8 @@ describe('CoursesListPage', () => {
     expect(screen.getByText('actions.tryAgain')).toBeTruthy();
   });
 
-  // ── Course data ────────────────────────────────────────────────────────
   it('renders course cards in grid view', async () => {
     wrap();
-    // card renders title in multiple places — getAllByText
     await waitFor(() => expect(screen.getAllByText('Course-1').length).toBeGreaterThan(0));
     expect(screen.getAllByText('Course-2').length).toBeGreaterThan(0);
   });
@@ -136,14 +136,12 @@ describe('CoursesListPage', () => {
     expect(mockList).toHaveBeenCalledWith(expect.objectContaining({ page: 1, limit: 8 }));
   });
 
-  // ── Empty state ────────────────────────────────────────────────────────
   it('shows empty state when no courses returned', async () => {
     mockList.mockResolvedValue(mockListResponse([]));
     wrap();
     await waitFor(() => expect(screen.getByText('table.noResults')).toBeTruthy());
   });
 
-  // ── View toggle ────────────────────────────────────────────────────────
   it('switches to table view and renders table', async () => {
     wrap();
     await waitFor(() => screen.getAllByText('Course-1'));
@@ -152,14 +150,12 @@ describe('CoursesListPage', () => {
     await waitFor(() => expect(screen.getByText('table.course')).toBeTruthy());
   });
 
-  // ── New Course dialog ───────────────────────────────────────────────
   it('clicking New Course button opens dialog', async () => {
     wrap();
     fireEvent.click(screen.getByText('newCourse'));
     await waitFor(() => expect(document.querySelector('[role="dialog"]')).toBeTruthy());
   });
 
-  // ── Search filter ─────────────────────────────────────────────────────
   it('typing in search input re-calls api.list with search param', async () => {
     wrap();
     await waitFor(() => expect(mockList).toHaveBeenCalledTimes(1));
@@ -170,21 +166,16 @@ describe('CoursesListPage', () => {
     );
   });
 
-  // ── Retry ───────────────────────────────────────────────────────────────
   it('retry button refetches and shows courses', async () => {
-    // First render fails
     mockList.mockRejectedValue(new Error('fail'));
     const { unmount } = wrap();
     await waitFor(() => screen.getByText('errors.loadFailed'), { timeout: 3000 });
-
-    // Swap mock to success, click retry
     mockList.mockResolvedValue(mockListResponse([makeCourse(1)]));
     fireEvent.click(screen.getByText('actions.tryAgain'));
     await waitFor(() => expect(screen.getAllByText('Course-1').length).toBeGreaterThan(0));
     unmount();
   });
 
-  // ── Pagination ──────────────────────────────────────────────────────────
   it('shows pagination when totalPages > 1', async () => {
     const courses = Array.from({ length: 8 }, (_, i) => makeCourse(i + 1));
     mockList.mockResolvedValue(mockListResponse(courses, 20));
