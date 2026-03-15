@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import NotFoundPage from '../pages/not-found.page';
+import NotFoundPage from '../pages/not-found-page';
 
 vi.mock('framer-motion', () => ({
   motion: new Proxy({} as Record<string, React.ElementType>, {
@@ -44,14 +44,11 @@ describe('NotFoundPage', () => {
 
   it('renders a link back to home', () => {
     wrap();
-    const link = screen.getByRole('link');
-    expect(link).toBeTruthy();
+    expect(screen.getByRole('link')).toBeTruthy();
   });
 
   it('renders terminal block with error lines', () => {
     wrap();
-    // TerminalBlock is mocked as <pre>{lines.join('\n')}</pre>
-    // The page passes lines containing '404' or 'ERROR'
     const pre = document.querySelector('pre');
     expect(pre).toBeTruthy();
     expect(pre!.textContent).toMatch(/404|ERROR|not found/i);
@@ -65,8 +62,7 @@ describe('NotFoundPage', () => {
 
   it('has a go-home / go-back button or link', () => {
     wrap();
-    const btns = screen.getAllByRole('link');
-    expect(btns.length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link').length).toBeGreaterThan(0);
   });
 
   it('renders without crashing', () => {
