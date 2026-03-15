@@ -72,8 +72,14 @@ describe('UsersTable — rendering', () => {
 describe('UsersTable — pagination', () => {
   it('shows pagination text when totalPages > 1', () => {
     renderTable([makeUser()], makeMeta({ totalPages: 3, total: 55, page: 2 }), 2);
+    // Text is split across nodes: "Page" "2" "of" "3" — match the specific leaf <div>
+    // that contains the text and has no child table/button elements.
     expect(
-      screen.getByText((_, el) => /page\s+2\s+of\s+3/i.test(el?.textContent ?? '') && el?.tagName !== 'BODY'),
+      screen.getByText((_, el) =>
+        el?.tagName === 'DIV' &&
+        el.children.length === 0 &&
+        /page\s+2\s+of\s+3/i.test(el.textContent ?? ''),
+      ),
     ).toBeInTheDocument();
   });
 
