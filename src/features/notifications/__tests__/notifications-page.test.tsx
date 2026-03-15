@@ -5,9 +5,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import NotificationsPage from '../pages/notifications.page';
 
-const mockGetHistory  = vi.fn();
-const mockBroadcast   = vi.fn();
-const mockToastError  = vi.fn();
+const mockGetHistory   = vi.fn();
+const mockBroadcast    = vi.fn();
+const mockToastError   = vi.fn();
 const mockToastSuccess = vi.fn();
 
 vi.mock('@/core/api/services/notifications.service', () => ({
@@ -82,22 +82,26 @@ describe('NotificationsPage', () => {
     await waitFor(() => expect(screen.getByText('Alert!')).toBeTruthy());
   });
 
-  it('shows validation error when send clicked with empty form', async () => {
-    // Fill title only (message stays empty) so the button becomes enabled
-    // but handleSend still hits the validation branch and calls toast.error
+  // Validation is enforced via disabled prop — the button is disabled when
+  // title OR message is empty, so handleSend is never reachable in that state.
+  // We assert the button’s disabled state directly.
+  it('send button is disabled when form is empty', async () => {
     wrap();
     await waitFor(() => screen.getByText('form.cardTitle'));
-
-    fireEvent.change(screen.getByPlaceholderText('form.titlePlaceholder'), {
-      target: { value: 'Some Title' },
-    });
-
     const sendBtn = getSendButton();
-    fireEvent.click(sendBtn);
+    expect(sendBtn).toBeTruthy();
+    expect(sendBtn.hasAttribute('disabled')).toBe(true);
+  });
 
-    await waitFor(() =>
-      expect(mockToastError).toHaveBeenCalledWith('form.validationError'),
-    );
+  it('send button is disabled when only title is filled', async () => {
+    wrap();
+    await waitFor(() => screen.getByPlaceholderText('form.titlePlaceholder'));
+    fireEvent.change(screen.getByPlaceholderText('form.titlePlaceholder'), {
+      target: { value: 'My Title' },
+    });
+    await waitFor(() => {
+      expect(getSendButton().hasAttribute('disabled')).toBe(true);
+    });
   });
 
   it('switches to user target mode', async () => {
