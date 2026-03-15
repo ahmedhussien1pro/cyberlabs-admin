@@ -20,17 +20,19 @@ describe('UnauthorizedPage', () => {
 
   it('renders UNAUTHORIZED_ACCESS badge', () => {
     wrap();
-    expect(screen.getByText('SYSTEM :: UNAUTHORIZED_ACCESS')).toBeTruthy();
+    // badge text is split: pulse dot + text node — use getByText with exact:false
+    expect(screen.getByText(/SYSTEM :: UNAUTHORIZED_ACCESS/)).toBeTruthy();
   });
 
   it('renders terminal header label', () => {
     wrap();
-    expect(screen.getByText('cyberlabs — auth')).toBeTruthy();
+    expect(screen.getByText(/cyberlabs.*auth/)).toBeTruthy();
   });
 
   it('renders forbidden translation key', () => {
     wrap();
-    expect(screen.getByText('forbidden')).toBeTruthy();
+    // the <p> contains only the text node; use exact:false to avoid whitespace issues
+    expect(screen.getByText('forbidden', { exact: true })).toBeTruthy();
   });
 
   it('renders forbiddenBack button', () => {

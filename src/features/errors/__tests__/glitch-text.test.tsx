@@ -1,19 +1,19 @@
 // src/features/errors/__tests__/glitch-text.test.tsx
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import { GlitchText } from '../components/glitch-text';
 
 describe('GlitchText', () => {
   it('renders the text 3 times (main + 2 aria-hidden layers)', () => {
     render(<GlitchText text='404' />);
     const spans = document.querySelectorAll('span');
-    const texts = Array.from(spans).map((s) => s.textContent);
+    const texts = Array.from(spans).map((s) => s.textContent?.trim());
     expect(texts.filter((t) => t === '404').length).toBe(3);
   });
 
   it('marks both glitch layers as aria-hidden', () => {
-    render(<GlitchText text='401' />);
-    const hidden = document.querySelectorAll('[aria-hidden="true"]');
+    const { container } = render(<GlitchText text='401' />);
+    const hidden = container.querySelectorAll('[aria-hidden="true"]');
     expect(hidden.length).toBe(2);
   });
 

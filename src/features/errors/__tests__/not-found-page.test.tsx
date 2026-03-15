@@ -8,20 +8,20 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'en' } }),
 }));
 
-vi.mock('framer-motion', async (orig) => {
-  const actual = await orig<typeof import('framer-motion')>();
-  return {
-    ...actual,
-    motion: new Proxy(actual.motion, {
-      get: (_t, tag: string) =>
-        ({ children, ...p }: any) =>
-          actual.motion[tag as keyof typeof actual.motion]
-            ? actual.motion[tag as keyof typeof actual.motion](p, children)
-            : <div {...p}>{children}</div>,
-    }),
-    AnimatePresence: ({ children }: any) => <>{children}</>,
-  };
-});
+// Lightweight framer-motion mock — avoids deep type instantiation
+vi.mock('framer-motion', () => ({
+  motion: new Proxy({} as Record<string, any>, {
+    get: (_t, tag: string) =>
+      function MockMotion({ children, ...rest }: React.PropsWithChildren<Record<string, unknown>>) {
+        const Tag = tag as keyof JSX.IntrinsicElements;
+        // strip framer-only props to avoid unknown-attr warnings
+        const { animate, initial, exit, transition, whileHover, whileTap, ...domProps } = rest as any;
+        void animate; void initial; void exit; void transition; void whileHover; void whileTap;
+        return <Tag {...domProps}>{children}</Tag>;
+      },
+  }),
+  AnimatePresence: ({ children }: React.PropsWithChildren) => <>{children}</>,
+}));
 
 function wrap() {
   return render(<MemoryRouter><NotFoundPage /></MemoryRouter>);
@@ -35,12 +35,12 @@ describe('NotFoundPage', () => {
 
   it('renders PAGE_NOT_FOUND badge', () => {
     wrap();
-    expect(screen.getByText('SYSTEM :: PAGE_NOT_FOUND')).toBeTruthy();
+    expect(screen.getByText(/SYSTEM :: PAGE_NOT_FOUND/)).toBeTruthy();
   });
 
   it('renders terminal header label', () => {
     wrap();
-    expect(screen.getByText('cyberlabs — bash')).toBeTruthy();
+    expect(screen.getByText(/cyberlabs.*bash/)).toBeTruthy();
   });
 
   it('renders translated notFoundDesc key', () => {

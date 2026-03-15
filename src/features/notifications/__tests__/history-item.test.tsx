@@ -47,15 +47,15 @@ describe('HistoryItem', () => {
   });
 
   it('falls back to INFO meta for unknown type', () => {
+    // Use innerHTML check instead of querySelector with Tailwind slash classes
     const { container } = render(
       <HistoryItem notif={{ ...base, type: 'UNKNOWN' as any }} />,
     );
-    expect(container.querySelector('.bg-blue-500\/10')).toBeTruthy();
+    expect(container.innerHTML).toContain('bg-blue-500/10');
   });
 
   it('renders type badge using translation key', () => {
     render(<HistoryItem notif={base} />);
-    // t mock returns key as-is: 'types.INFO'
     expect(screen.getByText('types.INFO')).toBeTruthy();
   });
 });

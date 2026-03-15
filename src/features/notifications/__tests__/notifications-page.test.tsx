@@ -7,27 +7,38 @@ import NotificationsPage from '../pages/notifications.page';
 
 const { mockGetHistory, mockBroadcast } = vi.hoisted(() => ({
   mockGetHistory: vi.fn(),
-  mockBroadcast:  vi.fn(),
+  mockBroadcast: vi.fn(),
 }));
+
+const mockToastError = vi.fn();
+const mockToastSuccess = vi.fn();
 
 vi.mock('@/core/api/services/notifications.service', () => ({
   notificationsService: {
-    getHistory:  (...a: any[]) => mockGetHistory(...a),
-    broadcast:   (...a: any[]) => mockBroadcast(...a),
+    getHistory: (...a: any[]) => mockGetHistory(...a),
+    broadcast: (...a: any[]) => mockBroadcast(...a),
   },
 }));
 vi.mock('@/core/api/services/users.service', () => ({
   usersService: { getAll: vi.fn().mockResolvedValue({ data: [] }) },
 }));
-vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock('sonner', () => ({
+  toast: { success: (...a: any[]) => mockToastSuccess(...a), error: (...a: any[]) => mockToastError(...a) },
+}));
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, _p?: any) => k }),
 }));
 
 function wrap() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
   return render(
-    <QueryClientProvider client={qc}><MemoryRouter><NotificationsPage /></MemoryRouter></QueryClientProvider>,
+    <QueryClientProvider client={qc}>
+      <MemoryRouter>
+        <NotificationsPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -65,36 +76,37 @@ describe('NotificationsPage', () => {
   });
 
   it('shows validation error when form is empty and send clicked', async () => {
-    const { toast } = await import('sonner');
     wrap();
-    await waitFor(() => screen.getByText('form.sendButtonAll'));
-    fireEvent.click(screen.getByText('form.sendButtonAll'));
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('form.validationError'));
+    // find the send button by its text key rendered by t() mock
+    const btn = await waitFor(() => screen.getByRole('button', { name: /form\.sendButtonAll/ }));
+    fireEvent.click(btn);
+    await waitFor(() => expect(mockToastError).toHaveBeenCalledWith('form.validationError'));
   });
 
   it('switches to user target mode', async () => {
     wrap();
-    await waitFor(() => screen.getByText('form.targetUser'));
-    fireEvent.click(screen.getByText('form.targetUser'));
+    const userBtn = await waitFor(() => screen.getByRole('button', { name: /form\.targetUser/ }));
+    fireEvent.click(userBtn);
     await waitFor(() => expect(screen.getByText('form.selectedUser')).toBeTruthy());
   });
 
   it('opens confirm dialog when form is valid', async () => {
     wrap();
-    await waitFor(() => screen.getByText('form.sendButtonAll'));
+    await waitFor(() => screen.getByPlaceholderText('form.titlePlaceholder'));
     fireEvent.change(screen.getByPlaceholderText('form.titlePlaceholder'), { target: { value: 'My Title' } });
     fireEvent.change(screen.getByPlaceholderText('form.messagePlaceholder'), { target: { value: 'My Message' } });
-    fireEvent.click(screen.getByText('form.sendButtonAll'));
+    const sendBtn = screen.getByRole('button', { name: /form\.sendButtonAll/ });
+    fireEvent.click(sendBtn);
     await waitFor(() => expect(screen.getByText('confirm.title')).toBeTruthy());
   });
 
   it('calls broadcast on confirm', async () => {
     mockBroadcast.mockResolvedValue({ recipientCount: 10 });
     wrap();
-    await waitFor(() => screen.getByText('form.sendButtonAll'));
+    await waitFor(() => screen.getByPlaceholderText('form.titlePlaceholder'));
     fireEvent.change(screen.getByPlaceholderText('form.titlePlaceholder'), { target: { value: 'Title' } });
     fireEvent.change(screen.getByPlaceholderText('form.messagePlaceholder'), { target: { value: 'Msg' } });
-    fireEvent.click(screen.getByText('form.sendButtonAll'));
+    fireEvent.click(screen.getByRole('button', { name: /form\.sendButtonAll/ }));
     await waitFor(() => screen.getByText('confirm.send'));
     fireEvent.click(screen.getByText('confirm.send'));
     await waitFor(() => expect(mockBroadcast).toHaveBeenCalled());
@@ -109,7 +121,7 @@ describe('NotificationsPage', () => {
 
   it('shows preview when title is typed', async () => {
     wrap();
-    await waitFor(() => screen.getByText('form.sendButtonAll'));
+    await waitFor(() => screen.getByPlaceholderText('form.titlePlaceholder'));
     fireEvent.change(screen.getByPlaceholderText('form.titlePlaceholder'), { target: { value: 'Preview Title' } });
     await waitFor(() => expect(screen.getByText('form.previewLabel')).toBeTruthy());
   });
