@@ -81,7 +81,8 @@ describe('CourseDetailPage', () => {
   it('shows skeletons while fetching', () => {
     mockGetById.mockReturnValue(new Promise(() => {}));
     wrap();
-    const skeletons = document.querySelectorAll('[data-slot="skeleton"]');
+    // Skeleton component renders divs with animate-pulse class in jsdom
+    const skeletons = document.querySelectorAll('.animate-pulse');
     expect(skeletons.length).toBeGreaterThan(0);
   });
 
