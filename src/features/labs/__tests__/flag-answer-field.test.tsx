@@ -7,36 +7,43 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const FLAG = 'CTF{s3cr3t_fl4g_v4lu3}';
 
+// Helper: password inputs are NOT role="textbox" — use querySelector instead
+const getInput = (container: HTMLElement) =>
+  container.querySelector('input') as HTMLInputElement;
+
+// Helper: the eye-toggle button has no text label — grab it by position (first button)
+const getToggleBtn = () =>
+  screen.getAllByRole('button').find(
+    (b) => !b.textContent?.match(/copy/i)
+  ) as HTMLElement;
+
 describe('FlagAnswerField', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('renders with flag masked by default', () => {
-    render(<FlagAnswerField flagAnswer={FLAG} />);
-    const input = screen.getByRole('textbox') as HTMLInputElement;
-    // input type should be password initially (masked)
+  it('renders with flag masked by default (type=password)', () => {
+    const { container } = render(<FlagAnswerField flagAnswer={FLAG} />);
+    const input = getInput(container);
     expect(input.type).toBe('password');
     expect(input.value).toBe(FLAG);
   });
 
-  it('shows the flag value when eye icon is clicked', () => {
-    render(<FlagAnswerField flagAnswer={FLAG} />);
-    const input = screen.getByRole('textbox') as HTMLInputElement;
-    // Find the toggle button (Eye icon)
-    const toggleBtn = screen.getByRole('button', { name: '' });
+  it('shows the flag value (type=text) when eye icon is clicked', () => {
+    const { container } = render(<FlagAnswerField flagAnswer={FLAG} />);
+    const input = getInput(container);
     expect(input.type).toBe('password');
-    fireEvent.click(toggleBtn);
+    fireEvent.click(getToggleBtn());
     expect(input.type).toBe('text');
   });
 
   it('hides the flag again when eye icon is clicked twice', () => {
-    render(<FlagAnswerField flagAnswer={FLAG} />);
-    const input = screen.getByRole('textbox') as HTMLInputElement;
-    const toggleBtn = screen.getByRole('button', { name: '' });
-    fireEvent.click(toggleBtn);
+    const { container } = render(<FlagAnswerField flagAnswer={FLAG} />);
+    const input = getInput(container);
+    const btn = getToggleBtn();
+    fireEvent.click(btn);
     expect(input.type).toBe('text');
-    fireEvent.click(toggleBtn);
+    fireEvent.click(btn);
     expect(input.type).toBe('password');
   });
 

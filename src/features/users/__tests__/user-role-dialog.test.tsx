@@ -44,6 +44,7 @@ const mockUser: User = {
   role: 'USER',
   isActive: true,
   createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(), // ✅ required field added
   _count: { enrollments: 0, labProgress: 0 },
 };
 

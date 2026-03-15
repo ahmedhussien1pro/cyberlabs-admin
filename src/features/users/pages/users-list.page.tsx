@@ -3,117 +3,77 @@ import { useQuery } from '@tanstack/react-query';
 import { usersService } from '@/core/api/services';
 import { UsersTable } from '../components/users-table';
 import { UserFilters } from '../components/user-filters';
-import { Card } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, Users, UserX, UserPlus, Shield } from 'lucide-react';
-import type { UserRole } from '@/core/types';
+import { Button } from '@/components/ui/button';
+import { UserPlus } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ROUTES } from '@/shared/constants';
+import type { UserListItem, PaginationMeta } from '@/core/types';
 
-export default function UsersListPage() {
+export function UsersListPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState<UserRole | 'ALL'>('ALL');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'suspended'>('all');
-  const limit = 20;
+  const [roleFilter, setRoleFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'suspended'>('all');
 
-  const { data: stats } = useQuery({
-    queryKey: ['users', 'stats'],
-    queryFn: usersService.getStats,
-  });
-
-  const {
-    data: usersData,
-    isLoading,
-    error,
-    refetch,
-  } = useQuery({
-    queryKey: ['users', 'list', page, search, roleFilter, statusFilter],
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ['admin-users', page, search, roleFilter, statusFilter],
     queryFn: () =>
-      usersService.getAll({
+      usersService.list({
         page,
-        limit,
+        limit: 20,
         search: search || undefined,
         role: roleFilter !== 'ALL' ? roleFilter : undefined,
-        isActive: statusFilter === 'all' ? undefined : statusFilter === 'active',
+        status: statusFilter !== 'all' ? statusFilter : undefined,
       }),
   });
 
-  if (error) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Alert variant="destructive" className="max-w-md">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>Failed to load users. Please try again later.</AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
-  // Build stat cards from the correct backend response shape
-  const statCards = stats
-    ? [
-        { label: 'Total Users', value: stats.total, icon: Users },
-        // byRole.ADMIN replaces the removed stats.admins field
-        { label: 'Admins', value: stats.byRole.ADMIN, icon: Shield },
-        { label: 'Suspended', value: stats.suspended, icon: UserX },
-        // newThisMonth replaces the removed stats.activeToday field
-        { label: 'New This Month', value: stats.newThisMonth, icon: UserPlus },
-      ]
-    : [];
+  const users: UserListItem[] = (data as any)?.data ?? [];
+  const meta: PaginationMeta | undefined = (data as any)?.meta;
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Users</h1>
-        <p className="text-muted-foreground">Manage platform users and permissions</p>
+    <div className='space-y-6'>
+      <div className='flex items-center justify-between'>
+        <div>
+          <h1 className='text-2xl font-bold'>Users</h1>
+          <p className='text-muted-foreground'>
+            {meta ? `${meta.total} total users` : 'Manage platform users'}
+          </p>
+        </div>
+        <Link to={ROUTES.USER_CREATE}>
+          <Button>
+            <UserPlus className='mr-2 h-4 w-4' />
+            Add User
+          </Button>
+        </Link>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        {stats ? (
-          statCards.map((stat) => (
-            <Card key={stat.label} className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  <p className="text-2xl font-bold">{stat.value}</p>
-                </div>
-                <stat.icon className="h-8 w-8 text-muted-foreground" />
-              </div>
-            </Card>
-          ))
-        ) : (
-          Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24" />)
-        )}
-      </div>
-
-      {/* Filters */}
       <UserFilters
         search={search}
-        onSearchChange={setSearch}
+        onSearchChange={(v) => { setSearch(v); setPage(1); }}
         roleFilter={roleFilter}
-        onRoleFilterChange={setRoleFilter}
+        onRoleFilterChange={(v) => { setRoleFilter(v); setPage(1); }}
         statusFilter={statusFilter}
-        onStatusFilterChange={setStatusFilter}
+        onStatusFilterChange={(v) => { setStatusFilter(v); setPage(1); }}
       />
 
-      {/* Users Table */}
-      {isLoading ? (
-        <Card className="p-6">
-          <div className="space-y-4">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <Skeleton key={i} className="h-12" />
-            ))}
-          </div>
-        </Card>
-      ) : (
+      {isLoading && (
+        <div className='flex items-center justify-center py-12'>
+          <div className='h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent' />
+        </div>
+      )}
+
+      {isError && (
+        <div className='rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive'>
+          Failed to load users. <button onClick={() => refetch()} className='underline'>Retry</button>
+        </div>
+      )}
+
+      {!isLoading && !isError && (
         <UsersTable
-          data={usersData?.data ?? []}
-          meta={usersData?.meta}
+          data={users}
+          meta={meta}
           page={page}
           onPageChange={setPage}
-          onRefetch={refetch}
         />
       )}
     </div>
