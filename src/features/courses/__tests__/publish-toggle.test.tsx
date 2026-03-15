@@ -3,22 +3,33 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PublishToggle } from '../components/publish-toggle';
 
-const mockPublish   = vi.fn();
-const mockUnpublish = vi.fn();
-const mockLabPublish   = vi.fn();
-const mockLabUnpublish = vi.fn();
+// vi.hoisted ensures these refs exist before vi.mock factory runs
+const {
+  mockPublish,
+  mockUnpublish,
+  mockLabPublish,
+  mockLabUnpublish,
+} = vi.hoisted(() => ({
+  mockPublish:      vi.fn(),
+  mockUnpublish:    vi.fn(),
+  mockLabPublish:   vi.fn(),
+  mockLabUnpublish: vi.fn(),
+}));
 
 vi.mock('@/core/api/services', () => ({
   coursesService: {
-    publish:   (...a: any[]) => mockPublish(...a),
-    unpublish: (...a: any[]) => mockUnpublish(...a),
+    publish:   (id: string) => mockPublish(id),
+    unpublish: (id: string) => mockUnpublish(id),
   },
   labsService: {
-    publish:   (...a: any[]) => mockLabPublish(...a),
-    unpublish: (...a: any[]) => mockLabUnpublish(...a),
+    publish:   (id: string) => mockLabPublish(id),
+    unpublish: (id: string) => mockLabUnpublish(id),
   },
 }));
-vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+
+vi.mock('sonner', () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
+}));
 
 function wrap(ui: React.ReactElement) {
   const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
@@ -75,7 +86,7 @@ describe('PublishToggle', () => {
     wrap(<PublishToggle id="c1" isPublished={false} type="course" />);
     fireEvent.click(screen.getByRole('button'));
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
-    // reverted — button back to Publish
+    // after revert, button should show Publish again
     expect(screen.getByRole('button', { name: /^publish$/i })).toBeTruthy();
   });
 });
