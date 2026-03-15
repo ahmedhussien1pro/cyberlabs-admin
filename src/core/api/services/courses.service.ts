@@ -55,6 +55,14 @@ export interface CourseLabItem {
   };
 }
 
+export interface CourseStats {
+  total: number;
+  published: number;
+  unpublished: number;
+  featured: number;
+  byState: Record<string, number>;
+}
+
 function normalizeArray<T>(res: unknown): T[] {
   if (Array.isArray(res)) return res as T[];
   if (res && typeof res === 'object') {
@@ -65,19 +73,45 @@ function normalizeArray<T>(res: unknown): T[] {
   return [];
 }
 
+/**
+ * Unwrap backend response that may be:
+ *   { data: { total, published, ... } }   <- axios wraps in .data
+ *   { total, published, ... }             <- direct
+ *   { data: { data: { total, ... } } }    <- double-wrapped
+ */
+function normalizeStats(raw: unknown): CourseStats {
+  let payload: any = raw;
+  // unwrap { data: ... }
+  if (payload && typeof payload === 'object' && 'data' in (payload as object)) {
+    payload = (payload as any).data;
+  }
+  // unwrap another level if still nested
+  if (payload && typeof payload === 'object' && 'data' in (payload as object) && typeof (payload as any).data === 'object') {
+    payload = (payload as any).data;
+  }
+  return {
+    total:       payload?.total       ?? 0,
+    published:   payload?.published   ?? 0,
+    unpublished: payload?.unpublished ?? (payload?.total ?? 0) - (payload?.published ?? 0),
+    featured:    payload?.featured    ?? payload?.isFeatured ?? 0,
+    byState:     payload?.byState     ?? payload?.by_state ?? {},
+  };
+}
+
 export const coursesService = {
   // GET /admin/courses
   getAll: (params?: CourseQueryParams) =>
     apiClient.get(ENDPOINTS.COURSES.LIST, { params }).then((r) => r.data),
 
   // GET /admin/courses/stats
-  getStats: () => apiClient.get(ENDPOINTS.COURSES.STATS).then((r) => r.data),
+  getStats: (): Promise<CourseStats> =>
+    apiClient.get(ENDPOINTS.COURSES.STATS).then((r) => normalizeStats(r.data)),
 
   // GET /admin/courses/:id
   getOne: (id: string) =>
     apiClient.get(ENDPOINTS.COURSES.DETAIL(id)).then((r) => r.data),
 
-  // Alias for getOne — used in course-form, course-detail, course-platform-preview
+  // Alias for getOne
   getById: (id: string) =>
     apiClient.get(ENDPOINTS.COURSES.DETAIL(id)).then((r) => r.data),
 
@@ -101,7 +135,6 @@ export const coursesService = {
   delete: (id: string) =>
     apiClient.delete(ENDPOINTS.COURSES.DETAIL(id)).then((r) => r.data),
 
-  // Alias kept for backward compat
   remove: (id: string) =>
     apiClient.delete(ENDPOINTS.COURSES.DETAIL(id)).then((r) => r.data),
 
@@ -113,7 +146,7 @@ export const coursesService = {
   updateCurriculum: (id: string, data: Record<string, unknown>) =>
     apiClient.put(ENDPOINTS.COURSES.CURRICULUM(id), data).then((r) => r.data),
 
-  // GET /admin/courses/:id/labs — always returns CourseLabItem[]
+  // GET /admin/courses/:id/labs
   getCourseLabs: (id: string): Promise<CourseLabItem[]> =>
     apiClient
       .get(ENDPOINTS.COURSES.LABS(id))
