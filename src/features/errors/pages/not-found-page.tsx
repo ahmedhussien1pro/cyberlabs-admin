@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react';
+// src/features/errors/pages/not-found-page.tsx
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Home, RotateCcw, Terminal } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Home, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/shared/constants';
+import { GlitchText, TerminalBlock, BinaryRain } from '../components';
 
-// ── Constants ──────────────────────────────────────────────────────────────
-const TERMINAL_LINES: string[] = [
+const TERMINAL_LINES = [
   '> SYSTEM ERROR: Route not found',
   '> Scanning directories...',
   '> ERROR 404: /page does not exist',
@@ -15,148 +15,18 @@ const TERMINAL_LINES: string[] = [
   '> Access Denied.',
 ];
 
-// ── Glitch Text ────────────────────────────────────────────────────────────
-function GlitchText({ text }: { text: string }) {
-  return (
-    <div className='relative select-none'>
-      <span
-        aria-hidden='true'
-        className='absolute inset-0 animate-[glitch1_3s_infinite] bg-gradient-to-r from-primary to-[#00c4ff] bg-clip-text text-transparent opacity-70'
-        style={{ clipPath: 'polygon(0 30%, 100% 30%, 100% 50%, 0 50%)' }}>
-        {text}
-      </span>
-      <span
-        aria-hidden='true'
-        className='absolute inset-0 animate-[glitch2_3s_infinite] text-red-500/50 opacity-50'
-        style={{ clipPath: 'polygon(0 60%, 100% 60%, 100% 80%, 0 80%)' }}>
-        {text}
-      </span>
-      <span className='bg-gradient-to-r from-primary via-[#00c4ff] to-primary bg-clip-text text-transparent'>
-        {text}
-      </span>
-    </div>
-  );
-}
+const getLineColor = (line: string) => {
+  if (line.includes('ERROR') || line.includes('Denied')) return 'text-red-400';
+  if (line.includes('recovery') || line.includes('Scanning')) return 'text-yellow-400';
+  return 'text-primary/80';
+};
 
-function TerminalBlock() {
-  const [lines, setLines] = useState<string[]>([]);
-
-  useEffect(() => {
-    let i = 0;
-    let active = true;
-
-    const run = () => {
-      setLines([]);
-      i = 0;
-
-      const interval = setInterval(() => {
-        if (!active) return;
-
-        if (i < TERMINAL_LINES.length) {
-          const line = TERMINAL_LINES[i];
-          if (typeof line === 'string') {
-            setLines((prev) => [...prev, line]);
-          }
-          i++;
-        } else {
-          clearInterval(interval);
-          if (active) {
-            setTimeout(run, 2000);
-          }
-        }
-      }, 600);
-    };
-
-    run();
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const getLineColor = (line: string) => {
-    if (line.includes('ERROR') || line.includes('Denied'))
-      return 'text-red-400';
-    if (line.includes('recovery') || line.includes('Scanning'))
-      return 'text-yellow-400';
-    return 'text-primary/80';
-  };
-
-  return (
-    <div
-      dir='ltr'
-      className='w-full overflow-hidden rounded-xl border border-border/40 bg-muted/60 backdrop-blur-sm dark:border-primary/20 dark:bg-black/60'>
-      {/* Header */}
-      <div className='flex items-center gap-2 border-b border-border/30 bg-muted/80 px-4 py-2.5 dark:border-primary/10 dark:bg-muted/20'>
-        <div className='h-3 w-3 rounded-full bg-red-500/70' />
-        <div className='h-3 w-3 rounded-full bg-yellow-500/70' />
-        <div className='h-3 w-3 rounded-full bg-green-500/70' />
-        <span className='ms-2 flex items-center gap-1.5 text-xs text-muted-foreground'>
-          <Terminal className='h-3 w-3' />
-          cyberlabs — bash
-        </span>
-      </div>
-
-      {/* Body */}
-      <div className='min-h-[150px] space-y-1.5 p-4 font-mono text-xs md:text-sm text-left text-foreground/70'>
-        <AnimatePresence mode='popLayout'>
-          {lines.map((line, i) =>
-            typeof line === 'string' ? (
-              <motion.p
-                key={`${line}-${i}`}
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className={getLineColor(line)}>
-                {line}
-              </motion.p>
-            ) : null,
-          )}
-        </AnimatePresence>
-
-        <p className='text-primary/80'>
-          {'> '}
-          <span className='inline-block h-[14px] w-[7px] translate-y-[2px] animate-[blink_1s_step-end_infinite] bg-primary' />
-        </p>
-      </div>
-    </div>
-  );
-}
-
-// ── Binary Rain ────────────────────────────────────────────────────────────
-function BinaryRain() {
-  const cols = Array.from({ length: 12 }, (_, i) => i);
-  return (
-    <div className='pointer-events-none absolute inset-0 overflow-hidden opacity-[0.035]'>
-      {cols.map((i) => (
-        <motion.div
-          key={i}
-          className='absolute top-0 whitespace-pre font-mono text-xs leading-5 text-primary'
-          style={{ left: `${(i / 12) * 100}%` }}
-          animate={{ y: ['-10%', '110%'] }}
-          transition={{
-            duration: 8 + (i % 5),
-            repeat: Infinity,
-            delay: i * 0.4,
-            ease: 'linear',
-          }}>
-          {Array.from({ length: 24 }, () =>
-            Math.random() > 0.5 ? '1' : '0',
-          ).join('\n')}
-        </motion.div>
-      ))}
-    </div>
-  );
-}
-
-// ── Main Page ──────────────────────────────────────────────────────────────
 export default function NotFoundPage() {
   const { t } = useTranslation('errors');
 
   return (
     <div className='relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-background px-4 py-16'>
-      <BinaryRain />
+      <BinaryRain color='text-primary' />
 
       <div className='pointer-events-none absolute inset-0 -z-10'>
         <div className='absolute left-1/4 top-1/4 h-80 w-80 rounded-full bg-primary/[0.06] blur-3xl' />
@@ -195,7 +65,12 @@ export default function NotFoundPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35 }}
           className='mt-6 w-full'>
-          <TerminalBlock />
+          <TerminalBlock
+            lines={TERMINAL_LINES}
+            label='cyberlabs — bash'
+            getLineColor={getLineColor}
+            cursorColor='bg-primary'
+          />
         </motion.div>
 
         <motion.p
@@ -214,18 +89,15 @@ export default function NotFoundPage() {
           transition={{ delay: 0.6 }}
           className='flex flex-wrap items-center justify-center gap-3'>
           <Button
-            asChild
-            size='lg'
+            asChild size='lg'
             className='gap-2 px-3 font-mono shadow-lg shadow-primary/20 transition-all duration-300 hover:scale-[1.03] hover:shadow-primary/40'>
             <Link to={ROUTES.DASHBOARD}>
               <Home className='h-4 w-4' />
               {t('notFoundBack')}
             </Link>
           </Button>
-
           <Button
-            size='lg'
-            variant='outline'
+            size='lg' variant='outline'
             onClick={() => window.history.back()}
             className='gap-2 px-3 font-mono transition-all duration-300 border-primary/40 hover:bg-primary/5 hover:text-primary'>
             <RotateCcw className='h-4 w-4' />
