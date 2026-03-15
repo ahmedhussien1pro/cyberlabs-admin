@@ -1,19 +1,12 @@
+// src/features/dashboard/components/engagement-metrics.tsx
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Activity, Users, FlaskConical, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { EngagementMetrics as EngagementMetricsType } from '@/core/types';
+import { formatDuration } from '../utils/format-duration';
 
 interface EngagementMetricsProps {
   data: EngagementMetricsType;
-}
-
-function formatDuration(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  const remainingMin = minutes % 60;
-  return `${hours}h ${remainingMin}m`;
 }
 
 const METRICS = [
