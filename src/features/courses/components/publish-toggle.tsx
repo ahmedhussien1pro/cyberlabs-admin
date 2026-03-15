@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
@@ -15,25 +15,35 @@ interface PublishToggleProps {
 export function PublishToggle({ id, isPublished, type, onSuccess }: PublishToggleProps) {
   const qc = useQueryClient();
   const [optimistic, setOptimistic] = useState(isPublished);
+  // ref captures the *current* optimistic value at click time,
+  // so mutationFn never reads a stale closure.
+  const pendingPublish = useRef(isPublished);
 
   const mutation = useMutation({
     mutationFn: () => {
+      // Use the ref value captured before onMutate flips the state
+      const shouldPublish = !pendingPublish.current;
       if (type === 'course') {
-        return optimistic
-          ? coursesService.unpublish(id)
-          : coursesService.publish(id);
+        return shouldPublish
+          ? coursesService.publish(id)
+          : coursesService.unpublish(id);
       } else {
-        return optimistic
-          ? labsService.unpublish(id)
-          : labsService.publish(id);
+        return shouldPublish
+          ? labsService.publish(id)
+          : labsService.unpublish(id);
       }
     },
     onMutate: () => {
+      pendingPublish.current = optimistic;
       setOptimistic((prev) => !prev);
     },
     onSuccess: () => {
-      const nextState = !isPublished;
-      toast.success(`${type === 'course' ? 'Course' : 'Lab'} ${nextState ? 'published' : 'unpublished'} successfully`);
+      const nextState = !pendingPublish.current;
+      toast.success(
+        `${type === 'course' ? 'Course' : 'Lab'} ${
+          nextState ? 'published' : 'unpublished'
+        } successfully`,
+      );
       if (type === 'course') {
         qc.invalidateQueries({ queryKey: ['courses'] });
       } else {
@@ -42,8 +52,12 @@ export function PublishToggle({ id, isPublished, type, onSuccess }: PublishToggl
       onSuccess?.();
     },
     onError: () => {
-      setOptimistic(isPublished);
-      toast.error(`Failed to ${isPublished ? 'unpublish' : 'publish'} ${type}`);
+      setOptimistic(pendingPublish.current);
+      toast.error(
+        `Failed to ${
+          pendingPublish.current ? 'unpublish' : 'publish'
+        } ${type}`,
+      );
     },
   });
 

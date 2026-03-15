@@ -3,8 +3,6 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PublishToggle } from '../components/publish-toggle';
 
-// Must mock the individual service files, not the barrel index,
-// because Vitest resolves the actual module at import time.
 const {
   mockCoursePublish,
   mockCourseUnpublish,
