@@ -7,7 +7,16 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    // setup.ts first (no JSX), then setup.tsx (JSX mocks)
+    // Limit workers to prevent OOM crashes with many heavy React test files.
+    // 2 workers is safe on most dev machines; bump to 3-4 on CI with >8GB RAM.
+    maxWorkers: 2,
+    minWorkers: 1,
+    poolOptions: {
+      forks: {
+        // Give each worker enough V8 heap for jsdom + React + TanStack Query
+        execArgv: ['--max-old-space-size=1024'],
+      },
+    },
     setupFiles: [
       './src/test/setup.ts',
       './src/test/setup.tsx',
