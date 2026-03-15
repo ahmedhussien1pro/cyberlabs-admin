@@ -19,7 +19,6 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-// ✅ barrel imports
 import { adminCoursesApi } from '../services/admin-courses.api';
 import { ROUTES } from '@/shared/constants';
 import type { AdminCourse, CourseState } from '../types';
@@ -48,16 +47,21 @@ export function CoursesTable({ data, meta, page, onPageChange, onRefetch }: Prop
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [deleteTarget, setDeleteTarget] = useState<AdminCourse | null>(null);
+  // ✅ track which course id is being duplicated so only that row is disabled
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['admin', 'courses'] });
 
   const stateMut = useMutation({
-    mutationFn: ({ id, state }: { id: string; state: CourseState }) => adminCoursesApi.setState(id, state),
+    mutationFn: ({ id, state }: { id: string; state: CourseState }) =>
+      adminCoursesApi.setState(id, state),
     onMutate: async ({ id, state }) => {
       await qc.cancelQueries({ queryKey: ['admin', 'courses', 'list'] });
       const snapshot = qc.getQueriesData({ queryKey: ['admin', 'courses', 'list'] });
       qc.setQueriesData({ queryKey: ['admin', 'courses', 'list'] }, (old: any) =>
-        old?.data ? { ...old, data: old.data.map((c: AdminCourse) => c.id === id ? { ...c, state } : c) } : old,
+        old?.data
+          ? { ...old, data: old.data.map((c: AdminCourse) => c.id === id ? { ...c, state } : c) }
+          : old,
       );
       return { snapshot };
     },
@@ -90,8 +94,14 @@ export function CoursesTable({ data, meta, page, onPageChange, onRefetch }: Prop
 
   const dupMut = useMutation({
     mutationFn: (id: string) => adminCoursesApi.duplicate(id),
-    onSuccess: (c) => { toast.success(t('toast.duplicated', { title: c.title })); invalidate(); navigate(ROUTES.COURSE_EDIT(c.slug)); },
+    onMutate: (id) => { setDuplicatingId(id); },
+    onSuccess: (c) => {
+      toast.success(t('toast.duplicated', { title: c.title }));
+      invalidate();
+      navigate(ROUTES.COURSE_EDIT(c.slug));
+    },
     onError: () => toast.error(t('errors.duplicateFailed')),
+    onSettled: () => { setDuplicatingId(null); },
   });
 
   return (
@@ -101,8 +111,23 @@ export function CoursesTable({ data, meta, page, onPageChange, onRefetch }: Prop
           <table className='w-full text-sm' role='table'>
             <thead>
               <tr className='border-b bg-muted/30'>
-                {[t('table.course'), t('table.state'), t('table.difficulty'), t('table.access'), t('table.enrolled'), t('table.actions')].map((h, i) => (
-                  <th key={i} className={`px-4 py-3 font-semibold text-muted-foreground ${i === 5 ? 'text-end' : 'text-start'}`} scope='col'>{h}</th>
+                {[
+                  t('table.course'),
+                  t('table.state'),
+                  t('table.difficulty'),
+                  t('table.access'),
+                  t('table.enrolled'),
+                  t('table.actions'),
+                ].map((h, i) => (
+                  <th
+                    key={i}
+                    className={`px-4 py-3 font-semibold text-muted-foreground ${
+                      i === 5 ? 'text-end' : 'text-start'
+                    }`}
+                    scope='col'
+                  >
+                    {h}
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -117,92 +142,175 @@ export function CoursesTable({ data, meta, page, onPageChange, onRefetch }: Prop
                     </div>
                   </td>
                 </tr>
-              ) : data.map((course) => (
-                <tr key={course.id} className='border-b border-border/50 hover:bg-muted/20 transition-colors'>
-                  <td className='px-4 py-3'>
-                    <div className='flex items-center gap-3'>
-                      <div className='h-10 w-14 shrink-0 overflow-hidden rounded-lg bg-muted'>
-                        {(course.image ?? course.thumbnail) ? (
-                          <img src={course.image ?? course.thumbnail ?? ''} alt={course.title} className='h-full w-full object-cover' />
-                        ) : (
-                          <div className='h-full w-full bg-primary/10 flex items-center justify-center'>
-                            <span className='text-[8px] font-bold text-primary px-1 text-center leading-tight'>{course.title.slice(0, 10)}</span>
-                          </div>
-                        )}
+              ) : (
+                data.map((course) => (
+                  <tr
+                    key={course.id}
+                    className='border-b border-border/50 hover:bg-muted/20 transition-colors'
+                  >
+                    <td className='px-4 py-3'>
+                      <div className='flex items-center gap-3'>
+                        <div className='h-10 w-14 shrink-0 overflow-hidden rounded-lg bg-muted'>
+                          {course.image ?? course.thumbnail ? (
+                            <img
+                              src={course.image ?? course.thumbnail ?? ''}
+                              alt={course.title}
+                              className='h-full w-full object-cover'
+                            />
+                          ) : (
+                            <div className='h-full w-full bg-primary/10 flex items-center justify-center'>
+                              <span className='text-[8px] font-bold text-primary px-1 text-center leading-tight'>
+                                {course.title.slice(0, 10)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className='min-w-0'>
+                          <p className='font-semibold text-foreground line-clamp-1'>{course.title}</p>
+                          {course.ar_title && (
+                            <p className='text-xs text-muted-foreground/70 line-clamp-1' dir='rtl'>
+                              {course.ar_title}
+                            </p>
+                          )}
+                          <p className='text-xs text-muted-foreground'>{course.slug}</p>
+                        </div>
                       </div>
-                      <div className='min-w-0'>
-                        <p className='font-semibold text-foreground line-clamp-1'>{course.title}</p>
-                        {course.ar_title && <p className='text-xs text-muted-foreground/70 line-clamp-1' dir='rtl'>{course.ar_title}</p>}
-                        <p className='text-xs text-muted-foreground'>{course.slug}</p>
+                    </td>
+
+                    <td className='px-4 py-3'>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className='cursor-pointer'>
+                            <Badge
+                              variant='outline'
+                              className={cn(
+                                'text-[10px] font-semibold cursor-pointer hover:opacity-80',
+                                STATE_BADGE[course.state],
+                              )}
+                            >
+                              {t(`state.${course.state}`, course.state)}
+                            </Badge>
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align='start'>
+                          {STATE_OPTIONS.map((opt) => {
+                            const Icon = opt.icon;
+                            const isCurrent = course.state === opt.value;
+                            return (
+                              <DropdownMenuItem
+                                key={opt.value}
+                                disabled={isCurrent}
+                                className={cn('gap-2 text-xs', isCurrent && 'opacity-50')}
+                                onSelect={() => {
+                                  if (!isCurrent) stateMut.mutate({ id: course.id, state: opt.value });
+                                }}
+                              >
+                                <Icon className={cn('h-3.5 w-3.5', opt.color)} />
+                                {t(`state.${opt.value}`)}
+                                {isCurrent && <span className='ms-auto text-[10px]'>✓</span>}
+                              </DropdownMenuItem>
+                            );
+                          })}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+
+                    <td className='px-4 py-3'>
+                      <span className='flex items-center gap-1 text-xs text-muted-foreground'>
+                        <BarChart3 className='h-3 w-3' aria-hidden='true' />
+                        {t(`difficulty.${course.difficulty}`, course.difficulty)}
+                      </span>
+                    </td>
+
+                    <td className='px-4 py-3'>
+                      <span className='text-xs text-muted-foreground'>
+                        {t(`access.${course.access}`, course.access)}
+                      </span>
+                    </td>
+
+                    <td className='px-4 py-3'>
+                      <span className='text-xs font-semibold'>{course.enrollmentCount ?? 0}</span>
+                    </td>
+
+                    <td className='px-4 py-3'>
+                      <div className='flex items-center justify-end gap-1'>
+                        <Button
+                          variant='ghost' size='sm'
+                          aria-label={`${t('overlay.preview')} ${course.title}`}
+                          className='h-8 w-8 p-0 text-muted-foreground hover:text-foreground'
+                          onClick={() => navigate(`${ROUTES.COURSE_EDIT(course.slug)}?tab=preview`)}
+                        >
+                          <Eye className='h-3.5 w-3.5' aria-hidden='true' />
+                        </Button>
+
+                        <Button
+                          variant='ghost' size='sm'
+                          aria-label={`${t('overlay.edit')} ${course.title}`}
+                          className='h-8 w-8 p-0'
+                          onClick={() => navigate(ROUTES.COURSE_EDIT(course.slug))}
+                        >
+                          <Edit2 className='h-3.5 w-3.5' aria-hidden='true' />
+                        </Button>
+
+                        {/* ✅ only the clicked row's duplicate button is disabled */}
+                        <Button
+                          variant='ghost' size='sm'
+                          aria-label={`${t('overlay.duplicate')} ${course.title}`}
+                          className='h-8 w-8 p-0'
+                          disabled={duplicatingId === course.id}
+                          onClick={() => dupMut.mutate(course.id)}
+                        >
+                          {duplicatingId === course.id
+                            ? <Loader2 className='h-3.5 w-3.5 animate-spin' />
+                            : <Copy className='h-3.5 w-3.5' aria-hidden='true' />}
+                        </Button>
+
+                        <Button
+                          variant='ghost' size='sm'
+                          aria-label={`${t('overlay.delete')} ${course.title}`}
+                          className='h-8 w-8 p-0 text-destructive hover:text-destructive'
+                          disabled={deleteMut.isPending && deleteTarget?.id === course.id}
+                          onClick={() => setDeleteTarget(course)}
+                        >
+                          <Trash2 className='h-3.5 w-3.5' aria-hidden='true' />
+                        </Button>
                       </div>
-                    </div>
-                  </td>
-                  <td className='px-4 py-3'>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button className='cursor-pointer'>
-                          <Badge variant='outline' className={cn('text-[10px] font-semibold cursor-pointer hover:opacity-80', STATE_BADGE[course.state])}>
-                            {t(`state.${course.state}`, course.state)}
-                          </Badge>
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align='start'>
-                        {STATE_OPTIONS.map((opt) => {
-                          const Icon = opt.icon;
-                          const isCurrent = course.state === opt.value;
-                          return (
-                            <DropdownMenuItem key={opt.value} disabled={isCurrent}
-                              className={cn('gap-2 text-xs', isCurrent && 'opacity-50')}
-                              onSelect={() => { if (!isCurrent) stateMut.mutate({ id: course.id, state: opt.value }); }}>
-                              <Icon className={cn('h-3.5 w-3.5', opt.color)} />
-                              {t(`state.${opt.value}`)}
-                              {isCurrent && <span className='ms-auto text-[10px]'>✓</span>}
-                            </DropdownMenuItem>
-                          );
-                        })}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </td>
-                  <td className='px-4 py-3'><span className='flex items-center gap-1 text-xs text-muted-foreground'><BarChart3 className='h-3 w-3' aria-hidden='true' />{t(`difficulty.${course.difficulty}`, course.difficulty)}</span></td>
-                  <td className='px-4 py-3'><span className='text-xs text-muted-foreground'>{t(`access.${course.access}`, course.access)}</span></td>
-                  <td className='px-4 py-3'><span className='text-xs font-semibold'>{course.enrollmentCount ?? 0}</span></td>
-                  <td className='px-4 py-3'>
-                    <div className='flex items-center justify-end gap-1'>
-                      <Button variant='ghost' size='sm' aria-label={`${t('overlay.preview')} ${course.title}`} className='h-8 w-8 p-0 text-muted-foreground hover:text-foreground'
-                        onClick={() => navigate(`${ROUTES.COURSE_EDIT(course.slug)}?tab=preview`)}>
-                        <Eye className='h-3.5 w-3.5' aria-hidden='true' />
-                      </Button>
-                      <Button variant='ghost' size='sm' aria-label={`${t('overlay.edit')} ${course.title}`} className='h-8 w-8 p-0'
-                        onClick={() => navigate(ROUTES.COURSE_EDIT(course.slug))}>
-                        <Edit2 className='h-3.5 w-3.5' aria-hidden='true' />
-                      </Button>
-                      <Button variant='ghost' size='sm' aria-label={`${t('overlay.duplicate')} ${course.title}`} className='h-8 w-8 p-0'
-                        disabled={dupMut.isPending} onClick={() => dupMut.mutate(course.id)}>
-                        {dupMut.isPending ? <Loader2 className='h-3.5 w-3.5 animate-spin' /> : <Copy className='h-3.5 w-3.5' aria-hidden='true' />}
-                      </Button>
-                      <Button variant='ghost' size='sm' aria-label={`${t('overlay.delete')} ${course.title}`}
-                        className='h-8 w-8 p-0 text-destructive hover:text-destructive'
-                        disabled={deleteMut.isPending && deleteTarget?.id === course.id}
-                        onClick={() => setDeleteTarget(course)}>
-                        <Trash2 className='h-3.5 w-3.5' aria-hidden='true' />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
+
         {meta && meta.totalPages > 1 && (
           <div className='flex items-center justify-between border-t px-4 py-3'>
             <p className='text-xs text-muted-foreground'>
-              {t('table.page')} <span className='font-semibold text-foreground'>{page}</span> {t('table.of')} <span className='font-semibold text-foreground'>{meta.totalPages}</span>{' — '}<span className='font-semibold text-foreground'>{meta.total}</span> {t('table.total')}
+              {t('table.page')}{' '}
+              <span className='font-semibold text-foreground'>{page}</span>{' '}
+              {t('table.of')}{' '}
+              <span className='font-semibold text-foreground'>{meta.totalPages}</span>
+              {' — '}
+              <span className='font-semibold text-foreground'>{meta.total}</span>{' '}
+              {t('table.total')}
             </p>
             <div className='flex items-center gap-1'>
-              <Button variant='outline' size='sm' aria-label={t('table.prevPage')} className='h-8 w-8 p-0' onClick={() => onPageChange(page - 1)} disabled={page === 1}>
+              <Button
+                variant='outline' size='sm'
+                aria-label={t('table.prevPage')}
+                className='h-8 w-8 p-0'
+                onClick={() => onPageChange(page - 1)}
+                disabled={page === 1}
+              >
                 <ChevronLeft className='h-3.5 w-3.5' aria-hidden='true' />
               </Button>
-              <Button variant='outline' size='sm' aria-label={t('table.nextPage')} className='h-8 w-8 p-0' onClick={() => onPageChange(page + 1)} disabled={page === meta.totalPages}>
+              <Button
+                variant='outline' size='sm'
+                aria-label={t('table.nextPage')}
+                className='h-8 w-8 p-0'
+                onClick={() => onPageChange(page + 1)}
+                disabled={page === meta.totalPages}
+              >
                 <ChevronRight className='h-3.5 w-3.5' aria-hidden='true' />
               </Button>
             </div>
@@ -213,18 +321,25 @@ export function CoursesTable({ data, meta, page, onPageChange, onRefetch }: Prop
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('dialogs.deleteTitle', { title: deleteTarget?.title })}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t('dialogs.deleteTitle', { title: deleteTarget?.title })}
+            </AlertDialogTitle>
             <AlertDialogDescription>{t('dialogs.deleteDesc')}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMut.isPending}>{t('dialogs.cancel')}</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteMut.isPending}>
+              {t('dialogs.cancel')}
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => { e.preventDefault(); if (deleteTarget) deleteMut.mutate(deleteTarget.id); }}
               disabled={deleteMut.isPending}
-              className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
-              {deleteMut.isPending
-                ? <><Loader2 className='mr-2 h-4 w-4 animate-spin' aria-hidden='true' /> {t('dialogs.deleting')}</>
-                : t('dialogs.deleteConfirm')}
+              className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+            >
+              {deleteMut.isPending ? (
+                <><Loader2 className='mr-2 h-4 w-4 animate-spin' aria-hidden='true' /> {t('dialogs.deleting')}</>
+              ) : (
+                t('dialogs.deleteConfirm')
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
