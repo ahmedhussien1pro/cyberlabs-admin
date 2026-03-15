@@ -1,19 +1,17 @@
 // src/features/errors/__tests__/binary-rain.test.tsx
 // NOTE: framer-motion is mocked globally in vitest setup.
-// BinaryRain renders motion.div columns — we test via innerHTML / data-testid.
 import { describe, it, expect, vi } from 'vitest';
+import React from 'react';
 import { render } from '@testing-library/react';
 import { BinaryRain } from '../components/binary-rain';
 
-// Mock framer-motion so motion.div renders as plain div
 vi.mock('framer-motion', () => ({
-  motion: new Proxy({} as Record<string, any>, {
+  motion: new Proxy({} as Record<string, React.ElementType>, {
     get: (_t, tag: string) =>
-      function MockMotion({ children, ...rest }: React.PropsWithChildren<Record<string, unknown>>) {
-        const Tag = tag as keyof JSX.IntrinsicElements;
-        const { animate, initial, exit, transition, whileHover, whileTap, style, ...domProps } = rest as any;
+      function MockMotion({ children, style, ...rest }: React.PropsWithChildren<{ style?: React.CSSProperties; [k: string]: unknown }>) {
+        const { animate, initial, exit, transition, whileHover, whileTap, ...domProps } = rest;
         void animate; void initial; void exit; void transition; void whileHover; void whileTap;
-        return <Tag style={style} {...domProps}>{children}</Tag>;
+        return React.createElement(tag, { style, ...domProps }, children);
       },
   }),
   AnimatePresence: ({ children }: React.PropsWithChildren) => <>{children}</>,
@@ -22,7 +20,6 @@ vi.mock('framer-motion', () => ({
 describe('BinaryRain', () => {
   it('renders default 12 columns', () => {
     const { container } = render(<BinaryRain />);
-    // wrapper div > 12 motion.div columns
     const cols = container.firstElementChild?.children;
     expect(cols?.length).toBe(12);
   });
@@ -35,7 +32,6 @@ describe('BinaryRain', () => {
 
   it('applies custom color class via innerHTML', () => {
     const { container } = render(<BinaryRain color='text-red-400' />);
-    // class is applied on each column div — check innerHTML string
     expect(container.innerHTML).toContain('text-red-400');
   });
 

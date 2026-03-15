@@ -15,7 +15,8 @@ const base: Notification = {
   type: 'INFO',
   sentAt: new Date('2025-01-01T10:00:00Z').toISOString(),
   recipientCount: 42,
-  sentBy: { id: 'u1', name: 'Admin' },
+  // sentBy only has { name, email } per the service type
+  sentBy: { name: 'Admin', email: 'admin@example.com' },
   targetUser: null,
 };
 
@@ -37,7 +38,7 @@ describe('HistoryItem', () => {
   });
 
   it('renders targetUser badge when present', () => {
-    render(<HistoryItem notif={{ ...base, targetUser: { id: 'u2', name: 'Bob' } }} />);
+    render(<HistoryItem notif={{ ...base, targetUser: { id: 'u2', name: 'Bob', email: 'bob@example.com' } }} />);
     expect(screen.getByText('Bob')).toBeTruthy();
   });
 
@@ -47,7 +48,6 @@ describe('HistoryItem', () => {
   });
 
   it('falls back to INFO meta for unknown type', () => {
-    // Use innerHTML check instead of querySelector with Tailwind slash classes
     const { container } = render(
       <HistoryItem notif={{ ...base, type: 'UNKNOWN' as any }} />,
     );

@@ -14,42 +14,49 @@ import {
   TopContentTable, QuickActions, BreakdownCard, DashboardErrorAlert, XpBanner,
 } from '../components';
 import { calcUserChangePercent, getErrorType } from '../utils/dashboard.utils';
+import type { GrowthData }      from '../components/growth-chart';
+import type { EngagementData }  from '../components/engagement-metrics';
+import type { TopContentData }  from '../components/top-content-table';
+import type { ActivityItem }    from '../components/recent-activity-feed';
 
 const REFETCH_INTERVAL = 5 * 60 * 1000;
-const useQ = (key: unknown[], fn: () => Promise<unknown>) =>
-  useQuery({ queryKey: key, queryFn: fn as any, retry: 1, refetchInterval: REFETCH_INTERVAL });
 
 export default function DashboardPage() {
   const { t } = useTranslation('dashboard');
 
   const { data: overview,  isLoading: overviewLoading,  error: overviewError,
           refetch: refetchOverview, dataUpdatedAt: overviewUpdatedAt } =
-    useQ(['analytics', 'overview'], analyticsService.getOverview);
+    useQuery({ queryKey: ['analytics', 'overview'], queryFn: analyticsService.getOverview, retry: 1, refetchInterval: REFETCH_INTERVAL });
 
   const { data: usersStats,   isLoading: usersLoading,   error: usersError,   refetch: refetchUsers }   =
-    useQ(['users',    'stats'], usersService.getStats);
+    useQuery({ queryKey: ['users',    'stats'], queryFn: usersService.getStats,   retry: 1, refetchInterval: REFETCH_INTERVAL });
   const { data: coursesStats, isLoading: coursesLoading, error: coursesError, refetch: refetchCourses } =
-    useQ(['courses',  'stats'], coursesService.getStats);
+    useQuery({ queryKey: ['courses',  'stats'], queryFn: coursesService.getStats, retry: 1, refetchInterval: REFETCH_INTERVAL });
   const { data: labsStats,    isLoading: labsLoading,    error: labsError,    refetch: refetchLabs }    =
-    useQ(['labs',     'stats'], labsService.getStats);
+    useQuery({ queryKey: ['labs',     'stats'], queryFn: labsService.getStats,    retry: 1, refetchInterval: REFETCH_INTERVAL });
 
-  const { data: growth }        = useQ(['analytics', 'growth'],          analyticsService.getGrowth);
-  const { data: engagement }    = useQ(['analytics', 'engagement'],      analyticsService.getEngagement);
-  const { data: topContent }    = useQ(['analytics', 'top-content'],     analyticsService.getTopContent);
-  const { data: recentActivity }= useQ(['analytics', 'recent-activity'], analyticsService.getRecentActivity);
+  const { data: growth }         = useQuery({ queryKey: ['analytics', 'growth'],          queryFn: analyticsService.getGrowth,         retry: 1, refetchInterval: REFETCH_INTERVAL });
+  const { data: engagement }     = useQuery({ queryKey: ['analytics', 'engagement'],      queryFn: analyticsService.getEngagement,     retry: 1, refetchInterval: REFETCH_INTERVAL });
+  const { data: topContent }     = useQuery({ queryKey: ['analytics', 'top-content'],     queryFn: analyticsService.getTopContent,     retry: 1, refetchInterval: REFETCH_INTERVAL });
+  const { data: recentActivity } = useQuery({ queryKey: ['analytics', 'recent-activity'], queryFn: analyticsService.getRecentActivity, retry: 1, refetchInterval: REFETCH_INTERVAL });
 
-  const isLoading    = overviewLoading || usersLoading || coursesLoading || labsLoading;
-  const hasAnyData   = overview || usersStats || coursesStats || labsStats;
-  const errorType    = getErrorType(overviewError, usersError, coursesError, labsError);
-  const showError    = !!errorType && !isLoading;
-  const lastUpdated  = overviewUpdatedAt ? format(new Date(overviewUpdatedAt), 'HH:mm:ss') : null;
+  const isLoading   = overviewLoading || usersLoading || coursesLoading || labsLoading;
+  const hasAnyData  = overview || usersStats || coursesStats || labsStats;
+  const errorType   = getErrorType(overviewError, usersError, coursesError, labsError);
+  const showError   = !!errorType && !isLoading;
+  const lastUpdated = overviewUpdatedAt ? format(new Date(overviewUpdatedAt), 'HH:mm:ss') : null;
 
   const handleRefreshAll = () => { refetchOverview(); refetchUsers(); refetchCourses(); refetchLabs(); };
 
-  const ov  = overview   as any;
-  const us  = usersStats   as any;
+  // typed aliases to avoid 'unknown' in JSX
+  const ov  = overview    as any;
+  const us  = usersStats  as any;
   const cs  = coursesStats as any;
-  const ls  = labsStats    as any;
+  const ls  = labsStats   as any;
+  const growthData      = growth        as GrowthData      | undefined;
+  const engagementData  = engagement    as EngagementData  | undefined;
+  const topContentData  = topContent    as TopContentData  | undefined;
+  const activityData    = recentActivity as ActivityItem[] | undefined;
 
   return (
     <div className='space-y-6'>
@@ -78,32 +85,32 @@ export default function DashboardPage() {
 
       {/* KPI Cards */}
       <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
-        {usersLoading   ? <Skeleton className='h-32' /> : <StatsCard title={t('stats.totalUsers') || 'Total Users'}         value={us?.total ?? ov?.users ?? 0}       subtitle={`+${us?.newThisMonth ?? 0} this month`}     change={calcUserChangePercent(us?.total ?? 0, us?.newThisMonth ?? 0)} icon={Users}        accentColor='blue'   />}
-        {coursesLoading ? <Skeleton className='h-32' /> : <StatsCard title={t('stats.courses')    || 'Courses'}             value={cs?.total ?? ov?.courses ?? 0}     subtitle={`${cs?.published ?? 0} published`}          icon={BookOpen}     accentColor='green'  />}
-        {labsLoading    ? <Skeleton className='h-32' /> : <StatsCard title={t('stats.labs')       || 'Labs'}                value={ls?.total ?? ov?.labs ?? 0}        subtitle={`${ls?.published ?? 0} published`}          icon={FlaskConical} accentColor='purple' />}
-        {overviewLoading? <Skeleton className='h-32' /> : <StatsCard title={t('stats.totalEnrollments') || 'Total Enrollments'} value={ov?.enrollments ?? 0}         subtitle={`${ov?.labCompletions ?? 0} lab completions`} icon={GraduationCap} accentColor='orange'/>}
+        {usersLoading    ? <Skeleton className='h-32' /> : <StatsCard title={t('stats.totalUsers')       || 'Total Users'}        value={us?.total ?? ov?.users ?? 0}       subtitle={`+${us?.newThisMonth ?? 0} this month`}      change={calcUserChangePercent(us?.total ?? 0, us?.newThisMonth ?? 0)} icon={Users}         accentColor='blue'   />}
+        {coursesLoading  ? <Skeleton className='h-32' /> : <StatsCard title={t('stats.courses')         || 'Courses'}            value={cs?.total ?? ov?.courses ?? 0}     subtitle={`${cs?.published ?? 0} published`}           icon={BookOpen}      accentColor='green'  />}
+        {labsLoading     ? <Skeleton className='h-32' /> : <StatsCard title={t('stats.labs')            || 'Labs'}               value={ls?.total ?? ov?.labs ?? 0}        subtitle={`${ls?.published ?? 0} published`}           icon={FlaskConical}  accentColor='purple' />}
+        {overviewLoading ? <Skeleton className='h-32' /> : <StatsCard title={t('stats.totalEnrollments')|| 'Total Enrollments'}  value={ov?.enrollments ?? 0}              subtitle={`${ov?.labCompletions ?? 0} lab completions`} icon={GraduationCap} accentColor='orange' />}
       </div>
 
       {/* Breakdown Cards */}
       <div className='grid gap-4 md:grid-cols-3'>
-        {us && <BreakdownCard title={t('breakdown.users')   || 'Users Breakdown'}   icon={Users}        rows={[{ label:'Total', value: us.total }, { label:'New This Month', value: us.newThisMonth, badge:'secondary' }, { label:'Suspended', value: us.suspended, badge:'destructive' }]} section={{ heading:'By Role',       rows: Object.entries(us.byRole   ?? {}) as [string,number][] }} />}
-        {cs && <BreakdownCard title={t('breakdown.courses') || 'Courses Breakdown'} icon={BookOpen}     rows={[{ label:'Total', value: cs.total }, { label:'Published',     value: cs.published,    badge:'green'     }, { label:'Unpublished', value: cs.unpublished, badge:'outline' }, { label:'Featured', value: cs.featured, badge:'secondary' }]} section={{ heading:'By State',      rows: Object.entries(cs.byState  ?? {}) as [string,number][] }} />}
-        {ls && <BreakdownCard title={t('breakdown.labs')    || 'Labs Breakdown'}    icon={FlaskConical} rows={[{ label:'Total', value: ls.total }, { label:'Published',     value: ls.published,    badge:'green'     }, { label:'Unpublished', value: ls.unpublished, badge:'outline' }, { label:'Completions', value: ls.totalCompletions, badge:'secondary' }]} section={{ heading:'By Difficulty', rows: Object.entries(ls.byDifficulty ?? {}) as [string,number][] }} />}
+        {us && <BreakdownCard title={t('breakdown.users')   || 'Users Breakdown'}   icon={Users}        rows={[{ label:'Total', value: us.total }, { label:'New This Month', value: us.newThisMonth, badge:'secondary' }, { label:'Suspended', value: us.suspended, badge:'destructive' }]} section={{ heading:'By Role',       rows: Object.entries(us.byRole      ?? {}) as [string, number][] }} />}
+        {cs && <BreakdownCard title={t('breakdown.courses') || 'Courses Breakdown'} icon={BookOpen}     rows={[{ label:'Total', value: cs.total }, { label:'Published',     value: cs.published,    badge:'green'      }, { label:'Unpublished', value: cs.unpublished, badge:'outline' }, { label:'Featured', value: cs.featured, badge:'secondary' }]} section={{ heading:'By State',      rows: Object.entries(cs.byState     ?? {}) as [string, number][] }} />}
+        {ls && <BreakdownCard title={t('breakdown.labs')    || 'Labs Breakdown'}    icon={FlaskConical} rows={[{ label:'Total', value: ls.total }, { label:'Published',     value: ls.published,    badge:'green'      }, { label:'Unpublished', value: ls.unpublished, badge:'outline' }, { label:'Completions', value: ls.totalCompletions, badge:'secondary' }]} section={{ heading:'By Difficulty', rows: Object.entries(ls.byDifficulty ?? {}) as [string, number][] }} />}
       </div>
 
       {ov && <XpBanner totalXP={ov.totalXP} totalPoints={ov.totalPoints} />}
 
-      {(growth || engagement) && (
+      {(growthData || engagementData) && (
         <div className='grid gap-6 lg:grid-cols-5'>
-          {growth     && <div className='lg:col-span-3'><GrowthChart    data={growth as any} /></div>}
-          {engagement && <div className='lg:col-span-2'><EngagementMetrics data={engagement as any} /></div>}
+          {growthData     && <div className='lg:col-span-3'><GrowthChart       data={growthData}     /></div>}
+          {engagementData && <div className='lg:col-span-2'><EngagementMetrics data={engagementData} /></div>}
         </div>
       )}
 
-      {(topContent || recentActivity) && (
+      {(topContentData || activityData) && (
         <div className='grid gap-6 lg:grid-cols-2'>
-          {topContent     && <TopContentTable     data={topContent as any} />}
-          {recentActivity && <RecentActivityFeed activities={recentActivity as any} />}
+          {topContentData && <TopContentTable    data={topContentData}      />}
+          {activityData   && <RecentActivityFeed activities={activityData} />}
         </div>
       )}
 

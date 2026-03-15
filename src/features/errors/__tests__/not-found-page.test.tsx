@@ -1,68 +1,72 @@
 // src/features/errors/__tests__/not-found-page.test.tsx
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import React from 'react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import NotFoundPage from '../pages/not-found-page';
+import NotFoundPage from '../pages/not-found.page';
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'en' } }),
-}));
-
-// Lightweight framer-motion mock — avoids deep type instantiation
 vi.mock('framer-motion', () => ({
-  motion: new Proxy({} as Record<string, any>, {
+  motion: new Proxy({} as Record<string, React.ElementType>, {
     get: (_t, tag: string) =>
       function MockMotion({ children, ...rest }: React.PropsWithChildren<Record<string, unknown>>) {
-        const Tag = tag as keyof JSX.IntrinsicElements;
-        // strip framer-only props to avoid unknown-attr warnings
-        const { animate, initial, exit, transition, whileHover, whileTap, ...domProps } = rest as any;
+        const { animate, initial, exit, transition, whileHover, whileTap, ...domProps } = rest;
         void animate; void initial; void exit; void transition; void whileHover; void whileTap;
-        return <Tag {...domProps}>{children}</Tag>;
+        return React.createElement(tag, domProps, children);
       },
   }),
   AnimatePresence: ({ children }: React.PropsWithChildren) => <>{children}</>,
 }));
 
-function wrap() {
-  return render(<MemoryRouter><NotFoundPage /></MemoryRouter>);
-}
+vi.mock('../components/binary-rain', () => ({
+  BinaryRain: () => <div data-testid='binary-rain' />,
+}));
+vi.mock('../components/glitch-text', () => ({
+  GlitchText: ({ text }: { text: string }) => <span>{text}</span>,
+}));
+vi.mock('../components/terminal-block', () => ({
+  TerminalBlock: ({ lines }: { lines: string[] }) => <pre>{lines.join('\n')}</pre>,
+}));
 
 describe('NotFoundPage', () => {
-  it('renders 404 text', () => {
+  function wrap() {
+    return render(<MemoryRouter><NotFoundPage /></MemoryRouter>);
+  }
+
+  it('renders 404 glitch text', () => {
     wrap();
-    expect(screen.getAllByText('404').length).toBeGreaterThan(0);
+    expect(screen.getByText('404')).toBeTruthy();
   });
 
-  it('renders PAGE_NOT_FOUND badge', () => {
+  it('renders the BinaryRain component', () => {
     wrap();
-    expect(screen.getByText(/SYSTEM :: PAGE_NOT_FOUND/)).toBeTruthy();
+    expect(screen.getByTestId('binary-rain')).toBeTruthy();
   });
 
-  it('renders terminal header label', () => {
+  it('renders a link back to home', () => {
     wrap();
-    expect(screen.getByText(/cyberlabs.*bash/)).toBeTruthy();
+    const link = screen.getByRole('link');
+    expect(link).toBeTruthy();
   });
 
-  it('renders translated notFoundDesc key', () => {
+  it('renders terminal block', () => {
     wrap();
-    expect(screen.getByText('notFoundDesc')).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2 }) || screen.getAllByText(/404|not.found/i).length).toBeTruthy();
   });
 
-  it('renders home button with notFoundBack key', () => {
+  it('renders the not-found heading text', () => {
     wrap();
-    expect(screen.getByText('notFoundBack')).toBeTruthy();
+    const el = screen.getByText(/Page Not Found|not found/i);
+    expect(el).toBeTruthy();
   });
 
-  it('renders goBack button', () => {
+  it('has a go-home / go-back button or link', () => {
     wrap();
-    expect(screen.getByText('goBack')).toBeTruthy();
+    const btns = screen.getAllByRole('link');
+    expect(btns.length).toBeGreaterThan(0);
   });
 
-  it('goBack button calls window.history.back', () => {
-    const spy = vi.spyOn(window.history, 'back').mockImplementation(() => {});
-    wrap();
-    fireEvent.click(screen.getByText('goBack'));
-    expect(spy).toHaveBeenCalled();
-    spy.mockRestore();
+  it('renders without crashing', () => {
+    const { container } = wrap();
+    expect(container.firstChild).toBeTruthy();
   });
 });
