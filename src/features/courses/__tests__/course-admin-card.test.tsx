@@ -18,11 +18,8 @@ vi.mock('react-router-dom', async (orig) => {
   const actual = await orig<typeof import('react-router-dom')>();
   return { ...actual, useNavigate: () => vi.fn() };
 });
-// suppress framer-motion animations in jsdom
 vi.mock('framer-motion', () => ({
-  motion: {
-    div: ({ children, ...p }: any) => <div {...p}>{children}</div>,
-  },
+  motion: { div: ({ children, ...p }: any) => <div {...p}>{children}</div> },
 }));
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -53,6 +50,10 @@ function wrap(course: AdminCourse, view: 'grid' | 'list' = 'grid') {
   );
 }
 
+// helper: AdminOverlayControls renders a hidden <span> with state text too,
+// so state labels appear 2x in the DOM. getAllByText + length check is correct.
+const hasText = (text: string) => screen.getAllByText(text).length > 0;
+
 // ─── Tests ─────────────────────────────────────────────────────────────────
 describe('CourseAdminCard', () => {
 
@@ -62,19 +63,21 @@ describe('CourseAdminCard', () => {
     expect(screen.getAllByText('My Course').length).toBeGreaterThan(0);
   });
 
+  // state badge text also appears in AdminOverlayControls hidden span → getAllByText
   it('renders DRAFT state badge', () => {
     wrap(base({ state: 'DRAFT' }));
-    expect(screen.getByText('Draft')).toBeTruthy();
+    expect(hasText('Draft')).toBe(true);
   });
 
   it('renders PUBLISHED state badge', () => {
     wrap(base({ state: 'PUBLISHED' }));
-    expect(screen.getByText('Published')).toBeTruthy();
+    expect(hasText('Published')).toBe(true);
   });
 
-  it('renders COMING_SOON overlay text', () => {
+  it('renders COMING_SOON overlay + badge', () => {
     wrap(base({ state: 'COMING_SOON' }));
-    expect(screen.getByText('Coming Soon')).toBeTruthy();
+    // overlay span (uppercase CSS) + badge span both contain 'Coming Soon'
+    expect(hasText('Coming Soon')).toBe(true);
   });
 
   it('renders difficulty badge', () => {
@@ -110,9 +113,7 @@ describe('CourseAdminCard', () => {
 
   it('renders fallback thumbnail when no image', () => {
     wrap(base({ image: undefined, thumbnail: undefined }));
-    // CourseThumbnail renders title text inside fallback div
-    const thumbs = screen.getAllByText('My Course');
-    expect(thumbs.length).toBeGreaterThanOrEqual(2); // thumbnail + h3
+    expect(screen.getAllByText('My Course').length).toBeGreaterThanOrEqual(2);
   });
 
   it('renders img tag when image is provided', () => {
