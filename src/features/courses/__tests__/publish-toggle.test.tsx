@@ -3,33 +3,48 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PublishToggle } from '../components/publish-toggle';
 
-// vi.hoisted ensures these refs exist before vi.mock factory runs
+// Must mock the individual service files, not the barrel index,
+// because Vitest resolves the actual module at import time.
 const {
-  mockPublish,
-  mockUnpublish,
+  mockCoursePublish,
+  mockCourseUnpublish,
   mockLabPublish,
   mockLabUnpublish,
 } = vi.hoisted(() => ({
-  mockPublish:      vi.fn(),
-  mockUnpublish:    vi.fn(),
-  mockLabPublish:   vi.fn(),
-  mockLabUnpublish: vi.fn(),
+  mockCoursePublish:   vi.fn(),
+  mockCourseUnpublish: vi.fn(),
+  mockLabPublish:      vi.fn(),
+  mockLabUnpublish:    vi.fn(),
 }));
 
-vi.mock('@/core/api/services', () => ({
+vi.mock('@/core/api/services/courses.service', () => ({
   coursesService: {
-    publish:   (id: string) => mockPublish(id),
-    unpublish: (id: string) => mockUnpublish(id),
+    publish:   (id: string) => mockCoursePublish(id),
+    unpublish: (id: string) => mockCourseUnpublish(id),
+    getStats:  vi.fn(),
+    getAll:    vi.fn(),
+    getOne:    vi.fn(),
+    getById:   vi.fn(),
+    create:    vi.fn(),
+    update:    vi.fn(),
+    delete:    vi.fn(),
+    remove:    vi.fn(),
   },
+}));
+
+vi.mock('@/core/api/services/labs.service', () => ({
   labsService: {
     publish:   (id: string) => mockLabPublish(id),
     unpublish: (id: string) => mockLabUnpublish(id),
+    getAll:    vi.fn(),
+    getOne:    vi.fn(),
+    create:    vi.fn(),
+    update:    vi.fn(),
+    delete:    vi.fn(),
   },
 }));
 
-vi.mock('sonner', () => ({
-  toast: { success: vi.fn(), error: vi.fn() },
-}));
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 function wrap(ui: React.ReactElement) {
   const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
@@ -38,8 +53,8 @@ function wrap(ui: React.ReactElement) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockPublish.mockResolvedValue({});
-  mockUnpublish.mockResolvedValue({});
+  mockCoursePublish.mockResolvedValue({});
+  mockCourseUnpublish.mockResolvedValue({});
   mockLabPublish.mockResolvedValue({});
   mockLabUnpublish.mockResolvedValue({});
 });
@@ -58,13 +73,13 @@ describe('PublishToggle', () => {
   it('calls coursesService.unpublish when published course toggled', async () => {
     wrap(<PublishToggle id="c1" isPublished={true} type="course" />);
     fireEvent.click(screen.getByRole('button'));
-    await waitFor(() => expect(mockUnpublish).toHaveBeenCalledWith('c1'));
+    await waitFor(() => expect(mockCourseUnpublish).toHaveBeenCalledWith('c1'));
   });
 
   it('calls coursesService.publish when unpublished course toggled', async () => {
     wrap(<PublishToggle id="c1" isPublished={false} type="course" />);
     fireEvent.click(screen.getByRole('button'));
-    await waitFor(() => expect(mockPublish).toHaveBeenCalledWith('c1'));
+    await waitFor(() => expect(mockCoursePublish).toHaveBeenCalledWith('c1'));
   });
 
   it('calls labsService.publish when lab type toggled', async () => {
@@ -80,13 +95,13 @@ describe('PublishToggle', () => {
     await waitFor(() => expect(onSuccess).toHaveBeenCalled());
   });
 
-  it('reverts optimistic state and shows error on failure', async () => {
-    mockPublish.mockRejectedValue(new Error('fail'));
+  it('reverts optimistic state and shows error toast on failure', async () => {
+    mockCoursePublish.mockRejectedValue(new Error('fail'));
     const { toast } = await import('sonner');
     wrap(<PublishToggle id="c1" isPublished={false} type="course" />);
     fireEvent.click(screen.getByRole('button'));
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
-    // after revert, button should show Publish again
+    // after revert, should show Publish again
     expect(screen.getByRole('button', { name: /^publish$/i })).toBeTruthy();
   });
 });
