@@ -3,30 +3,14 @@ import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import NotFoundPage from '../pages/not-found-page';
+import NotFoundPage from '../pages/not-found.page';
 
 vi.mock('framer-motion', () => ({
   motion: new Proxy({} as Record<string, React.ElementType>, {
     get: (_t, tag: string) =>
-      function MockMotion({
-        children,
-        ...rest
-      }: React.PropsWithChildren<Record<string, unknown>>) {
-        const {
-          animate,
-          initial,
-          exit,
-          transition,
-          whileHover,
-          whileTap,
-          ...domProps
-        } = rest;
-        void animate;
-        void initial;
-        void exit;
-        void transition;
-        void whileHover;
-        void whileTap;
+      function MockMotion({ children, ...rest }: React.PropsWithChildren<Record<string, unknown>>) {
+        const { animate, initial, exit, transition, whileHover, whileTap, ...domProps } = rest;
+        void animate; void initial; void exit; void transition; void whileHover; void whileTap;
         return React.createElement(tag, domProps, children);
       },
   }),
@@ -40,18 +24,12 @@ vi.mock('../components/glitch-text', () => ({
   GlitchText: ({ text }: { text: string }) => <span>{text}</span>,
 }));
 vi.mock('../components/terminal-block', () => ({
-  TerminalBlock: ({ lines }: { lines: string[] }) => (
-    <pre>{lines.join('\n')}</pre>
-  ),
+  TerminalBlock: ({ lines }: { lines: string[] }) => <pre>{lines.join('\n')}</pre>,
 }));
 
 describe('NotFoundPage', () => {
   function wrap() {
-    return render(
-      <MemoryRouter>
-        <NotFoundPage />
-      </MemoryRouter>,
-    );
+    return render(<MemoryRouter><NotFoundPage /></MemoryRouter>);
   }
 
   it('renders 404 glitch text', () => {
@@ -70,12 +48,13 @@ describe('NotFoundPage', () => {
     expect(link).toBeTruthy();
   });
 
-  it('renders terminal block', () => {
+  it('renders terminal block with error lines', () => {
     wrap();
-    expect(
-      screen.getByRole('heading', { level: 2 }) ||
-        screen.getAllByText(/404|not.found/i).length,
-    ).toBeTruthy();
+    // TerminalBlock is mocked as <pre>{lines.join('\n')}</pre>
+    // The page passes lines containing '404' or 'ERROR'
+    const pre = document.querySelector('pre');
+    expect(pre).toBeTruthy();
+    expect(pre!.textContent).toMatch(/404|ERROR|not found/i);
   });
 
   it('renders the not-found heading text', () => {
