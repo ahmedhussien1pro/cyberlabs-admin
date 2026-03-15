@@ -13,12 +13,11 @@ const { mockCreate, mockSaveCurriculum } = vi.hoisted(() => ({
 
 vi.mock('../services/admin-courses.api', () => ({
   adminCoursesApi: {
-    create:          (...a: any[]) => mockCreate(...a),
-    saveCurriculum:  (...a: any[]) => mockSaveCurriculum(...a),
+    create:         (...a: any[]) => mockCreate(...a),
+    saveCurriculum: (...a: any[]) => mockSaveCurriculum(...a),
   },
 }));
 
-// users service — InstructorPicker needs it; return empty so it doesn't break
 vi.mock('@/core/api/services', () => ({
   usersService: {
     getAll: vi.fn().mockResolvedValue({ data: [], meta: { total: 0, page: 1, limit: 100, totalPages: 0 } }),
@@ -36,7 +35,7 @@ vi.mock('react-router-dom', async (orig) => {
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
-// ─── Wrapper ────────────────────────────────────────────────────────────────
+// ─── Helpers ────────────────────────────────────────────────────────────────
 function wrap() {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -49,6 +48,9 @@ function wrap() {
     </QueryClientProvider>,
   );
 }
+
+/** Page has 2 “Save Course” buttons (top-bar + bottom). Click the first one. */
+const clickSave = () => fireEvent.click(screen.getAllByText('Save Course')[0]);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -94,13 +96,11 @@ describe('CourseCreatePage', () => {
     const json = JSON.stringify({
       title: 'Test Course', slug: 'test-course',
       difficulty: 'BEGINNER', access: 'FREE',
-      topics: [
-        { id: 't1', title: { en: 'Topic One', ar: 'موضوع 1' }, elements: [] },
-      ],
+      topics: [{ id: 't1', title: { en: 'Topic One', ar: 'موضوع 1' }, elements: [] }],
     });
     const file = new File([json], 'course.json', { type: 'application/json' });
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
-    fireEvent.change(input, { target: { files: [file] } });
+    fireEvent.change(document.querySelector('input[type="file"]') as HTMLInputElement,
+      { target: { files: [file] } });
     await waitFor(() => expect(screen.getByText('Course Metadata')).toBeTruthy());
   });
 
@@ -116,10 +116,10 @@ describe('CourseCreatePage', () => {
   it('auto-generates slug from title input', () => {
     wrap();
     fireEvent.click(screen.getByText('Skip — Start Blank'));
-    const titleInput = screen.getByPlaceholderText('e.g., Web Application Hacking');
-    fireEvent.change(titleInput, { target: { value: 'My New Course' } });
-    const slugInput = screen.getByPlaceholderText('web-application-hacking') as HTMLInputElement;
-    expect(slugInput.value).toBe('my-new-course');
+    fireEvent.change(screen.getByPlaceholderText('e.g., Web Application Hacking'),
+      { target: { value: 'My New Course' } });
+    expect((screen.getByPlaceholderText('web-application-hacking') as HTMLInputElement).value)
+      .toBe('my-new-course');
   });
 
   it('Add Topic button appends a topic row', () => {
@@ -134,10 +134,9 @@ describe('CourseCreatePage', () => {
     fireEvent.click(screen.getByText('Skip — Start Blank'));
     fireEvent.click(screen.getAllByText('Add Topic')[0]);
     expect(screen.getByDisplayValue('Topic 1')).toBeTruthy();
-    const trashBtn = document.querySelector('button[onClick]') ||
-      Array.from(document.querySelectorAll('button')).find((b) =>
-        b.querySelector('.lucide-trash2'),
-      );
+    const trashBtn = Array.from(document.querySelectorAll('button')).find((b) =>
+      b.querySelector('.lucide-trash2'),
+    );
     if (trashBtn) fireEvent.click(trashBtn);
     expect(document.querySelectorAll('input[value="Topic 1"]').length).toBe(0);
   });
@@ -149,12 +148,12 @@ describe('CourseCreatePage', () => {
     expect(screen.getByText('Mark as New')).toBeTruthy();
   });
 
-  // ── Validation ──────────────────────────────────────────────────────
+  // ── Validation ─────────────────────────────────────────────────────
   it('Save Course with empty title shows toast error', async () => {
     const { toast } = await import('sonner');
     wrap();
     fireEvent.click(screen.getByText('Skip — Start Blank'));
-    fireEvent.click(screen.getByText('Save Course'));
+    clickSave();
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Title is required')),
     );
@@ -164,9 +163,9 @@ describe('CourseCreatePage', () => {
     const { toast } = await import('sonner');
     wrap();
     fireEvent.click(screen.getByText('Skip — Start Blank'));
-    const titleInput = screen.getByPlaceholderText('e.g., Web Application Hacking');
-    fireEvent.change(titleInput, { target: { value: 'My Course' } });
-    fireEvent.click(screen.getByText('Save Course'));
+    fireEvent.change(screen.getByPlaceholderText('e.g., Web Application Hacking'),
+      { target: { value: 'My Course' } });
+    clickSave();
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Instructor is required')),
     );
@@ -174,39 +173,21 @@ describe('CourseCreatePage', () => {
 
   // ── Save success ───────────────────────────────────────────────────
   it('successful save shows SuccessDialog', async () => {
-    mockCreate.mockResolvedValue({
-      id: 'new-1', slug: 'my-course', title: 'My Course',
-    });
+    mockCreate.mockResolvedValue({ id: 'new-1', slug: 'my-course', title: 'My Course' });
     wrap();
-    fireEvent.click(screen.getByText('Skip — Start Blank'));
-    // fill required fields
-    fireEvent.change(screen.getByPlaceholderText('e.g., Web Application Hacking'), {
-      target: { value: 'My Course' },
-    });
-    // inject instructorId directly via the hidden input — simulate picker select
-    // by calling the mutation with a pre-set instructorId via a workaround:
-    // set instructorId field value (no UI select needed, we bypass InstructorPicker)
-    // Instead test via a monkey-patched state — skip instructor UI, focus on API call
-    // This test verifies the success dialog renders when mutation resolves.
-    // We trigger save after manually setting state via re-querying the form
-    // The simplest approach: fill title + set instructorId via the form state
-    // Since InstructorPicker has no text input for id, we test the error path above
-    // and trust the success path via: mock create + no-validation route (instructor set via JSON)
+    // Load JSON with instructorId pre-set to bypass InstructorPicker UI
     const json = JSON.stringify({
       title: 'My Course', slug: 'my-course',
       instructorId: 'usr-1',
       difficulty: 'BEGINNER', access: 'FREE',
     });
-    // re-render with JSON pre-loaded to bypass InstructorPicker
-    const { unmount } = wrap();
-    const input = document.querySelectorAll('input[type="file"]')[0] as HTMLInputElement;
     const file = new File([json], 'course.json', { type: 'application/json' });
-    fireEvent.change(input, { target: { files: [file] } });
+    fireEvent.change(document.querySelector('input[type="file"]') as HTMLInputElement,
+      { target: { files: [file] } });
     await waitFor(() => screen.getByText('Course Metadata'));
-    fireEvent.click(screen.getByText('Save Course'));
+    clickSave();
     await waitFor(() => expect(mockCreate).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByText('Course Created!')).toBeTruthy());
-    unmount();
   });
 
   // ── Navigation ─────────────────────────────────────────────────────
